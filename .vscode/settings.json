@@ -6,6 +6,7 @@
     "nand.h": "c",
     "diskio.h": "c",
     "map.h": "c",
-    "stdio.h": "c"
+    "stdio.h": "c",
+    "nand_ftl_diskio.h": "c"
   }
 }
