@@ -1,0 +1,8 @@
+{
+  "files.associations": {
+    "pimoroni_tiny2040.h": "c",
+    "flash_io.h": "c",
+    "flash.h": "c",
+    "nand.h": "c"
+  }
+}
