@@ -1,16 +1,14 @@
 #include "boards/pimoroni_tiny2040.h"
 #include "pico/stdlib.h"
-#include "flash_io.h"
 #include "ff.h"
 #include "stdio.h"
+#include "stdlib.h"
 
-BYTE Buff[4096];
-FATFS FatFs; /* File system object for each logical drive */
-FIL File;    /* File object */
-DIR Dir;     /* Directory object */
-FILINFO Finfo;
-
-void makeFileSystem() { f_mkfs("", 0, Buff, sizeof Buff); }
+// BYTE Buff[4096];
+FATFS fs; /* File system object for each logical drive */
+// FIL File; /* File object */
+// DIR Dir;  /* Directory object */
+// FILINFO Finfo;
 
 void loop() {
   while (true) {
@@ -26,48 +24,40 @@ int main() {
   sleep_ms(1000);
   printf("second hello! '\n");
 
-  FRESULT res;
-  UINT bw;
-  printf("hello? \n");
+  // mount file system
+  FRESULT res = f_mount(&fs, "", 1);
+  if (FR_OK == res) {
+    printf("f_mount succeeded! \n");
+  } else {
+    printf("f_mount failed, result: %d. \n", res);
+  }
 
-  res = f_mkfs("", 0, Buff, sizeof Buff);
-  if (res != 0) {
-    printf("failed to f_mkfs \n");
-  }
-  res = f_mount(&FatFs, "", 0);
-  if (res != 0) {
-    printf("failed to mount \n");
-  }
-  res = f_open(&File, "hello.txt", FA_CREATE_NEW | FA_WRITE);
-  if (res != 0) {
-    printf("failed to open \n");
-  }
-  res = f_write(&File, "Hello, World!\r\n", 15, &bw);
-  if (res != 0) {
-    printf("failed to write \n");
-  }
-  res = f_close(&File);
-  if (res != 0) {
-    printf("failed to close \n");
-  }
-  res = f_mount(0, "", 0);
-  if (res != 0) {
-    printf("failed to unmount \n");
-  }
-  sleep_ms(1000);
-  res = f_mount(&FatFs, "", 0);
-  if (res != 0) {
-    printf("failed to remount \n");
-  }
-  char line[100]; /* Line buffer */
+  // if filesystem mount failed due to no filesystem, attempt to make it
+  if (FR_NO_FILESYSTEM == res) {
+    printf("No filesystem present. Attempting to make file system..  \n");
+    uint8_t *work_buffer = malloc(FF_MAX_SS);
+    if (!work_buffer) {
+      printf(
+          "Unable to allocate f_mkfs work buffer. File system not created. \n");
+    } else {
+      // make the file system
+      res = f_mkfs("", 0, work_buffer, FF_MAX_SS);
+      if (FR_OK != res) {
+        printf("f_mkfs failed, result: %d. \n",
+               res);  // fs make failure
+      } else {
+        printf("f_mkfs succeeded! \n");  // fs make success
+        // retry mount
+        res = f_mount(&fs, "", 1);
+        if (FR_OK == res) {
+          printf("f_mount succeeded!");
+        } else {
+          printf("f_mount failed, result: %d. \n", res);
+        }
+      }
 
-  res = f_open(&File, "hello.txt", FA_READ);
-  if (res != 0) {
-    printf("failed to reopen \n");
-  }
-  while (f_gets(line, sizeof line, &File)) {
-    printf(line);
-    printf("\n");
+      free(work_buffer);
+    }
   }
 
   loop();

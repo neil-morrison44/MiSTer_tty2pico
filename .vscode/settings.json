@@ -3,6 +3,9 @@
     "pimoroni_tiny2040.h": "c",
     "flash_io.h": "c",
     "flash.h": "c",
-    "nand.h": "c"
+    "nand.h": "c",
+    "diskio.h": "c",
+    "map.h": "c",
+    "stdio.h": "c"
   }
 }
