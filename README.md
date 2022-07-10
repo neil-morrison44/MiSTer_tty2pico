@@ -46,6 +46,15 @@ Custom firmware / `.mpy` files for other boards / architectures can be added her
 
 ## Questions
 
+### How do I know what to name the logo files?
+Once you've got the board connected and running you can ssh in and type
+```
+$ screen /dev/ttyACM0
+```
+
+Which'll show you what the MiSTer is sending, what filename was attempted, and a couple of error messages.
+The filesystem is case insensitive, so `psx.png` should be found when it sends `PSX` etc
+
 ### Why MicroPython?
 I started writing this in C / C++ a while ago but gave up when I realised I'd have to do a lot of the USB MSC code myself to get it to appear as a flash drive, but if that changes it'd be a lot faster & probably support bigger images. CircuitPython is a bit more opinionated about what you can do with displays, which is probably nice if you're rendering a UI, but for this I just wanted to blit as fast as python could.
 
