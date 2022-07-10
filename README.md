@@ -19,14 +19,17 @@ On the board:
   - should be run through something like imageOptim to compress the PNG
   - Remove the alpha channel
   - Not interlaced
-  - Greyscale PNGs are supported and can probably be native display resolution since they're less resouce intensive
+  - Greyscale PNGs are supported and can probably be native display resolution since they're less resource intensive
 - Name the logo files the names of the cores (e.g. `logos/SNES.png`) this doesn't appear to be case sensitive
-- Add them to the drive that appears when the device is mounted along with `main.py` and the `.mpy` versions of the other files. (to add them once it's plugged in to the MiSTer you'll need to do
+- Add them to the drive that appears when the device is mounted along with `main.py` and the `.mpy` versions of the other files.
+- If you want to change images once it's plugged into a MiSTer you'll need to do:
 ```
 $ sudo mkdir /media/pico-usb
 $ sudo mount /dev/sda /media/pico-usb
+$ ls /media/pico-usb/logos
 ```
 (assuming the drive is at `/dev/sda`)
+(also you might need to reboot once you're finished)
 
 
 On the MiSTer side:
