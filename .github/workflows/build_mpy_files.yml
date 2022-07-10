@@ -2,7 +2,7 @@ name: Build mpy files
 on: push
 
 jobs:
-  typescript_build:
+  build_mpys:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
@@ -12,4 +12,11 @@ jobs:
       - name: convert tty_and_logos
         run: python -m mpy_cross tty_and_logos.py -Omax -march=armv6m
       - name: convert libs
-        run: python -m mpy_cross lib/*.py -Omax -march=armv6m
+        run: for FILE in lib/*.py; do python -m mpy_cross $FILE -Omax -march=armv6m; done
+      - name: zip .mpys
+        run: zip -R mpys '*.mpy'
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v3
+        with:
+          name: mpys
+          path: mpys.zip
