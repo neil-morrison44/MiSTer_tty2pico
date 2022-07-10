@@ -1,7 +1,5 @@
 name: Build Pico Firmware
-on:
-  push:
-    branches: [main]
+on: push
 
 jobs:
   typescript_build:
