@@ -41,3 +41,7 @@ I started writing this in C / C++ a while ago but gave up when I realised I'd ha
 ## TODO
 - I'd like to have more default logos & have the error states (missing image, image too large) show something visually
 - I'll design a case for the Pi Pico & gc9a01 and add the `.stl`s here
+
+## Libs
+- Uses https://github.com/russhughes/gc9a01py with some tweaks to add `@micropython.native` to a couple of methods & remove the unused text rendering
+- Uses https://github.com/Ratfink/micropython-png , which requires the itertools module
