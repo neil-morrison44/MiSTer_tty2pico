@@ -13,10 +13,10 @@ jobs:
         run: python -m mpy_cross tty_and_logos.py -Omax -march=armv6m
       - name: convert libs
         run: for FILE in lib/*.py; do python -m mpy_cross $FILE -Omax -march=armv6m; done
-      - name: zip .mpys
-        run: zip -R mpys '*.mpy'
-      - name: Archive code coverage results
+      - name: zip files
+        run: zip -R mpys '*.mpy' 'main.py' 'logos'
+      - name: Upload device-files
         uses: actions/upload-artifact@v3
         with:
-          name: mpys
-          path: mpys.zip
+          name: device-files
+          path: device-files.zip
