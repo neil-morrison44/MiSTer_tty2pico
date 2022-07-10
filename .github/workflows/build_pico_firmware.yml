@@ -7,7 +7,7 @@ jobs:
     steps:
       - uses: fiam/arm-none-eabi-gcc@v1
         with:
-          release: '10.3-2021.10'
+          release: '10-2020-q4'
       - run: git clone https://github.com/micropython/micropython.git /micropython
 
       - name: uncomment MSC mode
