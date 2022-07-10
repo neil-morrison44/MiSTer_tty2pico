@@ -22,5 +22,12 @@ jobs:
 
       - run: make
         working-directory: ./micropython/ports/rp2
+
       - run: ls -a
         working-directory: ./micropython/ports/rp2/build-PICO
+
+      - name: Upload firmware.uf2
+        uses: actions/upload-artifact@v3
+        with:
+          name: firmware-uf2
+          path: ./micropython/ports/rp2/build-PICO/firmware.uf2
