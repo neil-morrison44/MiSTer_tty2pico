@@ -6,9 +6,13 @@ A full colour version of https://github.com/venice1200/MiSTer_tty2oled
 - The more RAM the device has got the faster it'll switch images
 
 ## Installation
+Hardware:
+- Connect the display to match the Pins specified in https://github.com/neil-morrison44/MiSTer_tty2pico/blob/main/tty_and_logos.py#L17-L22
+- Plug in to USB with BOOTSEL held
 
 On the board:
-- If it's a Pi Pico you'll need to upload a custom firmware.uf2 file to support USB Mass Storage Class, hopefully I can get this building & added as an asset on release
+- If it's a Pi Pico you'll need to upload a custom firmware.uf2 file to support USB Mass Storage Class, this can be found attached to the release (can see the workflow that adds it in this repo)
+- Once it's installed the firmware it should appear as an empty flash drive (might need to unplug & replug), extract and copy over the files found in `files.zip` on the release
 - Find / create logo files which fit the following criteria:
   - _must_ be PNGs
   - max resolution depends on RAM but I've found ~160x160px works for the RP2040 Pico, it'll center the image regardless
@@ -24,6 +28,10 @@ On the MiSTer side:
 - Follow installation instructions of https://github.com/venice1200/MiSTer_tty2oled
 - Change the tty in its `.ini` files to be the one for the device
 - The device won't know what to do with the new updators etc added to tty2oled so... don't use them.
+
+## For other boards
+The `.mpy` files & `firmware.uf2` are intended for the Pi Pico, but the `.py` files themselves should work on any board that can run micropython (though it'll need to support MSC mode & the RAM will be more limited than when using `.mpy` files).
+Custom firmware / `.mpy` files for other boards / architectures can be added here fairly easily.
 
 ## Questions
 
