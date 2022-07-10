@@ -1,12 +1,13 @@
 {
-  "files.associations": {
-    "pimoroni_tiny2040.h": "c",
-    "flash_io.h": "c",
-    "flash.h": "c",
-    "nand.h": "c",
-    "diskio.h": "c",
-    "map.h": "c",
-    "stdio.h": "c",
-    "nand_ftl_diskio.h": "c"
-  }
+  "python.languageServer": "Pylance",
+  "python.linting.pylintEnabled": false,
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportMissingModuleSource": "none"
+  },
+  "python.analysis.extraPaths": [
+    "",
+    "/Users/neilmorrison/.vscode/extensions/joedevivo.vscode-circuitpython-0.1.17-darwin-arm64/stubs",
+    "/Users/neilmorrison/Library/Application Support/Code/User/globalStorage/joedevivo.vscode-circuitpython/bundle/20220710/adafruit-circuitpython-bundle-py-20220710/lib"
+  ],
+  "circuitpython.board.version": null
 }
