@@ -5,9 +5,15 @@ jobs:
   typescript_build:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out code
-        uses: actions/checkout@v2
-      - name: Build docker images
-        run: docker build -t local .
-      - name: Run tests
-        run: docker run -v local .
+      - uses: fiam/arm-none-eabi-gcc@v1
+      - run: git clone https://github.com/micropython/micropython.git /micropython
+
+      - name: uncomment MSC mode
+        run: sed "s/\/\/ \#define/#define/g" -i mpconfigboard.h
+        working-directory: ./micropython/ports/rp2
+
+      - name: make submodules
+        working-directory: ./micropython/ports/rp2
+
+      - name: make
+        run: make
