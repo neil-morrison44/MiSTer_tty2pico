@@ -21,12 +21,23 @@ On the board:
   - Not interlaced
   - Greyscale PNGs are supported and can probably be native display resolution since they're less resouce intensive
 - Name the logo files the names of the cores (e.g. `logos/SNES.png`) this doesn't appear to be case sensitive
-- Add them to the drive that appears when the device is mounted along with `main.py` and the `.mpy` versions of the other files
+- Add them to the drive that appears when the device is mounted along with `main.py` and the `.mpy` versions of the other files. (to add them once it's plugged in to the MiSTer you'll need to do
+```
+$ sudo mkdir /media/pico-usb
+$ sudo mount /dev/sda /media/pico-usb
+```
+(assuming the drive is at `/dev/sda`)
 
 
 On the MiSTer side:
 - Follow installation instructions of https://github.com/venice1200/MiSTer_tty2oled
-- Change the tty in its `.ini` files to be the one for the device
+- Change the tty in its `.ini` files to be the one for the device. Also turn off unsupported features. e.g.
+```
+TTYDEV="/dev/ttyACM0"
+USBMODE="no"
+SCRIPT_UPDATE="no"
+TTY2OLED_UPDATE="no"
+```
 - The device won't know what to do with the new updators etc added to tty2oled so... don't use them.
 
 ## For other boards
@@ -49,6 +60,8 @@ Sure, just edit the `tty_and_logos.py` file to point to a different display lib 
 ## TODO
 - I'd like to have more default logos & have the error states (missing image, image too large) show something visually
 - I'll design a case for the Pi Pico & gc9a01 and add the `.stl`s here
+- Could do my own updater & watch script rather than piggybacking off of tty2oled
+- Custom PCB? Probably a bit much.
 
 ## Libs
 - Uses https://github.com/russhughes/gc9a01py with some tweaks to add `@micropython.native` to a couple of methods & remove the unused text rendering
