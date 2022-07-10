@@ -10,7 +10,7 @@ jobs:
 
       - name: uncomment MSC mode
         run: sed "s/\/\/ \#define/#define/g" -i mpconfigboard.h
-        working-directory: ./micropython/ports/rp2
+        working-directory: ./micropython/ports/rp2/boards/PICO
 
       - name: make submodules
         working-directory: ./micropython/ports/rp2
