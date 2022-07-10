@@ -38,6 +38,14 @@ Custom firmware / `.mpy` files for other boards / architectures can be added her
 ### Why MicroPython?
 I started writing this in C / C++ a while ago but gave up when I realised I'd have to do a lot of the USB MSC code myself to get it to appear as a flash drive, but if that changes it'd be a lot faster & probably support bigger images. CircuitPython is a bit more opinionated about what you can do with displays, which is probably nice if you're rendering a UI, but for this I just wanted to blit as fast as python could.
 
+### Why not include logos in this repo?
+I'm not a fan of being sued, so unless someone can justify their fair use I'll just leave the default `mister` one in (which I'm not even sure of the copyright on but it's used elsewhere so...).
+
+There might be a set of `.pngs` somewhere, _eventually_, but it won't be here.
+
+### Can it support <screen X>?
+Sure, just edit the `tty_and_logos.py` file to point to a different display lib & change some `240`s into whatever the new display width & height is, so long as it supports the `.blit_buffer` method it should work fine.
+
 ## TODO
 - I'd like to have more default logos & have the error states (missing image, image too large) show something visually
 - I'll design a case for the Pi Pico & gc9a01 and add the `.stl`s here

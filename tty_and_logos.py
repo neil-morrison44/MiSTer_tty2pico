@@ -7,6 +7,9 @@ from gc9a01py import GC9A01
 
 gc.enable()
 
+DISPLAY_WIDTH = const(240)
+DISPLAY_HEIGHT = const(240)
+
 RED_MASK = const(0b11111000)
 GREEN_MASK = const(0b11111100)
 
@@ -39,9 +42,8 @@ def display_logo(core_name):
     width, height, rows, info = r.read()
     greyscale = info["greyscale"]
     gc.collect()
-
-    x_offset = round((240 / 2) - (width / 2))
-    y_offset = round((240 / 2) - (height / 2))
+    x_offset = round((DISPLAY_WIDTH / 2) - (width / 2))
+    y_offset = round((DISPLAY_HEIGHT / 2) - (height / 2))
     y = 0
     y_blit_start = 0
 
