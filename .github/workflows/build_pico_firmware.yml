@@ -8,7 +8,7 @@ jobs:
       - uses: fiam/arm-none-eabi-gcc@v1
         with:
           release: '10-2020-q4'
-      - run: git clone https://github.com/micropython/micropython.git /micropython
+      - run: git clone https://github.com/micropython/micropython.git micropython
 
       - name: uncomment MSC mode
         run: sed "s/\/\/ \#define/#define/g" -i mpconfigboard.h
