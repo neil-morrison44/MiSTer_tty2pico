@@ -8,6 +8,6 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
       - name: Build docker images
-        run: docker build -t local
+        run: docker build -t local .
       - name: Run tests
         run: docker run -v local
