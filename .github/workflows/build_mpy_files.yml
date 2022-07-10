@@ -1,0 +1,15 @@
+name: Build mpy files
+on: push
+
+jobs:
+  typescript_build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: install mpy-cross
+        run: pip install mpy-cross
+      - name: convert tty_and_logos
+        run: python -m mpy_cross tty_and_logos.py -Omax -march=armv6m
+      - name: convert libs
+        run: python -m mpy_cross lib/*.py -Omax -march=armv6m
