@@ -1,0 +1,16 @@
+name: Build Pico Firmware
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  typescript_build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Build docker images
+        run: docker build -t local
+      - name: Run tests
+        run: docker run -v local
