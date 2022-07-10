@@ -1,0 +1,77 @@
+name: Build for release
+
+on:
+  release:
+    types: [created]
+
+
+jobs:
+  build_firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get release
+        id: get_release
+        uses: bruceadams/get-release@v1.2.3
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - uses: fiam/arm-none-eabi-gcc@v1
+        with:
+          release: '10-2020-q4'
+      - run: git clone https://github.com/micropython/micropython.git micropython
+
+      - name: uncomment MSC mode
+        run: sed "s/\/\/ \#define/#define/g" -i mpconfigboard.h
+        working-directory: ./micropython/ports/rp2/boards/PICO
+
+      - run: cat mpconfigboard.h
+        working-directory: ./micropython/ports/rp2/boards/PICO
+
+      - run: make submodules
+        working-directory: ./micropython/ports/rp2
+
+      - run: make
+        working-directory: ./micropython/ports/rp2
+
+      - run: ls -a
+        working-directory: ./micropython/ports/rp2/build-PICO
+
+      - name: Attach custom firmware
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: ./micropython/ports/rp2/build-PICO/firmware.uf2
+          asset_name: firmware.uf2
+          asset_content_type: application/octet-stream
+
+  build_files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Get release
+        id: get_release
+        uses: bruceadams/get-release@v1.2.3
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: install mpy-cross
+        run: pip install mpy-cross
+      - name: convert tty_and_logos
+        run: python -m mpy_cross tty_and_logos.py -Omax -march=armv6m
+      - name: convert libs
+        run: for FILE in lib/*.py; do python -m mpy_cross $FILE -Omax -march=armv6m; done
+      - name: zip files
+        run: zip -R device-files '*.mpy' 'main.py' 'logos/*.png'
+
+      - name: Attach file system files
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: ./device-files.zip
+          asset_name: files
+          asset_content_type: application/octet-stream
