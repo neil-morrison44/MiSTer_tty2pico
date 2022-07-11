@@ -8,17 +8,18 @@ A full colour version of https://github.com/venice1200/MiSTer_tty2oled
 ## Installation
 Hardware:
 - Connect the display to match the Pins specified in https://github.com/neil-morrison44/MiSTer_tty2pico/blob/main/tty_and_logos.py#L17-L22
-- Plug in to USB with BOOTSEL held
+- On a computer, plug it into USB with BOOTSEL held (normal Pi Pico `firmware.uf2` steps, except with the custom firmware from github releases)
 
 On the board:
-- If it's a Pi Pico you'll need to upload a custom firmware.uf2 file to support USB Mass Storage Class, this can be found attached to the release (can see the workflow that adds it in this repo)
-- Once it's installed the firmware it should appear as an empty flash drive (might need to unplug & replug), extract and copy over the files found in `files.zip` on the release
+- If it's a Pi Pico you'll need to upload a custom `firmware.uf2` file to support USB Mass Storage Class, this can be found attached to the release (can see the workflow that adds it in this repo)
+- After it's installed the firmware it should appear as an empty flash drive (might need to unplug & replug), extract and copy over the files found in `files.zip` on the release
 - Find / create logo files which fit the following criteria:
   - _must_ be PNGs
   - max resolution depends on RAM but I've found ~160x160px works for the RP2040 Pico, it'll center the image regardless
   - should be run through something like imageOptim to compress the PNG
   - Remove the alpha channel
   - Not interlaced
+  - It'll look at the colour of the top left pixel to pick the background
   - Greyscale PNGs are supported and can probably be native display resolution since they're less resource intensive
 - Name the logo files the names of the cores (e.g. `logos/SNES.png`) this doesn't appear to be case sensitive
 - Add them to the drive that appears when the device is mounted along with `main.py` and the `.mpy` versions of the other files.
