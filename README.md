@@ -5,6 +5,8 @@ A full colour version of https://github.com/venice1200/MiSTer_tty2oled
 - Built for the gc9a01 display, but swapping that for any other display should be easy enough
 - The more RAM the device has got the faster it'll switch images
 
+<img src="./readme_images/8AEE547F-BAA3-452A-836F-03CCF3AC730D_1_105_c.jpeg" alt="Image of the display" height="250">
+
 ## Installation
 Hardware:
 - Connect the display to match the Pins specified in https://github.com/neil-morrison44/MiSTer_tty2pico/blob/main/tty_and_logos.py#L17-L22
@@ -69,6 +71,16 @@ There might be a set of `.pngs` somewhere, _eventually_, but it won't be here.
 
 ### Can it support <screen X>?
 Sure, just edit the `tty_and_logos.py` file to point to a different display lib & change some `240`s into whatever the new display width & height is, so long as it supports the `.blit_buffer` method it should work fine.
+
+## 3D printed mount
+
+<img src="./readme_images/B8A32793-4AA9-4293-92DC-E02D58DB419E_1_105_c.jpeg" alt="Image of display in the 3D printed mount beside the MiSTer" height="250">
+
+- There's quite a simple mount for it in the `3d_model` folder, the cable is left exposed so I recommend cable ties.
+- Will need 2 3m screws to attach the front to the base.
+- The screen & pico slide into their holes and are held securely
+- The base should be printed with more infill than the front so it's better balanced.
+- .stls in the `cad_models` folder are stl conversions of files from https://grabcad.com/library/raspberry-pi-pico-w-pins-1 & https://grabcad.com/library/waveshare-1-28in-round-display-1
 
 ## TODO
 - I'd like to have more default logos & have the error states (missing image, image too large) show something visually
