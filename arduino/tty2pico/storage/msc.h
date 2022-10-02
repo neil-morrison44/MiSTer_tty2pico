@@ -41,8 +41,8 @@ bool fs_formatted; // Check if flash is formatted
 bool fs_changed;   // Set to true when PC write to flash
 
 // Callback invoked when received READ10 command.
-// Copy disk's data to buffer (up to bufsize) and 
-// return number of copied bytes (must be multiple of block size) 
+// Copy disk's data to buffer (up to bufsize) and
+// return number of copied bytes (must be multiple of block size)
 int32_t mscReadCallback(uint32_t lba, void* buffer, uint32_t bufsize)
 {
 	// Note: SPIFLash Block API: readBlocks/writeBlocks/syncBlocks
@@ -51,7 +51,7 @@ int32_t mscReadCallback(uint32_t lba, void* buffer, uint32_t bufsize)
 }
 
 // Callback invoked when received WRITE10 command.
-// Process data in buffer to disk's storage and 
+// Process data in buffer to disk's storage and
 // return number of written bytes (must be multiple of block size)
 int32_t mscWriteCallback(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
 {
@@ -99,19 +99,30 @@ void loopMSC()
 
 FatFile getFile(const char *path, oflag_t oflag = O_RDONLY)
 {
-  FatFile file;
+	FatFile file;
 
 	if (!fatfs.exists(path))
+	{
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+		Serial.print("File not found: "); Serial.println(path);
+#endif
 		return file;
+	}
 
-  file.close(); // Ensure any previous file has been closed
+	file.close(); // Ensure any previous file has been closed
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	if (file.open(&fatfs, path, oflag))
+		Serial.print("Opened file: "); Serial.println(path);
+#else
 	file.open(&fatfs, path, oflag);
-  return file;
+#endif
+
+	return file;
 }
 
 FatFile getFile(String path, oflag_t oflag = O_RDONLY)
 {
-  return getFile(path.c_str(), oflag);
+	return getFile(path.c_str(), oflag);
 }
 
 /*************************
@@ -139,8 +150,8 @@ void setupStorage(void)
 	// Init file system on the flash
 	fs_formatted = fatfs.begin(&flash);
 
-  // Delay just a moment to allow filesystem to initialize
-  delay(500);
+	// Delay just a moment to allow filesystem to initialize
+	delay(500);
 
 	if (!fs_formatted)
 		Serial.println("Failed to init files system, flash may not be formatted");
@@ -151,7 +162,7 @@ void setupStorage(void)
 
 	fs_changed = true; // to print contents initially
 
-  Serial.println("USB MSC storage setup complete");
+	Serial.println("USB MSC storage setup complete");
 }
 
 /*************************
@@ -164,104 +175,104 @@ static String dirText;
 String getDirectory(void)
 {
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-  Serial.print("Get directory: "); Serial.println(dirText.c_str()); 
+	Serial.print("Get directory: "); Serial.println(dirText.c_str());
 #endif
-  return dirText;
+	return dirText;
 }
 
 int getFileCount(void)
 {
-  int count = 0;
-  if (!dir.isDir() || !dir.available())
-    return count;
+	int count = 0;
+	if (!dir.isDir() || !dir.available())
+		return count;
 
-  dir.rewind();
-  FatFile entry;
-  while (entry.openNext(&dir, O_RDONLY))
-    count += 1;
+	dir.rewind();
+	FatFile entry;
+	while (entry.openNext(&dir, O_RDONLY))
+		count += 1;
 
-  dir.rewind();
-  return count;
+	dir.rewind();
+	return count;
 }
 
 String getNextFile(void)
 {
-  FatFile entry;
+	FatFile entry;
 
-  if (entry.openNext(&dir, O_RDONLY))
-  {
-    char buffer[250];
-    memset(buffer, 0, sizeof(char) * 250);
-    entry.getName(buffer, 250);
-    String fileName = dirText + String(buffer);
+	if (entry.openNext(&dir, O_RDONLY))
+	{
+		char buffer[250];
+		memset(buffer, 0, sizeof(char) * 250);
+		entry.getName(buffer, 250);
+		String fileName = dirText + String(buffer);
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-    Serial.print("Got next file: "); Serial.println(fileName);
+		Serial.print("Got next file: "); Serial.println(fileName);
 #endif
-    return fileName;
-  }
-  else
-  {
+		return fileName;
+	}
+	else
+	{
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-    Serial.println("No next file found");
+		Serial.println("No next file found");
 #endif
-    return "";
-  }
+		return "";
+	}
 }
 
 void printDirectory(const char *path, int numTabs)
 {
-  FatFile dir = getFile(path);
-  FatFile entry;
+	FatFile dir = getFile(path);
+	FatFile entry;
 
-  while (entry.openNext(&dir, O_RDONLY))
-  {
-    for (uint8_t i = 0; i < numTabs; i++)
-      Serial.print('\t');
+	while (entry.openNext(&dir, O_RDONLY))
+	{
+		for (uint8_t i = 0; i < numTabs; i++)
+			Serial.print('\t');
 
-    char buffer[250];
-    memset(buffer, 0, sizeof(char) * 250);
-    entry.getName(buffer, 250);
-    String fileName = String(path) + String(buffer);
-    Serial.print(fileName);
-    if (entry.isDir())
-    {
-      Serial.println("/");
-      printDirectory(fileName.c_str(), numTabs + 1);
-    }
-    else
-    {
-      Serial.print("\t\t");
-      entry.printFileSize(&Serial);
-      Serial.print("\tCREATION: ");
-      entry.printCreateDateTime(&Serial);
-      Serial.print("\tLAST WRITE: ");
-      entry.printModifyDateTime(&Serial);
-      Serial.println();
-    }
-    
-    entry.close();
-  }
+		char buffer[250];
+		memset(buffer, 0, sizeof(char) * 250);
+		entry.getName(buffer, 250);
+		String fileName = String(path) + String(buffer);
+		Serial.print(fileName);
+		if (entry.isDir())
+		{
+			Serial.println("/");
+			printDirectory(fileName.c_str(), numTabs + 1);
+		}
+		else
+		{
+			Serial.print("\t\t");
+			entry.printFileSize(&Serial);
+			Serial.print("\tCREATION: ");
+			entry.printCreateDateTime(&Serial);
+			Serial.print("\tLAST WRITE: ");
+			entry.printModifyDateTime(&Serial);
+			Serial.println();
+		}
+
+		entry.close();
+	}
 }
 
 void rewindDirectory(void)
 {
-  dir.rewind();
+	dir.rewind();
 }
 
 void setDirectory(String path)
 {
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-  Serial.print("Setting directory to: "); Serial.println(dirText);
+	Serial.print("Setting directory to: "); Serial.println(dirText);
 #endif
-  dirText = path;
+	dirText = path;
 
-  if (dir.isDir())
-    dir.close();
+	if (dir.isDir())
+		dir.close();
 
-  dir = getFile(dirText);
+	dir = getFile(dirText);
 
-  if (dir.isDir())
-    dir.rewind();
+	if (dir.isDir())
+		dir.rewind();
 }
 
 /*************************
@@ -273,38 +284,38 @@ static FatFile pngfile;
 void *pngOpen(const char *filename, int32_t *size)
 {
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-  Serial.printf("Attempting to open %s\n", filename);
+	Serial.printf("Attempting to open %s\n", filename);
 #endif
-  pngfile = getFile(filename);
-  *size = pngfile.fileSize();
-  return &pngfile;
+	pngfile = getFile(filename);
+	*size = pngfile.fileSize();
+	return &pngfile;
 }
 
 void pngClose(void *handle)
 {
-  if (handle == nullptr)
-    return;
-    
-  FatFile pngfile = *((FatFile*)handle);
-  pngfile.close();
+	if (handle == nullptr)
+		return;
+
+	FatFile pngfile = *((FatFile*)handle);
+	pngfile.close();
 }
 
 int32_t pngRead(PNGFILE *page, uint8_t *buffer, int32_t length)
 {
-  if (!pngfile.isOpen())
-    return 0;
-    
-  page = page; // Avoid warning
-  return pngfile.read(buffer, length);
+	if (!pngfile.isOpen())
+		return 0;
+
+	page = page; // Avoid warning
+	return pngfile.read(buffer, length);
 }
 
 int32_t pngSeek(PNGFILE *page, int32_t position)
 {
-  if (!pngfile.isOpen())
-    return 0;
+	if (!pngfile.isOpen())
+		return 0;
 
-  page = page; // Avoid warning
-  return pngfile.seekSet(position);
+	page = page; // Avoid warning
+	return pngfile.seekSet(position);
 }
 
 #endif

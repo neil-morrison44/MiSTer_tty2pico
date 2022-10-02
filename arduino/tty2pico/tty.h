@@ -7,26 +7,26 @@ void setupTTY()
 {
 	Serial.begin(TTY_BAUDRATE);
 #if defined(WAIT_FOR_SERIAL) && WAIT_FOR_SERIAL == 1
-  while (!Serial) delay(10);
+	while (!Serial) delay(10);
 #endif
-  Serial.println("Serial setup complete");
+	Serial.println("Serial setup complete");
 }
 
 String readTTY()
 {
-  static String command;
+	static String command;
 
-  if (Serial.available())
-  {
-	  command = Serial.readStringUntil('\n');
-    if (command.length() > 0)
-      Serial.printf("Received Corename or Command: %s\n", command.c_str());
-    else
-      command = "";
-  }
-  else command = "";
+	if (Serial.available())
+	{
+		command = Serial.readStringUntil('\n');
+		if (command.length() > 0)
+			Serial.printf("Received Corename or Command: %s\n", command.c_str());
+		else
+			command = "";
+	}
+	else command = "";
 
-  return command;
+	return command;
 }
 
 #endif

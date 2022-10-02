@@ -7,7 +7,7 @@
  * Setup functions
  *************************/
 
- extern void setupStorage(void);
+extern void setupStorage(void);
 
 /*************************
  * Directory functions
@@ -33,10 +33,10 @@ extern int32_t pngSeek(PNGFILE *page, int32_t position);
  * Include implementation
  *************************/
 
-#if defined(STORAGE_TYPE_FLASH_FS)
-#include "storage/msc.h"
-#elif defined(STORAGE_TYPE_SD_CARD)
+#if defined(STORAGE_TYPE_SD_CARD)
 #include "storage/sdcard.h"
+#else
+#include "storage/msc.h"
 #endif
 
 #endif

@@ -15,26 +15,27 @@
 
 File getFile(const char *path, oflag_t oflag = O_RDONLY)
 {
-  File sdFile;
+	File file;
 
-  Serial.print("Checking file exists: "); Serial.println(path);
 	if (!SD.exists(path))
-  {
-    Serial.println("File not found");
-		return sdFile;
-  }
+	{
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+		Serial.print("File not found: "); Serial.println(path);
+#endif
+		return file;
+	}
 
-  Serial.println("File exists");
-  sdFile.close(); // Ensure any previous file has been closed
-  Serial.println("Previous file closed");
-  sdFile = SD.open(path, oflag);
-  Serial.print("Opened file: "); Serial.println(sdFile.name());
-  return sdFile;
+	file.close(); // Ensure any previous file has been closed
+	file = SD.open(path, oflag);
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.print("Opened file: "); Serial.println(file.name());
+#endif
+	return file;
 }
 
 File getFile(String path, oflag_t oflag = O_RDONLY)
 {
-  return getFile(path.c_str(), oflag);
+	return getFile(path.c_str(), oflag);
 }
 
 /*************************
@@ -43,17 +44,17 @@ File getFile(String path, oflag_t oflag = O_RDONLY)
 
 void setupStorage(void)
 {
-  SDCARD_SPI.setRX(SDCARD_MISO_PIN);
-  SDCARD_SPI.setTX(SDCARD_MOSI_PIN);
-  SDCARD_SPI.setSCK(SDCARD_SCK_PIN);
+	SDCARD_SPI.setRX(SDCARD_MISO_PIN);
+	SDCARD_SPI.setTX(SDCARD_MOSI_PIN);
+	SDCARD_SPI.setSCK(SDCARD_SCK_PIN);
 
-  if (!SD.begin(SDCARD_CS_PIN, SPI_FULL_SPEED, SDCARD_SPI))
-  {
-    Serial.println("initialization failed!");
-    return;
-  }
+	if (!SD.begin(SDCARD_CS_PIN, SPI_FULL_SPEED, SDCARD_SPI))
+	{
+		Serial.println("initialization failed!");
+		return;
+	}
 
-  Serial.println("SD storage setup complete");
+	Serial.println("SD storage setup complete");
 }
 
 /*************************
@@ -64,85 +65,85 @@ static File dir;
 
 String getDirectory(void)
 {
-  return String(dir.fullName());
+	return String(dir.fullName());
 }
 
 int getFileCount(void)
 {
-  dir.rewindDirectory();
+	dir.rewindDirectory();
 
-  int count = 0;
-  while (true)
-  {
-    File entry = dir.openNextFile();
-    if (entry)
-      count += 1;
-    else
-      break;
-  }
+	int count = 0;
+	while (true)
+	{
+		File entry = dir.openNextFile();
+		if (entry)
+			count += 1;
+		else
+			break;
+	}
 
-  dir.rewindDirectory();
-  return count;
+	dir.rewindDirectory();
+	return count;
 }
 
 String getNextFile(void)
 {
-  static File entry;
+	static File entry;
 
-  entry = dir.openNextFile();
-  if (!entry)
-    return "";
+	entry = dir.openNextFile();
+	if (!entry)
+		return "";
 
-  return String(entry.fullName());
+	return String(entry.fullName());
 }
 
 void printDirectory(const char *path, int numTabs)
 {
-  File dir = getFile(path);
+	File dir = getFile(path);
 
-  while (true)
-  {
-    File entry =  dir.openNextFile();
-    if (!entry) // no more files
-      break;
+	while (true)
+	{
+		File entry =  dir.openNextFile();
+		if (!entry) // no more files
+			break;
 
-    for (uint8_t i = 0; i < numTabs; i++)
-      Serial.print('\t');
+		for (uint8_t i = 0; i < numTabs; i++)
+			Serial.print('\t');
 
-    Serial.print(entry.name());
-    if (entry.isDirectory())
-    {
-      Serial.println("/");
-      printDirectory(entry.name(), numTabs + 1);
-    }
-    else
-    {
-      // files have sizes, directories do not
-      Serial.print("\t\t");
-      Serial.print(entry.size(), DEC);
-      time_t cr = entry.getCreationTime();
-      time_t lw = entry.getLastWrite();
-      struct tm *tmstruct = localtime(&cr);
-      Serial.printf("\tCREATION: %d-%02d-%02d %02d:%02d:%02d", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);
-      tmstruct = localtime(&lw);
-      Serial.printf("\tLAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);
-    }
-    entry.close();
-  }
+		Serial.print(entry.name());
+		if (entry.isDirectory())
+		{
+			Serial.println("/");
+			printDirectory(entry.name(), numTabs + 1);
+		}
+		else
+		{
+			// files have sizes, directories do not
+			Serial.print("\t\t");
+			Serial.print(entry.size(), DEC);
+			time_t cr = entry.getCreationTime();
+			time_t lw = entry.getLastWrite();
+			struct tm *tmstruct = localtime(&cr);
+			Serial.printf("\tCREATION: %d-%02d-%02d %02d:%02d:%02d", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);
+			tmstruct = localtime(&lw);
+			Serial.printf("\tLAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);
+		}
+		entry.close();
+	}
 }
 
 void rewindDirectory(void)
 {
-  dir.rewindDirectory();
+	dir.rewindDirectory();
 }
 
 void setDirectory(String path)
 {
-  dir.close();
+	dir.close();
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-  Serial.print("Setting directory to: "); Serial.println(path.c_str());
+	Serial.print("Setting directory to: "); Serial.println(path.c_str());
 #endif
-  dir = getFile(path);
+	dir = getFile(path);
 }
 
 /*************************
@@ -153,37 +154,37 @@ static File pngfile;
 
 void *pngOpen(const char *filename, int32_t *size)
 {
-  Serial.printf("Attempting to open %s\n", filename);
-  pngfile = getFile(filename);
-  *size = pngfile.size();
-  return &pngfile;
+	Serial.printf("Attempting to open %s\n", filename);
+	pngfile = getFile(filename);
+	*size = pngfile.size();
+	return &pngfile;
 }
 
 void pngClose(void *handle)
 {
-  if (handle == nullptr)
-    return;
-    
-  File pngfile = *((File*)handle);
-  pngfile.close();
+	if (handle == nullptr)
+		return;
+
+	File pngfile = *((File*)handle);
+	pngfile.close();
 }
 
 int32_t pngRead(PNGFILE *page, uint8_t *buffer, int32_t length)
 {
-  if (!pngfile.available())
-    return 0;
+	if (!pngfile.available())
+		return 0;
 
-  page = page; // Avoid warning
-  return pngfile.read(buffer, length);
+	page = page; // Avoid warning
+	return pngfile.read(buffer, length);
 }
 
 int32_t pngSeek(PNGFILE *page, int32_t position)
 {
-  if (!pngfile.available())
-    return 0;
+	if (!pngfile.available())
+		return 0;
 
-  page = page; // Avoid warning
-  return pngfile.seek(position);
+	page = page; // Avoid warning
+	return pngfile.seek(position);
 }
 
 #endif

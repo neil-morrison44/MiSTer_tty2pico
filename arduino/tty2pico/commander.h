@@ -9,60 +9,60 @@ static String lastCommand;
 
 static void cmdSaver(String command)
 {
-  bool wasRunning = isSlideshowActive();
-  if (command.indexOf(',') > -1 && command.length() > 9)
-  {
-    String mode = command.substring(command.indexOf(',') + 1, command.indexOf(',') + 2);
-    Serial.print("Screensaver mode changed to "); Serial.println(mode);
-    setSlideshowActive(mode != "0");
+	bool wasRunning = isSlideshowActive();
+	if (command.indexOf(',') > -1 && command.length() > 9)
+	{
+		String mode = command.substring(command.indexOf(',') + 1, command.indexOf(',') + 2);
+		Serial.print("Screensaver mode changed to "); Serial.println(mode);
+		setSlideshowActive(mode != "0");
 
-    if (wasRunning && !isSlideshowActive())
-      showPng(STARTUP_LOGO);
-  }
-  else
-  {
-    setSlideshowActive(true); // Default to turning on slideshow
-  }
+		if (wasRunning && !isSlideshowActive())
+			showPng(STARTUP_LOGO);
+	}
+	else
+	{
+		setSlideshowActive(true); // Default to turning on slideshow
+	}
 }
 
 static void cmdSetCore(String command)
 {
-  setSlideshowActive(false);
+	setSlideshowActive(false);
 
-  String coreName;
-  if (command.startsWith("CMDCOR"))
-  {
-    int coreIndex = command.indexOf(',') + 1;
-    coreName = command.substring(coreIndex, command.length());
-  }
-  else coreName = command;
+	String coreName;
+	if (command.startsWith("CMDCOR"))
+	{
+		int coreIndex = command.indexOf(',') + 1;
+		coreName = command.substring(coreIndex, command.length());
+	}
+	else coreName = command;
 
-  String path = LOGO_PATH + coreName + ".png";
-  Serial.printf("Loading png file: %s\n", path.c_str());
-  showPng(path);
+	String path = LOGO_PATH + coreName + ".png";
+	Serial.printf("Loading png file: %s\n", path.c_str());
+	showPng(path);
 }
 
 static void cmdSetTime(void)
 {
-  // TODO: Add for ESP32?
+	// TODO: Add for ESP32?
 }
 
 static void cmdUnknown()
 {
-  // Unknown command, don't do anything
+	// Unknown command, don't do anything
 }
 
 void processCommand(String command)
 {
-  if (command != "" && command != lastCommand)
-  {
-    lastCommand = command;
+	if (command != "" && command != lastCommand)
+	{
+		lastCommand = command;
 
-    if (command.startsWith("CMDSETTIME"))                                 cmdSetTime();
-    else if (command.startsWith("CMDSAVER"))                              cmdSaver(command);
-    else if (command.startsWith("CMD") && !command.startsWith("CMDCOR,")) cmdUnknown();
-    else                                                                  cmdSetCore(command); // Assume core name if no command was matched
-  }
+		if (command.startsWith("CMDSETTIME"))                                 cmdSetTime();
+		else if (command.startsWith("CMDSAVER"))                              cmdSaver(command);
+		else if (command.startsWith("CMD") && !command.startsWith("CMDCOR,")) cmdUnknown();
+		else                                                                  cmdSetCore(command); // Assume core name if no command was matched
+	}
 }
 
 #endif

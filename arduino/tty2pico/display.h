@@ -16,8 +16,8 @@ int16_t xpos = 0;
 int16_t ypos = 0;
 int32_t xoffset = 0;
 int32_t yoffset = 0;
-PNG png;                   // PNG decoder instance
-TFT_eSPI tft = TFT_eSPI(); // Invoke custom library
+PNG png;
+TFT_eSPI tft = TFT_eSPI();
 
 void setupDisplay()
 {
@@ -28,7 +28,7 @@ void setupDisplay()
 	tft.fillScreen(BACKGROUND_COLOR);
 	tft.setTextFont(2);
 
-  Serial.println("Display setup complete");
+	Serial.println("Display setup complete");
 }
 
 void pngDraw(PNGDRAW *pDraw)
@@ -40,48 +40,22 @@ void pngDraw(PNGDRAW *pDraw)
 
 void showPng(const char *path)
 {
-  int16_t rc = png.open(path, &pngOpen, &pngClose, &pngRead, &pngSeek, &pngDraw);
-  if (rc == PNG_SUCCESS)
-  {
-    xoffset = (TFT_WIDTH - png.getWidth()) / 2;
-    yoffset = (TFT_HEIGHT - png.getHeight()) / 2;
+	int16_t rc = png.open(path, &pngOpen, &pngClose, &pngRead, &pngSeek, &pngDraw);
+	if (rc == PNG_SUCCESS)
+	{
+		xoffset = (TFT_WIDTH - png.getWidth()) / 2;
+		yoffset = (TFT_HEIGHT - png.getHeight()) / 2;
 
-    tft.fillScreen(BACKGROUND_COLOR);
-    tft.startWrite();
-    rc = png.decode(NULL, 0);
-    tft.endWrite();
-  }
+		tft.fillScreen(BACKGROUND_COLOR);
+		tft.startWrite();
+		rc = png.decode(NULL, 0);
+		tft.endWrite();
+	}
 }
 
 void showPng(String path)
 {
-  showPng(path.c_str());
-}
-
-void runSlideshowFrame(long time)
-{
-  static long nextChange = 0;
-
-  if (time < nextChange)
-    return;
-
-  String nextFile = getNextFile();
-  if (nextFile == "")
-  {
-    const char *dirName = getDirectory().c_str();
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-    Serial.print("No slideshow file found, reset directory for: "); Serial.println(dirName);
-#endif
-    rewindDirectory();
-  }
-  else
-  {
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-    Serial.print("Found slideshow file: "); Serial.println(nextFile.c_str());
-#endif
-    showPng(nextFile);
-    nextChange = time + SLIDESHOW_DELAY;
-  }
+	showPng(path.c_str());
 }
 
 #endif
