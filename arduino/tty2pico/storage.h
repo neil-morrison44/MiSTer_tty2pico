@@ -1,6 +1,7 @@
 #ifndef STORAGE_H
 #define STORAGE_H
 
+#include <AnimatedGIF.h>
 #include <PNGdec.h>
 
 /*************************
@@ -19,6 +20,15 @@ extern String getNextFile(void);
 extern void printDirectory(const char *path, int numTabs);
 extern void rewindDirectory(void);
 extern void setDirectory(String path);
+
+/*************************
+ * GIF functions
+ *************************/
+
+extern void *gifOpen(const char *filename, int32_t *size);
+extern void gifClose(void *handle);
+extern int32_t gifRead(GIFFILE *page, uint8_t *buffer, int32_t length);
+extern int32_t gifSeek(GIFFILE *page, int32_t position);
 
 /*************************
  * PNG functions

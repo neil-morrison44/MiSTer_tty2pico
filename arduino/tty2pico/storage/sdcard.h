@@ -7,6 +7,7 @@
 #include "../config.h"
 #include <SPI.h>
 #include <SD.h>
+#include <AnimatedGIF.h>
 #include <PNGdec.h>
 
 /*************************
@@ -144,6 +145,88 @@ void setDirectory(String path)
 	Serial.print("Setting directory to: "); Serial.println(path.c_str());
 #endif
 	dir = getFile(path);
+}
+
+/*************************
+ * GIF functions
+ *************************/
+
+File giffile;
+
+void *gifOpen(const char *filename, int32_t *size)
+{
+	giffile = getFile(filename);
+
+	if (giffile.available())
+	{
+		*size = giffile.size();
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+		Serial.print("Opened file "); Serial.println(String(filename).c_str()); Serial.print(" with file size "); Serial.print(giffile.size()); Serial.println(" bytes");
+#endif
+		return (void *)&giffile;
+	}
+	else
+	{
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+		Serial.print("Failed to open "); Serial.println(String(filename).c_str());
+#endif
+		return NULL;
+	}
+}
+
+void gifClose(void *handle)
+{
+	if (handle == nullptr)
+		return;
+
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.println("Closing file");
+#endif
+	File file = static_cast<File *>(handle);
+	file.close();
+}
+
+int32_t gifRead(GIFFILE *page, uint8_t *buffer, int32_t length)
+{
+	File *file = static_cast<File *>(page->fHandle);
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.println("Reading GIF");
+#endif
+	if (!file->available())
+	{
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+		Serial.println("GIF not open");
+#endif
+		return 0;
+	}
+
+	int32_t byteCount;
+	byteCount = length;
+	// Note: If you read a file all the way to the last byte, seek() stops working
+	if ((page->iSize - page->iPos) < length)
+			byteCount = page->iSize - page->iPos - 1; // <-- ugly work-around
+	if (byteCount <= 0)
+			return 0;
+	byteCount = (int32_t)file->read(buffer, byteCount);
+	page->iPos = file->position();
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.print("Read "); Serial.print(byteCount); Serial.println(" bytes");
+#endif
+	return byteCount;
+}
+
+int32_t gifSeek(GIFFILE *page, int32_t position)
+{
+	File *file = static_cast<File *>(page->fHandle);
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.print("Seeking GIF to position "); Serial.println(position);
+#endif
+	file->seek(position);
+	page->iPos = (int32_t)file->position();
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.print("Seeked to position "); Serial.println(page->iPos);
+#endif
+	return page->iPos;
 }
 
 /*************************

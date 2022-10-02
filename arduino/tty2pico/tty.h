@@ -20,9 +20,10 @@ String readTTY()
 	{
 		command = Serial.readStringUntil('\n');
 		if (command.length() > 0)
-			Serial.printf("Received Corename or Command: %s\n", command.c_str());
-		else
-			command = "";
+		{
+			Serial.print("Received Corename or Command: "); Serial.println(command.c_str());
+		}
+		else command = "";
 	}
 	else command = "";
 

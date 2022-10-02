@@ -78,4 +78,26 @@ The `User_Setup_Select.h` file in the `TFT_eSPI` library folder needs to be modi
 #include <../TFT_eSPI_Configs_RP2040/GC9A01_RoundyPi.h>
 ```
 
-####
+## TODO
+
+### Definitely TODO
+
+* [ ] Refine documentation and provide examples and pin definitions
+* [ ] Implement support for whatever commands make sense from [tty2oled](https://github.com/venice1200/MiSTer_tty2oled/wiki/Command_v2) and [tty2tft](https://github.com/ojaksch/MiSTer_tty2tft/tree/main/doc#commands)
+* [ ] Add GIF support
+* [ ] Add JPEG support
+* [ ] Add default assets
+* [ ] Support transparency (shows black for PNG)
+  * [ ] Allow setting up a background image/color
+* [ ] Add configuration for SPI Micro SD breakouts
+* [ ] More LCD/OLED display configurations
+  * [ ] ST7735 128x160
+  * [ ] ST7789V3 172x320
+
+### Maybe TODO
+* Technical
+  * [ ] Multicore support (one for logic, the other for draw calls)
+  * [ ] Move the "Software configuration" section of `config.h` into a text/json/xml/whatever file to be read from the filesystem on startup
+* 3D Models
+  * [ ] Create variant of existing GC9A01 holder for the RoundyPi
+  * [ ] Modify the [MiSTer Multisystem dust cover](https://www.printables.com/model/159379-mister-multisystem-v5-2022-classic-gaming-console-/files) to support GC9A01/RoundyPi and possibly other display modules

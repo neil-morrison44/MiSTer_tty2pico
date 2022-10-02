@@ -5,7 +5,6 @@
 
 #define TFT_WIDTH 128
 #define TFT_HEIGHT 160
-#define TFT_ROTATION 1
 
 // #define TFT_SPI_PORT 0
 #define TFT_MOSI 23

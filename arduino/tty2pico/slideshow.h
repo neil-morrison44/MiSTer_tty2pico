@@ -32,7 +32,7 @@ static void runSlideshowFrame(long time)
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
 		Serial.print("Found slideshow file: "); Serial.println(nextFile.c_str());
 #endif
-		showPng(nextFile);
+		showPNG(nextFile);
 		nextChange = time + SLIDESHOW_DELAY;
 	}
 }

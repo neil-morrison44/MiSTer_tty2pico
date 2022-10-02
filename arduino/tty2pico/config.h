@@ -1,6 +1,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include <User_Setup_Select.h> // This will pull in the TFT_eSPI configuration defines for the display
+
 /**************************
  * Board configuration
  **************************/
@@ -47,6 +49,48 @@
 
 #ifndef VERBOSE_OUTPUT
 #define VERBOSE_OUTPUT 0 // Log a lot of stuff to the serial output, only useful for debugging
+#endif
+
+#ifndef TFT_ROTATION
+#define TFT_ROTATION 0 // Set the rotation position, values are from 0-3
+#endif
+
+#ifndef DISK_LABEL
+#define DISK_LABEL "tty2pico" // Default label for newly formatted filesystem, limit of 11 characters
+#endif
+
+// If defined will use the DMA mode with TFT_eSPI library
+// This can live in either the board-specific config, or at the top of the .ino file
+// #define USE_DMA
+
+/**************************
+ * Computed configuration
+ **************************/
+
+#ifdef TFT_DISPLAY_WIDTH
+#undef TFT_DISPLAY_WIDTH
+#endif
+#ifndef TFT_DISPLAY_WIDTH
+#if TFT_ROTATION % 2 == 0
+#define TFT_DISPLAY_WIDTH TFT_WIDTH
+#else
+#define TFT_DISPLAY_WIDTH TFT_HEIGHT
+#endif
+#endif
+
+#ifdef TFT_DISPLAY_HEIGHT
+#undef TFT_DISPLAY_HEIGHT
+#endif
+#ifndef TFT_DISPLAY_HEIGHT
+#if TFT_ROTATION % 2 == 0
+#define TFT_DISPLAY_HEIGHT TFT_HEIGHT
+#else
+#define TFT_DISPLAY_HEIGHT TFT_WIDTH
+#endif
+#endif
+
+#ifndef MAX_IMAGE_WIDTH
+#define MAX_IMAGE_WIDTH TFT_DISPLAY_WIDTH // This value is used to allocate line buffers, so usually set to your display width
 #endif
 
 #endif

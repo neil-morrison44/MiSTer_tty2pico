@@ -17,7 +17,7 @@ static void cmdSaver(String command)
 		setSlideshowActive(mode != "0");
 
 		if (wasRunning && !isSlideshowActive())
-			showPng(STARTUP_LOGO);
+			showImage(STARTUP_LOGO);
 	}
 	else
 	{
@@ -38,13 +38,19 @@ static void cmdSetCore(String command)
 	else coreName = command;
 
 	String path = LOGO_PATH + coreName + ".png";
-	Serial.printf("Loading png file: %s\n", path.c_str());
-	showPng(path);
+	Serial.print("Loading png file: "); Serial.println(path.c_str());
+	showImage(path);
 }
 
 static void cmdSetTime(void)
 {
 	// TODO: Add for ESP32?
+}
+
+static void cmdShow(String command)
+{
+	String path = command.substring(command.indexOf(',') + 1);
+	showImage(path);
 }
 
 static void cmdUnknown()
@@ -60,6 +66,7 @@ void processCommand(String command)
 
 		if (command.startsWith("CMDSETTIME"))                                 cmdSetTime();
 		else if (command.startsWith("CMDSAVER"))                              cmdSaver(command);
+		else if (command.startsWith("CMDSHOW,"))                              cmdShow(command);
 		else if (command.startsWith("CMD") && !command.startsWith("CMDCOR,")) cmdUnknown();
 		else                                                                  cmdSetCore(command); // Assume core name if no command was matched
 	}

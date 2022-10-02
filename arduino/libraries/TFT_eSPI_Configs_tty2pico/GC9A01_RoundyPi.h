@@ -12,7 +12,6 @@
 #define TFT_DC    8
 #define TFT_RST  12
 #define TFT_BL   13
-#define TFT_BACKLIGHT_ON HIGH
 
 #define LOAD_GLCD   // Font 1. Original Adafruit 8 pixel font needs ~1820 bytes in FLASH
 #define LOAD_FONT2  // Font 2. Small 16 pixel high font, needs ~3534 bytes in FLASH, 96 characters
