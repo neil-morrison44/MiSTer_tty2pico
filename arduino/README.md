@@ -83,8 +83,28 @@ The `User_Setup_Select.h` file in the `TFT_eSPI` library folder needs to be modi
 ### Definitely TODO
 
 * [ ] Refine documentation and provide examples and pin definitions
-* [ ] Implement support for whatever commands make sense from [tty2oled](https://github.com/venice1200/MiSTer_tty2oled/wiki/Command_v2) and [tty2tft](https://github.com/ojaksch/MiSTer_tty2tft/tree/main/doc#commands)
-* [ ] Add GIF support
+* [ ] Implement support for whatever commands make sense from:
+  * [tty2oled](https://github.com/venice1200/MiSTer_tty2oled/wiki/Command_v2)
+    * [ ] CMDBYE - Show Sorgelig's Cat Icon
+    * [ ] CMDCLS - Clear and Update the Display
+    * [x] CMDCOR - Command to announce Corechange (no transitions)
+    * [ ] CMDDOFF - Switch Display off
+    * [ ] CMDDON - Power Display on
+    * [ ] CMDGEO - Show Geometric Figures
+    * [ ] CMDSAVER - Disable or Enable the ScreenSaver (currently only toggle)
+    * [ ] CMDSETTIME - Set MCU clock, ESP32 only
+    * [ ] CMDSHTEMP - Read the temp sensor of the RP2040 if available
+    * [ ] CMDSHSYSHW - Show tty2pico system information
+    * [ ] CMDSNAM - Show actual loaded Corename
+    * [ ] CMDSWSAVER - Switch Screensaver on or off
+    * [ ] CMDTEST - Show a full screen test picture
+    * [ ] CMDTXT - Send Text to the Display
+  * [tty2tft](https://github.com/ojaksch/MiSTer_tty2tft/tree/main/doc#commands)
+    * [ ] CMDDINVON - Invert screen on
+    * [ ] CMDDINVOFF - Invert screen off
+    * [ ] CMDROT - Rotate screen (0=none/Portrait, 1=90°/Landscape, 2=180°, 3=270°)
+    * [ ] CMDVIDEOPLAY,PARAM - Play videos or not (yes/no/may)
+* [ ] Add GIF support (in progress)
 * [ ] Add JPEG support
 * [ ] Add default assets
 * [ ] Support transparency (shows black for PNG)
