@@ -2,6 +2,7 @@
 #define ST7735_GREENTAB2
 
 #define RP2040_PIO_SPI
+#define RP2040_PIO_PUSHBLOCK
 
 #define TFT_WIDTH 128
 #define TFT_HEIGHT 160

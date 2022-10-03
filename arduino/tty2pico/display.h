@@ -6,10 +6,10 @@
 #include "config.h"
 #include "storage.h"
 #include <SPI.h>
+#include <TFT_eSPI.h>
 #include <AnimatedGIF.h>
 #include <JPEGDEC.h>
 #include <PNGdec.h>
-#include <TFT_eSPI.h>
 
 #define DISABLE_COLOR_MIXING 0xffffffff
 
@@ -39,9 +39,7 @@ void setupDisplay()
 	tft.setTextFont(2);
 
 	// Clear display
-	tft.startWrite();
 	tft.fillScreen(BACKGROUND_COLOR);
-	tft.endWrite();
 
 #if defined(TFT_BL)
 	delay(50); // Small delay to avoid garbage output
@@ -158,17 +156,20 @@ void showGIF(const char *path)
 		tft.startWrite();
 
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+		Serial.println("Show GIF start");
 		long runtime = micros();
 		int frames = 0;
 #endif
 
 		gif.begin(BIG_ENDIAN_PIXELS);
-		while (gif.playFrame(true, 0))
-		{
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-			frames++;
-#endif
-		}
+		// TODO: Why does this lock up the MCU? It doesn't even get into the playFrame method
+// 		while (gif.playFrame(true, NULL))
+// 		{
+// #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+// 			Serial.println("Increment frame count");
+// 			frames++;
+// #endif
+// 		}
 		gif.close();
 		tft.endWrite();
 
@@ -196,10 +197,7 @@ JPEGDEC jpeg;
 
 int jpegDraw(JPEGDRAW *pDraw)
 {
-	tft.startWrite();
-	// tft.pushImageDMA(pDraw->x, pDraw->y, pDraw->iWidth, pDraw->iHeight, pDraw->pPixels);
-	tft.pushRect(pDraw->x, pDraw->y, pDraw->iWidth, pDraw->iHeight, pDraw->pPixels);
-	tft.endWrite();
+	tft.pushImage(pDraw->x, pDraw->y, pDraw->iWidth, pDraw->iHeight, pDraw->pPixels);
 	return 1;
 }
 

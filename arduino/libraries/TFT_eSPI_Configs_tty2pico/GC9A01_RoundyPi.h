@@ -1,6 +1,7 @@
 #define GC9A01_DRIVER
 
 #define RP2040_PIO_SPI
+#define RP2040_PIO_PUSHBLOCK
 
 #define TFT_WIDTH  240
 #define TFT_HEIGHT 240
@@ -23,9 +24,11 @@
 
 #define SMOOTH_FONT
 
-#define SPI_FREQUENCY  66500000
-// #define SPI_FREQUENCY  40000000
-// #define SPI_FREQUENCY  27000000
+#define SPI_FREQUENCY  66500000 // Max for 133 MHz speed
+// #define SPI_FREQUENCY  40000000 // Standard speed
 
-// Optional reduced SPI frequency for reading TFT
-#define SPI_READ_FREQUENCY  5000000
+// #define SPI_READ_FREQUENCY  5000000
+
+// #define SPI_TOUCH_FREQUENCY  2500000
+
+// #define SUPPORT_TRANSACTIONS

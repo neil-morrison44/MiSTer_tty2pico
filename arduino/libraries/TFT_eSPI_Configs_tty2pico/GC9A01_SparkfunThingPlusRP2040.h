@@ -1,6 +1,7 @@
 #define GC9A01_DRIVER
 
 #define RP2040_PIO_SPI
+#define RP2040_PIO_PUSHBLOCK
 
 #define TFT_WIDTH 240
 #define TFT_HEIGHT 240
