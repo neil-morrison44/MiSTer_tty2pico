@@ -8,6 +8,7 @@
 #include <SPI.h>
 #include <SD.h>
 #include <AnimatedGIF.h>
+#include <JPEGDEC.h>
 #include <PNGdec.h>
 
 /*************************
@@ -161,7 +162,7 @@ void *gifOpen(const char *filename, int32_t *size)
 	{
 		*size = giffile.size();
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-		Serial.print("Opened file "); Serial.println(String(filename).c_str()); Serial.print(" with file size "); Serial.print(giffile.size()); Serial.println(" bytes");
+		Serial.print("Opened file "); Serial.print(String(filename).c_str()); Serial.print(" with file size "); Serial.print(giffile.size()); Serial.println(" bytes");
 #endif
 		return (void *)&giffile;
 	}
@@ -182,8 +183,8 @@ void gifClose(void *handle)
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
 	Serial.println("Closing file");
 #endif
-	File file = static_cast<File *>(handle);
-	file.close();
+	File *file = static_cast<File *>(handle);
+	file->close();
 }
 
 int32_t gifRead(GIFFILE *page, uint8_t *buffer, int32_t length)
@@ -230,6 +231,80 @@ int32_t gifSeek(GIFFILE *page, int32_t position)
 }
 
 /*************************
+ * JPEG functions
+ *************************/
+
+static File jpegfile;
+
+void *jpegOpen(const char *filename, int32_t *size)
+{
+	jpegfile = getFile(filename);
+
+	if (jpegfile.available())
+	{
+		*size = jpegfile.size();
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+		Serial.print("Opened file "); Serial.print(String(filename).c_str()); Serial.print(" with file size "); Serial.print(jpegfile.size()); Serial.println(" bytes");
+#endif
+		return (void *)&jpegfile;
+	}
+	else
+	{
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+		Serial.print("Failed to open "); Serial.println(String(filename).c_str());
+#endif
+		return NULL;
+	}
+}
+
+void jpegClose(void *handle)
+{
+	if (handle == nullptr)
+		return;
+
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.println("Closing file");
+#endif
+	File *file = static_cast<File *>(handle);
+	file->close();
+}
+
+int32_t jpegRead(JPEGFILE *page, uint8_t *buffer, int32_t length)
+{
+	File *file = static_cast<File *>(page->fHandle);
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.println("Reading JPEG");
+#endif
+	if (!file->available())
+	{
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+		Serial.println("JPEG not open");
+#endif
+		return 0;
+	}
+
+	int byteCount = file->read(buffer, length);
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.print("Read "); Serial.print(byteCount); Serial.println(" bytes");
+#endif
+	return byteCount;
+}
+
+int32_t jpegSeek(JPEGFILE *page, int32_t position)
+{
+	File *file = static_cast<File *>(page->fHandle);
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.print("Seeking JPEG to position "); Serial.println(position);
+#endif
+	file->seek(position);
+	page->iPos = (int32_t)file->position();
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.print("Seeked to position "); Serial.println(page->iPos);
+#endif
+	return page->iPos;
+}
+
+/*************************
  * PNG functions
  *************************/
 
@@ -237,10 +312,23 @@ static File pngfile;
 
 void *pngOpen(const char *filename, int32_t *size)
 {
-	Serial.printf("Attempting to open %s\n", filename);
 	pngfile = getFile(filename);
-	*size = pngfile.size();
-	return &pngfile;
+
+	if (pngfile.available())
+	{
+		*size = pngfile.size();
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+		Serial.print("Opened file "); Serial.print(String(filename).c_str()); Serial.print(" with file size "); Serial.print(pngfile.size()); Serial.println(" bytes");
+#endif
+		return (void *)&pngfile;
+	}
+	else
+	{
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+		Serial.print("Failed to open "); Serial.println(String(filename).c_str());
+#endif
+		return NULL;
+	}
 }
 
 void pngClose(void *handle)
@@ -248,26 +336,46 @@ void pngClose(void *handle)
 	if (handle == nullptr)
 		return;
 
-	File pngfile = *((File*)handle);
-	pngfile.close();
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.println("Closing file");
+#endif
+	File *file = static_cast<File *>(handle);
+	file->close();
 }
 
 int32_t pngRead(PNGFILE *page, uint8_t *buffer, int32_t length)
 {
-	if (!pngfile.available())
+	File *file = static_cast<File *>(page->fHandle);
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.println("Reading PNG");
+#endif
+	if (!file->available())
+	{
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+		Serial.println("PNG not open");
+#endif
 		return 0;
+	}
 
-	page = page; // Avoid warning
-	return pngfile.read(buffer, length);
+	int byteCount = file->read(buffer, length);
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.print("Read "); Serial.print(byteCount); Serial.println(" bytes");
+#endif
+	return byteCount;
 }
 
 int32_t pngSeek(PNGFILE *page, int32_t position)
 {
-	if (!pngfile.available())
-		return 0;
-
-	page = page; // Avoid warning
-	return pngfile.seek(position);
+	File *file = static_cast<File *>(page->fHandle);
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.print("Seeking PNG to position "); Serial.println(position);
+#endif
+	file->seek(position);
+	page->iPos = (int32_t)file->position();
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.print("Seeked to position "); Serial.println(page->iPos);
+#endif
+	return page->iPos;
 }
 
 #endif

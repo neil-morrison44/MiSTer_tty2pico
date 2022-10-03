@@ -2,6 +2,7 @@
 #define STORAGE_H
 
 #include <AnimatedGIF.h>
+#include <JPEGDEC.h>
 #include <PNGdec.h>
 
 /*************************
@@ -29,6 +30,15 @@ extern void *gifOpen(const char *filename, int32_t *size);
 extern void gifClose(void *handle);
 extern int32_t gifRead(GIFFILE *page, uint8_t *buffer, int32_t length);
 extern int32_t gifSeek(GIFFILE *page, int32_t position);
+
+/*************************
+ * JPEG functions
+ *************************/
+
+extern void *jpegOpen(const char *filename, int32_t *size);
+extern void jpegClose(void *handle);
+extern int32_t jpegRead(JPEGFILE *page, uint8_t *buffer, int32_t length);
+extern int32_t jpegSeek(JPEGFILE *page, int32_t position);
 
 /*************************
  * PNG functions

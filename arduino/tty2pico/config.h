@@ -28,7 +28,7 @@
 #endif
 
 #ifndef STARTUP_LOGO
-#define STARTUP_LOGO "/logos/mister.png" // The logo to show on startup (when not in slideshow mode)
+#define STARTUP_LOGO "/logos/mister.jpg" // The logo to show on startup (when not in slideshow mode)
 #endif
 
 #ifndef BACKGROUND_COLOR

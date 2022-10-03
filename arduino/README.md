@@ -78,6 +78,10 @@ The `User_Setup_Select.h` file in the `TFT_eSPI` library folder needs to be modi
 #include <../TFT_eSPI_Configs_RP2040/GC9A01_RoundyPi.h>
 ```
 
+### Open Issues
+
+* The JPEGDEC library forces an `FS.h` include which conflicts with the custom FS implementation in the Adafruit SdFat library. [This commit](https://github.com/FeralAI/JPEGDEC/commit/6c2143afc6aa7e6b10d7d80923d0bd81b94993e0) allows overriding this forced include.
+
 ## TODO
 
 ### Definitely TODO

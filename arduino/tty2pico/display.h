@@ -7,6 +7,7 @@
 #include "storage.h"
 #include <SPI.h>
 #include <AnimatedGIF.h>
+#include <JPEGDEC.h>
 #include <PNGdec.h>
 #include <TFT_eSPI.h>
 
@@ -55,27 +56,24 @@ void setupDisplay()
  *******************************************************************************/
 
 AnimatedGIF gif;
-static uint16_t usImage[TFT_DISPLAY_WIDTH * TFT_DISPLAY_HEIGHT];
 
 // From the examples in the https://github.com/bitbank2/AnimatedGIF repo
+// Draw a line of image directly on the LCD
 void gifDrawLine(GIFDRAW *pDraw)
 {
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.println("gifDrawLine");
+#endif
 	uint8_t *s;
-	uint16_t *d, *usPalette;
-	int x, iWidth;
+	uint16_t *d, *usPalette, usTemp[320];
+	int x, y, iWidth;
 
 	iWidth = pDraw->iWidth;
-	if (iWidth + pDraw->iX > TFT_DISPLAY_WIDTH)
-		iWidth = TFT_DISPLAY_WIDTH - pDraw->iX;
+	if (iWidth > TFT_DISPLAY_WIDTH)
+		iWidth = TFT_DISPLAY_WIDTH;
 	usPalette = pDraw->pPalette;
-	if (pDraw->iY + pDraw->y >= TFT_DISPLAY_HEIGHT || pDraw->iX >= TFT_DISPLAY_WIDTH || iWidth < 1)
-		return;
-	if (pDraw->y == 0) { // start of frame, set address window on LCD
-		tft.dmaWait(); // wait for previous writes to complete before trying to access the LCD
-		tft.setAddrWindow(xoffset + pDraw->iX, yoffset + pDraw->iY, pDraw->iWidth, pDraw->iHeight);
-		// By setting the address window to the size of the current GIF frame, we can just write
-		// continuously over the whole frame without having to set the address window again
-	}
+	y = pDraw->iY + pDraw->y; // current line
+
 	s = pDraw->pPixels;
 	if (pDraw->ucDisposalMethod == 2) // restore to background color
 	{
@@ -88,36 +86,67 @@ void gifDrawLine(GIFDRAW *pDraw)
 	}
 
 	// Apply the new pixels to the main image
-	d = &usImage[pDraw->iWidth * pDraw->y];
 	if (pDraw->ucHasTransparency) // if transparency used
 	{
-		uint8_t c, ucTransparent = pDraw->ucTransparent;
-		int x;
-		for (x=0; x < iWidth; x++)
+		uint8_t *pEnd, c, ucTransparent = pDraw->ucTransparent;
+		int x, iCount;
+		pEnd = s + iWidth;
+		x = 0;
+		iCount = 0; // count non-transparent pixels
+		while(x < iWidth)
 		{
-			c = *s++;
-			if (c != ucTransparent)
-				d[x] = usPalette[c];
+			c = ucTransparent-1;
+			d = usTemp;
+			while (c != ucTransparent && s < pEnd)
+			{
+				c = *s++;
+				if (c == ucTransparent) // done, stop
+				{
+					s--; // back up to treat it like transparent
+				}
+				else // opaque
+				{
+						*d++ = usPalette[c];
+						iCount++;
+				}
+			} // while looking for opaque pixels
+			if (iCount) // any opaque pixels?
+			{
+				tft.pushRect(pDraw->iX + x + xoffset, y + yoffset, iCount, 1, (uint16_t*)usTemp);
+				x += iCount;
+				iCount = 0;
+			}
+			// no, look for a run of transparent pixels
+			c = ucTransparent;
+			while (c == ucTransparent && s < pEnd)
+			{
+				c = *s++;
+				if (c == ucTransparent)
+						iCount++;
+				else
+						s--;
+			}
+			if (iCount)
+			{
+				x += iCount; // skip these
+				iCount = 0;
+			}
 		}
 	}
 	else
 	{
+		s = pDraw->pPixels;
 		// Translate the 8-bit pixels through the RGB565 palette (already byte reversed)
 		for (x=0; x<iWidth; x++)
-		{
-			d[x] = usPalette[s[x]];
-		}
+			usTemp[x] = usPalette[*s++];
+
+		tft.pushRect(pDraw->iX, y, iWidth, 1, (uint16_t*)usTemp);
 	}
-	tft.dmaWait(); // wait for last write to complete (the last scan line)
-	// We write with block set to FALSE (3rd param) so that we can be decoding the next
-	// line while the DMA hardware continues to write data to the LCD controller
-	tft.pushPixelsDMA(d, iWidth);
 }
 
 void showGIF(const char *path)
 {
-	int16_t rc = gif.open(path, gifOpen, gifClose, gifRead, gifSeek, gifDrawLine);
-	if (rc == GIF_SUCCESS)
+	if (gif.open(path, &gifOpen, &gifClose, &gifRead, &gifSeek, &gifDrawLine))
 	{
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
 		Serial.print("Opened GIF "); Serial.print(path); Serial.print(" with resolution "); Serial.print(gif.getCanvasWidth()); Serial.print(" x "); Serial.println(gif.getCanvasHeight());
@@ -133,10 +162,9 @@ void showGIF(const char *path)
 		int frames = 0;
 #endif
 
-		gif.begin();
+		gif.begin(BIG_ENDIAN_PIXELS);
 		while (gif.playFrame(true, 0))
 		{
-			yield();
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
 			frames++;
 #endif
@@ -151,13 +179,57 @@ void showGIF(const char *path)
 	}
 	else
 	{
-		Serial.print("Could not open GIF "); Serial.print(path); Serial.print(", error code "); Serial.println(rc);
+		Serial.print("Could not open GIF "); Serial.println(path);
 	}
 }
 
 void showGIF(String path)
 {
 	showGIF(path.c_str());
+}
+
+/*******************************************************************************
+ * JPEG
+ *******************************************************************************/
+
+JPEGDEC jpeg;
+
+int jpegDraw(JPEGDRAW *pDraw)
+{
+	tft.startWrite();
+	// tft.pushImageDMA(pDraw->x, pDraw->y, pDraw->iWidth, pDraw->iHeight, pDraw->pPixels);
+	tft.pushRect(pDraw->x, pDraw->y, pDraw->iWidth, pDraw->iHeight, pDraw->pPixels);
+	tft.endWrite();
+	return 1;
+}
+
+void showJPEG(const char *path)
+{
+	if (jpeg.open(path, &jpegOpen, &jpegClose, &jpegRead, &jpegSeek, &jpegDraw))
+	{
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+		Serial.print("Opened JPEG "); Serial.print(path); Serial.print(" with resolution "); Serial.print(jpeg.getWidth()); Serial.print(" x "); Serial.println(jpeg.getHeight());
+#endif
+
+		xoffset = (TFT_DISPLAY_WIDTH - jpeg.getWidth()) / 2;
+		yoffset = (TFT_DISPLAY_HEIGHT - jpeg.getHeight()) / 2;
+
+		tft.startWrite();
+		tft.fillScreen(BACKGROUND_COLOR);
+		jpeg.setPixelType(RGB565_BIG_ENDIAN);
+		jpeg.decode(xoffset, yoffset, 0);
+		jpeg.close();
+		tft.endWrite();
+	}
+	else
+	{
+		Serial.print("Could not open JPEG "); Serial.println(path);
+	}
+}
+
+void showJPEG(String path)
+{
+	showJPEG(path.c_str());
 }
 
 /*******************************************************************************
@@ -205,14 +277,13 @@ void showImage(const char *path)
 
 	String pathString = String(path);
 	pathString.trim();
-	if (pathString.endsWith(".png") || pathString.endsWith(".PNG"))
-	{
+
+	if (pathString.endsWith(".jpg") || pathString.endsWith(".JPG") || pathString.endsWith(".jpeg") || pathString.endsWith(".JPEG"))
+		showJPEG(path);
+	else if (pathString.endsWith(".png") || pathString.endsWith(".PNG"))
 		showPNG(path);
-	}
 	else if (pathString.endsWith(".gif") || pathString.endsWith(".GIF"))
-	{
 		showGIF(path);
-	}
 }
 
 void showImage(String path)
