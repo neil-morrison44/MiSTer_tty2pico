@@ -6,11 +6,12 @@
 /*******************************************************************************
  * Configuration overrides - See "config.h" for more details
  *******************************************************************************/
-#define CONFIG_THINGPLUS      // Valid options: CONFIG_PICO, CONFIG_ROUNDYPI, CONFIG_THINGPLUS
-#define SLIDESHOW_ON_START 0  // Display the slideshow on startup instead of the STARTUP_LOGO
-#define WAIT_FOR_SERIAL    0  // Wait for serial connection before running program code
-#define VERBOSE_OUTPUT     0  // Log a lot of stuff to the serial output, only useful for debugging
-#define JPEGDEC_EXCLUDE_FS    // Hack to exclude the FS.h import in JPEGDEC, conflicts with custom FS stuff for FlashFS
+#define CONFIG_THINGPLUS                 // Valid options: CONFIG_PICO, CONFIG_ROUNDYPI, CONFIG_THINGPLUS
+#define SLIDESHOW_ON_START 0             // Display the slideshow on startup instead of the STARTUP_LOGO
+#define WAIT_FOR_SERIAL    0             // Wait for serial connection before running program code
+#define VERBOSE_OUTPUT     0             // Log a lot of stuff to the serial output, only useful for debugging
+#define JPEGDEC_EXCLUDE_FS               // Hack to exclude the FS.h import in JPEGDEC, conflicts with custom FS stuff for FlashFS
+// #define STARTUP_LOGO "/logos/mister.gif" // The logo to show on startup (when not in slideshow mode)
 
 /*******************************************************************************
  * Includes
@@ -28,12 +29,12 @@ void setup()
 {
 	setupTTY();
 	setupDisplay();
-  setupStorage();
+	setupStorage();
 
-  setDirectory(LOGO_PATH);
+	setDirectory(LOGO_PATH);
 
 #if !defined(SLIDESHOW_ON_START) || SLIDESHOW_ON_START == 0
-  showImage(STARTUP_LOGO);
+	showStartup();
 #endif
 }
 
@@ -43,8 +44,8 @@ void loop()
 	loopMSC();
 #endif
 
-  String command = readTTY();
-  processCommand(command);
+	String command = readTTY();
+	processCommand(command);
 
 	loopDisplay(millis());
 }

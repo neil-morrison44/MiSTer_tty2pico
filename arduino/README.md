@@ -89,7 +89,7 @@ The `User_Setup_Select.h` file in the `TFT_eSPI` library folder needs to be modi
 * [ ] Refine documentation and provide examples and pin definitions
 * [ ] Implement support for whatever commands make sense from:
   * [tty2oled](https://github.com/venice1200/MiSTer_tty2oled/wiki/Command_v2)
-    * [ ] CMDBYE - Show Sorgelig's Cat Icon
+    * [x] CMDBYE - Show Sorgelig's Cat Icon
     * [ ] CMDCLS - Clear and Update the Display
     * [x] CMDCOR - Command to announce Corechange (no transitions)
     * [ ] CMDDOFF - Switch Display off

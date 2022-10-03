@@ -10,14 +10,35 @@
 #include <AnimatedGIF.h>
 #include <JPEGDEC.h>
 #include <PNGdec.h>
+#include "mister.h"
 
 #define DISABLE_COLOR_MIXING 0xffffffff
+
+typedef enum DisplayState {
+	DISPLAY_STATIC_IMAGE,
+	DISPLAY_ANIMATED_GIF,
+	DISPLAY_SLIDESHOW,
+	DISPLAY_MISTER,
+} DisplayState;
+
+const char *imageExtensions[] = {
+	".gif",
+	".png",
+	".jpg",
+	".jpeg",
+};
+const int imageExtensionCount = sizeof(imageExtensions) / sizeof(imageExtensions[0]);
 
 int16_t xpos = 0;
 int16_t ypos = 0;
 int32_t xoffset = 0;
 int32_t yoffset = 0;
 String currentImage;
+#if defined(SLIDESHOW_ON_START) && SLIDESHOW_ON_START == 1
+static DisplayState displayState = DISPLAY_SLIDESHOW;
+#else
+static DisplayState displayState = DISPLAY_STATIC_IMAGE;
+#endif
 
 /*******************************************************************************
  * Display setup
@@ -182,11 +203,9 @@ void gifDrawLine(GIFDRAW *pDraw)
 	}
 }
 
-bool showingGIF = false;
-
 void showGIF(const char *path)
 {
-	showingGIF = true;
+	displayState = DISPLAY_ANIMATED_GIF;
 
 	gif.begin(BIG_ENDIAN_PIXELS);
 
@@ -248,6 +267,8 @@ int jpegDrawLine(JPEGDRAW *pDraw)
 
 void showJPEG(const char *path)
 {
+	displayState = DISPLAY_STATIC_IMAGE;
+
 	if (jpeg.open(path, &jpegOpen, &jpegClose, &jpegRead, &jpegSeek, &jpegDrawLine))
 	{
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
@@ -290,6 +311,8 @@ void pngDrawLine(PNGDRAW *pDraw)
 
 void showPNG(const char *path)
 {
+	displayState = DISPLAY_STATIC_IMAGE;
+
 	int16_t rc = png.open(path, &pngOpen, &pngClose, &pngRead, &pngSeek, &pngDrawLine);
 	if (rc == PNG_SUCCESS)
 	{
@@ -309,8 +332,18 @@ void showPNG(String path)
 }
 
 /*******************************************************************************
- * Generic image functions
+ * Generic functions
  *******************************************************************************/
+
+DisplayState getDisplayState(void)
+{
+	return displayState;
+}
+
+void setDisplayState(DisplayState state)
+{
+	displayState = state;
+}
 
 void showImage(const char *path)
 {
@@ -318,7 +351,6 @@ void showImage(const char *path)
 	Serial.print("Showing image: "); Serial.println(path);
 #endif
 
-	showingGIF = false;
 	String pathString = String(path);
 	pathString.trim();
 	currentImage = pathString;
@@ -336,17 +368,42 @@ void showImage(String path)
 	showImage(path.c_str());
 }
 
+void showMister(void)
+{
+	displayState = DISPLAY_MISTER;
+
+	gif.begin(BIG_ENDIAN_PIXELS);
+
+	if (gif.open((uint8_t *)mister, sizeof(mister), gifDrawLine))
+	{
+		xoffset = (TFT_DISPLAY_WIDTH - gif.getCanvasWidth()) / 2;
+		yoffset = (TFT_DISPLAY_HEIGHT - gif.getCanvasHeight()) / 2;
+
+		// tft.fillScreen(BACKGROUND_COLOR);
+		tft.startWrite();
+		while (gif.playFrame(true, NULL))
+		{
+			yield();
+		}
+		gif.close();
+		tft.endWrite();
+	}
+}
+
+void showStartup(void)
+{
+#if defined(STARTUP_LOGO)
+  showImage(STARTUP_LOGO);
+#else
+  showMister();
+#endif
+}
+
 /*******************************************************************************
  * Slideshow functions
  *******************************************************************************/
 
-#if defined(SLIDESHOW_ON_START) && SLIDESHOW_ON_START == 1
-static bool slideshowActive = true;
-#else
-static bool slideshowActive = false;
-#endif
-
-static void runSlideshowFrame(long time)
+static void runSlideshow(long time)
 {
 	static long nextChange = 0;
 
@@ -368,24 +425,9 @@ static void runSlideshowFrame(long time)
 		Serial.print("Found slideshow file: "); Serial.println(nextFile.c_str());
 #endif
 		showImage(nextFile);
+		displayState = DISPLAY_SLIDESHOW; // Need to explicitly set state here since showImage methods will update it
 		nextChange = time + SLIDESHOW_DELAY;
 	}
-}
-
-void loopSlideshow(long time)
-{
-	if (slideshowActive)
-		runSlideshowFrame(time);
-}
-
-bool isSlideshowActive(void)
-{
-	return slideshowActive;
-}
-
-void setSlideshowActive(bool active)
-{
-	slideshowActive = active;
 }
 
 /*******************************************************************************
@@ -394,10 +436,13 @@ void setSlideshowActive(bool active)
 
 void loopDisplay(long time)
 {
-	if (slideshowActive)
-		loopSlideshow(time);
-	else if (showingGIF && currentImage != "")
-		showGIF(currentImage);
+	switch (displayState)
+	{
+		case DISPLAY_ANIMATED_GIF: showGIF(currentImage);   break;
+		case DISPLAY_SLIDESHOW:    runSlideshow(time);      break;
+		case DISPLAY_MISTER:       showMister();            break;
+		default:                                            break;
+	}
 }
 
 #endif

@@ -6,28 +6,32 @@
 
 static String lastCommand;
 
+static void cmdBye(void)
+{
+	showMister();
+}
+
 static void cmdSaver(String command)
 {
-	bool wasRunning = isSlideshowActive();
+	DisplayState lastDisplayState = getDisplayState();
 	if (command.indexOf(',') > -1 && command.length() > 9)
 	{
 		String mode = command.substring(command.indexOf(',') + 1, command.indexOf(',') + 2);
 		Serial.print("Screensaver mode changed to "); Serial.println(mode);
-		setSlideshowActive(mode != "0");
-
-		if (wasRunning && !isSlideshowActive())
-			showImage(STARTUP_LOGO);
+		bool enabled = mode != "0";
+		if (enabled)
+			setDisplayState(DISPLAY_SLIDESHOW);
+		if (!enabled && lastDisplayState != DISPLAY_SLIDESHOW)
+			 showStartup();
 	}
 	else
 	{
-		setSlideshowActive(true); // Default to turning on slideshow
+		setDisplayState(DISPLAY_SLIDESHOW);
 	}
 }
 
 static void cmdSetCore(String command)
 {
-	setSlideshowActive(false);
-
 	String coreName;
 	if (command.startsWith("CMDCOR"))
 	{
@@ -36,9 +40,22 @@ static void cmdSetCore(String command)
 	}
 	else coreName = command;
 
-	String path = LOGO_PATH + coreName + ".png";
-	Serial.print("Loading png file: "); Serial.println(path.c_str());
-	showImage(path);
+	String path;
+	bool found = false;
+	for (int i = 0; i < imageExtensionCount; i++)
+	{
+		path = LOGO_PATH + coreName + String(imageExtensions[i]);
+		File file = getFile(path);
+		if (file)
+		{
+			found = true;
+			Serial.print("Loading "); Serial.println(path.c_str());
+			break;
+		}
+	}
+
+	if (found)
+		showImage(path);
 }
 
 static void cmdSetTime(void)
@@ -63,7 +80,8 @@ void processCommand(String command)
 	{
 		lastCommand = command;
 
-		if (command.startsWith("CMDSETTIME"))                                 cmdSetTime();
+		if (command == "CMDBYE")                                              cmdBye();
+		else if (command.startsWith("CMDSETTIME"))                            cmdSetTime();
 		else if (command.startsWith("CMDSAVER"))                              cmdSaver(command);
 		else if (command.startsWith("CMDSHOW,"))                              cmdShow(command);
 		else if (command.startsWith("CMD") && !command.startsWith("CMDCOR,")) cmdUnknown();

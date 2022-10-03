@@ -27,9 +27,8 @@
 #define LOGO_PATH "/logos/" // Path to logo folder
 #endif
 
-#ifndef STARTUP_LOGO
-#define STARTUP_LOGO "/logos/mister.gif" // The logo to show on startup (when not in slideshow mode)
-#endif
+// The logo to show on startup (when not in slideshow mode)
+// #define STARTUP_LOGO "/logos/mister.gif"
 
 #ifndef BACKGROUND_COLOR
 #define BACKGROUND_COLOR 0x0000 // The default background color
