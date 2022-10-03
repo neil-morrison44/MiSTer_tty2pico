@@ -17,6 +17,7 @@ int16_t xpos = 0;
 int16_t ypos = 0;
 int32_t xoffset = 0;
 int32_t yoffset = 0;
+String currentImage;
 
 /*******************************************************************************
  * Display setup
@@ -55,27 +56,38 @@ void setupDisplay()
 
 AnimatedGIF gif;
 
+#define TFT_BUFFER_SIZE TFT_DISPLAY_WIDTH
+
+#define USE_DMA
+#ifdef USE_DMA
+static uint16_t usTemp[2][TFT_BUFFER_SIZE]; // Global display buffer for DMA use
+#else
+static uint16_t usTemp[1][TFT_BUFFER_SIZE]; // Global display buffer
+#endif
+static bool dmaBuf = 0;
+
 // From the examples in the https://github.com/bitbank2/AnimatedGIF repo
 // Draw a line of image directly on the LCD
 void gifDrawLine(GIFDRAW *pDraw)
 {
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-	Serial.println("gifDrawLine");
-#endif
 	uint8_t *s;
-	uint16_t *d, *usPalette, usTemp[320];
-	int x, y, iWidth;
+	uint16_t *d, *usPalette;
+	int x, y, iWidth, iCount;
 
+	// Display bounds check and cropping
 	iWidth = pDraw->iWidth;
-	if (iWidth > TFT_DISPLAY_WIDTH)
-		iWidth = TFT_DISPLAY_WIDTH;
+	if (iWidth + pDraw->iX > TFT_DISPLAY_WIDTH)
+		iWidth = TFT_DISPLAY_WIDTH - pDraw->iX;
 	usPalette = pDraw->pPalette;
 	y = pDraw->iY + pDraw->y; // current line
+	if (y >= TFT_DISPLAY_HEIGHT || pDraw->iX >= TFT_DISPLAY_WIDTH || iWidth < 1)
+		return;
 
+	// Old image disposal
 	s = pDraw->pPixels;
 	if (pDraw->ucDisposalMethod == 2) // restore to background color
 	{
-		for (x=0; x<iWidth; x++)
+		for (x = 0; x < iWidth; x++)
 		{
 			if (s[x] == pDraw->ucTransparent)
 				s[x] = pDraw->ucBackground;
@@ -87,15 +99,14 @@ void gifDrawLine(GIFDRAW *pDraw)
 	if (pDraw->ucHasTransparency) // if transparency used
 	{
 		uint8_t *pEnd, c, ucTransparent = pDraw->ucTransparent;
-		int x, iCount;
 		pEnd = s + iWidth;
 		x = 0;
 		iCount = 0; // count non-transparent pixels
-		while(x < iWidth)
+		while (x < iWidth)
 		{
-			c = ucTransparent-1;
-			d = usTemp;
-			while (c != ucTransparent && s < pEnd)
+			c = ucTransparent - 1;
+			d = &usTemp[0][0];
+			while (c != ucTransparent && s < pEnd && iCount < TFT_BUFFER_SIZE)
 			{
 				c = *s++;
 				if (c == ucTransparent) // done, stop
@@ -104,13 +115,15 @@ void gifDrawLine(GIFDRAW *pDraw)
 				}
 				else // opaque
 				{
-						*d++ = usPalette[c];
-						iCount++;
+					*d++ = usPalette[c];
+					iCount++;
 				}
 			} // while looking for opaque pixels
 			if (iCount) // any opaque pixels?
 			{
-				tft.pushRect(pDraw->iX + x + xoffset, y + yoffset, iCount, 1, (uint16_t*)usTemp);
+				// DMA would degrtade performance here due to short line segments
+				tft.setAddrWindow(pDraw->iX + x, y, iCount, 1);
+				tft.pushPixels(usTemp, iCount);
 				x += iCount;
 				iCount = 0;
 			}
@@ -120,39 +133,73 @@ void gifDrawLine(GIFDRAW *pDraw)
 			{
 				c = *s++;
 				if (c == ucTransparent)
-						iCount++;
+					x++;
 				else
-						s--;
-			}
-			if (iCount)
-			{
-				x += iCount; // skip these
-				iCount = 0;
+					s--;
 			}
 		}
 	}
 	else
 	{
 		s = pDraw->pPixels;
-		// Translate the 8-bit pixels through the RGB565 palette (already byte reversed)
-		for (x=0; x<iWidth; x++)
-			usTemp[x] = usPalette[*s++];
 
-		tft.pushRect(pDraw->iX, y, iWidth, 1, (uint16_t*)usTemp);
+		// Unroll the first pass to boost DMA performance
+		// Translate the 8-bit pixels through the RGB565 palette (already byte reversed)
+		if (iWidth <= TFT_BUFFER_SIZE)
+			for (iCount = 0; iCount < iWidth; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
+		else
+			for (iCount = 0; iCount < TFT_BUFFER_SIZE; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
+
+#ifdef USE_DMA // 71.6 fps (ST7796 84.5 fps)
+		tft.dmaWait();
+		tft.setAddrWindow(pDraw->iX, y, iWidth, 1);
+		tft.pushPixelsDMA(&usTemp[dmaBuf][0], iCount);
+		dmaBuf = !dmaBuf;
+#else // 57.0 fps
+		tft.setAddrWindow(pDraw->iX, y, iWidth, 1);
+		tft.pushPixels(&usTemp[0][0], iCount);
+#endif
+
+		iWidth -= iCount;
+		// Loop if pixel buffer smaller than width
+		while (iWidth > 0)
+		{
+			// Translate the 8-bit pixels through the RGB565 palette (already byte reversed)
+			if (iWidth <= TFT_BUFFER_SIZE)
+				for (iCount = 0; iCount < iWidth; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
+			else
+				for (iCount = 0; iCount < TFT_BUFFER_SIZE; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
+
+#ifdef USE_DMA
+			tft.dmaWait();
+			tft.pushPixelsDMA(&usTemp[dmaBuf][0], iCount);
+			dmaBuf = !dmaBuf;
+#else
+			tft.pushPixels(&usTemp[0][0], iCount);
+#endif
+			iWidth -= iCount;
+		}
 	}
 }
 
+bool showingGIF = false;
+
 void showGIF(const char *path)
 {
-	if (gif.open(path, &gifOpen, &gifClose, &gifRead, &gifSeek, &gifDrawLine))
+	showingGIF = true;
+
+	gif.begin(BIG_ENDIAN_PIXELS);
+
+	if (gif.open(path, gifOpen, gifClose, gifRead, gifSeek, gifDrawLine))
 	{
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
 		Serial.print("Opened GIF "); Serial.print(path); Serial.print(" with resolution "); Serial.print(gif.getCanvasWidth()); Serial.print(" x "); Serial.println(gif.getCanvasHeight());
 #endif
+
 		xoffset = (TFT_DISPLAY_WIDTH - gif.getCanvasWidth()) / 2;
 		yoffset = (TFT_DISPLAY_HEIGHT - gif.getCanvasHeight()) / 2;
 
-		tft.fillScreen(BACKGROUND_COLOR);
+		// tft.fillScreen(BACKGROUND_COLOR);
 		tft.startWrite();
 
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
@@ -161,15 +208,13 @@ void showGIF(const char *path)
 		int frames = 0;
 #endif
 
-		gif.begin(BIG_ENDIAN_PIXELS);
-		// TODO: Why does this lock up the MCU? It doesn't even get into the playFrame method
-// 		while (gif.playFrame(true, NULL))
-// 		{
-// #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-// 			Serial.println("Increment frame count");
-// 			frames++;
-// #endif
-// 		}
+		while (gif.playFrame(true, NULL))
+		{
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+			frames++;
+			yield();
+#endif
+		}
 		gif.close();
 		tft.endWrite();
 
@@ -195,7 +240,7 @@ void showGIF(String path)
 
 JPEGDEC jpeg;
 
-int jpegDraw(JPEGDRAW *pDraw)
+int jpegDrawLine(JPEGDRAW *pDraw)
 {
 	tft.pushImage(pDraw->x, pDraw->y, pDraw->iWidth, pDraw->iHeight, pDraw->pPixels);
 	return 1;
@@ -203,7 +248,7 @@ int jpegDraw(JPEGDRAW *pDraw)
 
 void showJPEG(const char *path)
 {
-	if (jpeg.open(path, &jpegOpen, &jpegClose, &jpegRead, &jpegSeek, &jpegDraw))
+	if (jpeg.open(path, &jpegOpen, &jpegClose, &jpegRead, &jpegSeek, &jpegDrawLine))
 	{
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
 		Serial.print("Opened JPEG "); Serial.print(path); Serial.print(" with resolution "); Serial.print(jpeg.getWidth()); Serial.print(" x "); Serial.println(jpeg.getHeight());
@@ -273,20 +318,86 @@ void showImage(const char *path)
 	Serial.print("Showing image: "); Serial.println(path);
 #endif
 
+	showingGIF = false;
 	String pathString = String(path);
 	pathString.trim();
+	currentImage = pathString;
 
-	if (pathString.endsWith(".jpg") || pathString.endsWith(".JPG") || pathString.endsWith(".jpeg") || pathString.endsWith(".JPEG"))
+	if (currentImage.endsWith(".jpg") || currentImage.endsWith(".JPG") || currentImage.endsWith(".jpeg") || currentImage.endsWith(".JPEG"))
 		showJPEG(path);
-	else if (pathString.endsWith(".png") || pathString.endsWith(".PNG"))
+	else if (currentImage.endsWith(".png") || currentImage.endsWith(".PNG"))
 		showPNG(path);
-	else if (pathString.endsWith(".gif") || pathString.endsWith(".GIF"))
+	else if (currentImage.endsWith(".gif") || currentImage.endsWith(".GIF"))
 		showGIF(path);
 }
 
 void showImage(String path)
 {
 	showImage(path.c_str());
+}
+
+/*******************************************************************************
+ * Slideshow functions
+ *******************************************************************************/
+
+#if defined(SLIDESHOW_ON_START) && SLIDESHOW_ON_START == 1
+static bool slideshowActive = true;
+#else
+static bool slideshowActive = false;
+#endif
+
+static void runSlideshowFrame(long time)
+{
+	static long nextChange = 0;
+
+	if (time < nextChange)
+		return;
+
+	String nextFile = getNextFile();
+	if (nextFile == "")
+	{
+		const char *dirName = getDirectory().c_str();
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+		Serial.print("No slideshow file found, reset directory for: "); Serial.println(dirName);
+#endif
+		rewindDirectory();
+	}
+	else
+	{
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+		Serial.print("Found slideshow file: "); Serial.println(nextFile.c_str());
+#endif
+		showImage(nextFile);
+		nextChange = time + SLIDESHOW_DELAY;
+	}
+}
+
+void loopSlideshow(long time)
+{
+	if (slideshowActive)
+		runSlideshowFrame(time);
+}
+
+bool isSlideshowActive(void)
+{
+	return slideshowActive;
+}
+
+void setSlideshowActive(bool active)
+{
+	slideshowActive = active;
+}
+
+/*******************************************************************************
+ * Lifecycle functions
+ *******************************************************************************/
+
+void loopDisplay(long time)
+{
+	if (slideshowActive)
+		loopSlideshow(time);
+	else if (showingGIF && currentImage != "")
+		showGIF(currentImage);
 }
 
 #endif

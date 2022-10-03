@@ -3,7 +3,6 @@
 
 #include "config.h"
 #include "display.h"
-#include "slideshow.h"
 
 static String lastCommand;
 

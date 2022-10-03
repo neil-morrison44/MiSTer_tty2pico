@@ -108,8 +108,8 @@ The `User_Setup_Select.h` file in the `TFT_eSPI` library folder needs to be modi
     * [ ] CMDDINVOFF - Invert screen off
     * [ ] CMDROT - Rotate screen (0=none/Portrait, 1=90°/Landscape, 2=180°, 3=270°)
     * [ ] CMDVIDEOPLAY,PARAM - Play videos or not (yes/no/may)
-* [ ] Add GIF support (in progress)
-* [ ] Add JPEG support
+* [x] Add GIF support
+* [x] Add JPEG support
 * [ ] Add default assets
 * [ ] Support transparency (shows black for PNG)
   * [ ] Allow setting up a background image/color
