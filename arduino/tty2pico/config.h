@@ -28,7 +28,7 @@
 #endif
 
 #ifndef STARTUP_LOGO
-#define STARTUP_LOGO "/logos/mister.jpg" // The logo to show on startup (when not in slideshow mode)
+#define STARTUP_LOGO "/logos/mister.png" // The logo to show on startup (when not in slideshow mode)
 #endif
 
 #ifndef BACKGROUND_COLOR
@@ -56,7 +56,7 @@
 #endif
 
 #ifndef DISK_LABEL
-#define DISK_LABEL "tty2pico" // Default label for newly formatted filesystem, limit of 11 characters
+#define DISK_LABEL "TTY2PICO" // Default label for newly formatted filesystem, limit of 11 characters
 #endif
 
 // If defined will use the DMA mode with TFT_eSPI library

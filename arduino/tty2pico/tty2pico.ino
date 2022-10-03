@@ -19,8 +19,8 @@
 #include "tty.h"
 #include "storage.h"
 #include "display.h"
-#include "slideshow.h"
 #include "commander.h"
+#include "slideshow.h"
 
 /*******************************************************************************
  * Lifecycle functions
