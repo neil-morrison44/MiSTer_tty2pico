@@ -79,7 +79,6 @@ AnimatedGIF gif;
 
 #define TFT_BUFFER_SIZE TFT_DISPLAY_WIDTH
 
-#define USE_DMA
 #ifdef USE_DMA
 static uint16_t usTemp[2][TFT_BUFFER_SIZE]; // Global display buffer for DMA use
 #else
@@ -231,8 +230,8 @@ void showGIF(const char *path)
 		{
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
 			frames++;
-			yield();
 #endif
+			yield();
 		}
 		gif.close();
 		tft.endWrite();
