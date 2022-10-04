@@ -1,18 +1,5 @@
-#define GC9A01_DRIVER
-
-#define RP2040_PIO_SPI
-#define RP2040_PIO_PUSHBLOCK
-
-#define TFT_WIDTH 240
-#define TFT_HEIGHT 240
-
-// #define TFT_SPI_PORT 0
-#define TFT_MOSI 23
-#define TFT_SCLK 22
-#define TFT_CS    4
-#define TFT_DC    5
-#define TFT_RST   6
-#define TFT_BL    7
+#ifndef TFT_ESPI_STANDARD_FONTS_H
+#define TFT_ESPI_STANDARD_FONTS_H
 
 #define LOAD_GLCD   // Font 1. Original Adafruit 8 pixel font needs ~1820 bytes in FLASH
 #define LOAD_FONT2  // Font 2. Small 16 pixel high font, needs ~3534 bytes in FLASH, 96 characters
@@ -24,11 +11,4 @@
 
 #define SMOOTH_FONT
 
-#define SPI_FREQUENCY  66500000 // Max for 133 MHz speed
-// #define SPI_FREQUENCY  40000000 // Standard speed
-
-// #define SPI_READ_FREQUENCY  5000000
-
-// #define SPI_TOUCH_FREQUENCY  2500000
-
-// #define SUPPORT_TRANSACTIONS
+#endif

@@ -1,0 +1,8 @@
+#ifndef ST7789V_172_320_H
+#define ST7789V_172_320_H
+
+#define TFT_WIDTH 172
+#define TFT_HEIGHT 320
+#define SPI_FREQUENCY 40000000
+
+#endif

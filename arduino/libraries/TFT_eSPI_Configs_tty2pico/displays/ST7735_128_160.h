@@ -1,0 +1,10 @@
+#ifndef ST7735_128_160_H
+#define ST7735_128_160_H
+
+#define ST7735_DRIVER
+#define ST7735_GREENTAB2
+#define TFT_WIDTH 128
+#define TFT_HEIGHT 160
+#define SPI_FREQUENCY 40000000
+
+#endif

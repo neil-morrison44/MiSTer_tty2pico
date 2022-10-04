@@ -115,7 +115,7 @@ The `User_Setup_Select.h` file in the `TFT_eSPI` library folder needs to be modi
 * [ ] Add default assets
 * [ ] Support transparency (shows black for PNG)
   * [ ] Allow setting up a background image/color
-* [ ] Add configuration for SPI Micro SD breakouts
+* [x] Add configuration for SPI Micro SD breakouts
 * [ ] More LCD/OLED display configurations
   * [ ] ST7735 128x160
   * [ ] ST7789V3 172x320

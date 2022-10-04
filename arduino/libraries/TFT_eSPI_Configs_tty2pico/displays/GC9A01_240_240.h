@@ -1,0 +1,9 @@
+#ifndef GC9A01_240_240_H
+#define GC9A01_240_240_H
+
+#define GC9A01_DRIVER
+#define TFT_WIDTH 240
+#define TFT_HEIGHT 240
+#define SPI_FREQUENCY 66500000
+
+#endif
