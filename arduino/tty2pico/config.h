@@ -11,6 +11,8 @@
 #include "configs/roundypi.h"
 #elif defined(CONFIG_THINGPLUS)
 #include "configs/thingplus.h"
+#elif defined(CONFIG_PICO_SD)
+#include "configs/pico_sd.h"
 #else
 #include "configs/pico.h"
 #endif
