@@ -3,25 +3,29 @@
 
 #include "config.h"
 
+#ifndef TTY_SERIAL
+#define TTY_SERIAL Serial
+#endif
+
 void setupTTY()
 {
-	Serial.begin(TTY_BAUDRATE);
+	TTY_SERIAL.begin(TTY_BAUDRATE);
 #if defined(WAIT_FOR_SERIAL) && WAIT_FOR_SERIAL == 1
-	while (!Serial) delay(10);
+	while (!TTY_SERIAL) delay(10);
 #endif
-	Serial.println("Serial setup complete");
+	TTY_SERIAL.println("Serial setup complete");
 }
 
 String readTTY()
 {
 	static String command;
 
-	if (Serial.available())
+	if (TTY_SERIAL.available())
 	{
-		command = Serial.readStringUntil('\n');
+		command = TTY_SERIAL.readStringUntil('\n');
 		if (command.length() > 0)
 		{
-			Serial.print("Received Corename or Command: "); Serial.println(command.c_str());
+			TTY_SERIAL.print("Received Corename or Command: "); TTY_SERIAL.println(command.c_str());
 		}
 		else command = "";
 	}

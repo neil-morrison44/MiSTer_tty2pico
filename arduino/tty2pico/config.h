@@ -33,7 +33,32 @@
 // #define STARTUP_LOGO "/logos/mister.gif"
 
 #ifndef BACKGROUND_COLOR
-#define BACKGROUND_COLOR 0x0000 // The default background color
+// Predefined values from TFT_eSPI:
+// BLACK       0x0000      /*   0,   0,   0 */
+// NAVY        0x000F      /*   0,   0, 128 */
+// DARKGREEN   0x03E0      /*   0, 128,   0 */
+// DARKCYAN    0x03EF      /*   0, 128, 128 */
+// MAROON      0x7800      /* 128,   0,   0 */
+// PURPLE      0x780F      /* 128,   0, 128 */
+// OLIVE       0x7BE0      /* 128, 128,   0 */
+// LIGHTGREY   0xD69A      /* 211, 211, 211 */
+// DARKGREY    0x7BEF      /* 128, 128, 128 */
+// BLUE        0x001F      /*   0,   0, 255 */
+// GREEN       0x07E0      /*   0, 255,   0 */
+// CYAN        0x07FF      /*   0, 255, 255 */
+// RED         0xF800      /* 255,   0,   0 */
+// MAGENTA     0xF81F      /* 255,   0, 255 */
+// YELLOW      0xFFE0      /* 255, 255,   0 */
+// WHITE       0xFFFF      /* 255, 255, 255 */
+// ORANGE      0xFDA0      /* 255, 180,   0 */
+// GREENYELLOW 0xB7E0      /* 180, 255,   0 */
+// PINK        0xFE19      /* 255, 192, 203 */ //Lighter pink, was 0xFC9F
+// BROWN       0x9A60      /* 150,  75,   0 */
+// GOLD        0xFEA0      /* 255, 215,   0 */
+// SILVER      0xC618      /* 192, 192, 192 */
+// SKYBLUE     0x867D      /* 135, 206, 235 */
+// VIOLET      0x915C      /* 180,  46, 226 */
+#define BACKGROUND_COLOR 0xF800 // The default background color
 #endif
 
 #ifndef SLIDESHOW_DELAY

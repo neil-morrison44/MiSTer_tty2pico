@@ -87,9 +87,6 @@ void gifClose(void *handle)
 int32_t gifRead(GIFFILE *page, uint8_t *buffer, int32_t length)
 {
 	File *file = static_cast<File *>(page->fHandle);
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-	Serial.println("Reading GIF");
-#endif
 	if (!file->available())
 	{
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
@@ -107,23 +104,14 @@ int32_t gifRead(GIFFILE *page, uint8_t *buffer, int32_t length)
 			return 0;
 	byteCount = file->read(buffer, byteCount);
 	page->iPos = file->position();
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-	Serial.print("Read "); Serial.print(byteCount); Serial.println(" bytes");
-#endif
 	return byteCount;
 }
 
 int32_t gifSeek(GIFFILE *page, int32_t position)
 {
 	File *file = static_cast<File *>(page->fHandle);
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-	Serial.print("Seeking GIF to position "); Serial.println(position);
-#endif
 	file->seek(position);
 	page->iPos = (int32_t)file->position();
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-	Serial.print("Seeked to position "); Serial.println(page->iPos);
-#endif
 	return page->iPos;
 }
 
@@ -169,9 +157,6 @@ void jpegClose(void *handle)
 int32_t jpegRead(JPEGFILE *page, uint8_t *buffer, int32_t length)
 {
 	File *file = static_cast<File *>(page->fHandle);
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-	Serial.println("Reading JPEG");
-#endif
 	if (!file->available())
 	{
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
@@ -181,23 +166,14 @@ int32_t jpegRead(JPEGFILE *page, uint8_t *buffer, int32_t length)
 	}
 
 	int byteCount = file->read(buffer, length);
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-	Serial.print("Read "); Serial.print(byteCount); Serial.println(" bytes");
-#endif
 	return byteCount;
 }
 
 int32_t jpegSeek(JPEGFILE *page, int32_t position)
 {
 	File *file = static_cast<File *>(page->fHandle);
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-	Serial.print("Seeking JPEG to position "); Serial.println(position);
-#endif
 	file->seek(position);
 	page->iPos = (int32_t)file->position();
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-	Serial.print("Seeked to position "); Serial.println(page->iPos);
-#endif
 	return page->iPos;
 }
 
@@ -243,35 +219,20 @@ void pngClose(void *handle)
 int32_t pngRead(PNGFILE *page, uint8_t *buffer, int32_t length)
 {
 	File *file = static_cast<File *>(page->fHandle);
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-	Serial.println("Reading PNG");
-#endif
 	if (!file->available())
 	{
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-		Serial.println("PNG not open");
-#endif
 		return 0;
 	}
 
 	int byteCount = file->read(buffer, length);
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-	Serial.print("Read "); Serial.print(byteCount); Serial.println(" bytes");
-#endif
 	return byteCount;
 }
 
 int32_t pngSeek(PNGFILE *page, int32_t position)
 {
 	File *file = static_cast<File *>(page->fHandle);
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-	Serial.print("Seeking PNG to position "); Serial.println(position);
-#endif
 	file->seek(position);
 	page->iPos = (int32_t)file->position();
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-	Serial.print("Seeked to position "); Serial.println(page->iPos);
-#endif
 	return page->iPos;
 }
 

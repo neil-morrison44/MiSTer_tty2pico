@@ -55,6 +55,9 @@ void setupDisplay()
 
 	// Setup screen
 	tft.init();
+#ifdef USE_DMA
+	tft.initDMA();
+#endif
 #if defined(TFT_ROTATION)
 	tft.setRotation(TFT_ROTATION);
 #endif
@@ -75,7 +78,7 @@ void setupDisplay()
  * GIF
  *******************************************************************************/
 
-AnimatedGIF gif;
+static AnimatedGIF gif;
 
 #define TFT_BUFFER_SIZE TFT_DISPLAY_WIDTH
 
@@ -166,9 +169,11 @@ void gifDrawLine(GIFDRAW *pDraw)
 		// Unroll the first pass to boost DMA performance
 		// Translate the 8-bit pixels through the RGB565 palette (already byte reversed)
 		if (iWidth <= TFT_BUFFER_SIZE)
-			for (iCount = 0; iCount < iWidth; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
+			for (iCount = 0; iCount < iWidth; iCount++)
+				usTemp[dmaBuf][iCount] = usPalette[*s++];
 		else
-			for (iCount = 0; iCount < TFT_BUFFER_SIZE; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
+			for (iCount = 0; iCount < TFT_BUFFER_SIZE; iCount++)
+				usTemp[dmaBuf][iCount] = usPalette[*s++];
 
 #ifdef USE_DMA // 71.6 fps (ST7796 84.5 fps)
 		tft.dmaWait();
@@ -217,7 +222,6 @@ void showGIF(const char *path)
 		xoffset = (TFT_DISPLAY_WIDTH - gif.getCanvasWidth()) / 2;
 		yoffset = (TFT_DISPLAY_HEIGHT - gif.getCanvasHeight()) / 2;
 
-		// tft.fillScreen(BACKGROUND_COLOR);
 		tft.startWrite();
 
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
@@ -256,7 +260,7 @@ void showGIF(String path)
  * JPEG
  *******************************************************************************/
 
-JPEGDEC jpeg;
+static JPEGDEC jpeg;
 
 int jpegDrawLine(JPEGDRAW *pDraw)
 {
@@ -278,7 +282,6 @@ void showJPEG(const char *path)
 		yoffset = (TFT_DISPLAY_HEIGHT - jpeg.getHeight()) / 2;
 
 		tft.startWrite();
-		tft.fillScreen(BACKGROUND_COLOR);
 		jpeg.setPixelType(RGB565_BIG_ENDIAN);
 		jpeg.decode(xoffset, yoffset, 0);
 		jpeg.close();
@@ -299,7 +302,7 @@ void showJPEG(String path)
  * PNG
  *******************************************************************************/
 
-PNG png;
+static PNG png;
 
 void pngDrawLine(PNGDRAW *pDraw)
 {

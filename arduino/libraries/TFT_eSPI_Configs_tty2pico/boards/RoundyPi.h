@@ -12,9 +12,4 @@
 #define TFT_RST  12
 #define TFT_BL   13
 
-#define SPI_FREQUENCY  66500000
-// #define SPI_READ_FREQUENCY  5000000
-// #define SPI_TOUCH_FREQUENCY  2500000
-// #define SUPPORT_TRANSACTIONS
-
 #endif
