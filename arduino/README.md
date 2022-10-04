@@ -30,12 +30,14 @@ If you are building the version to run from flash then change the `USB Stack` to
 
 These are the shared dependencies between all builds from the Arduino Library Manager:
 
+* AnimatedGIF
+* JPEGDEC
 * PNGdec
 * TFT_eSPI
 
-These dependencies need to be installed manually:
+These dependencies need to be installed manually from the libraries folder:
 
-* [TFT_eSPI_Configs_RP2040](https://github.com/FeralAI/TFT_eSPI_Configs_RP2040)
+* TFT_eSPI_Configs_tty2pico
 
 #### Flash FS Version Dependencies
 
@@ -63,9 +65,9 @@ Each of these defines corresponds to a config header in the `configs` folder. If
 
 #### Configuring TFT_eSPI
 
-Configuration of `TFT_eSPI` is handled inside of its library folder. To make things easier, the `libraries/TFT_eSPI_Configs_RP2040` folder contains prebuilt configs for certain RP2040 board and display combinations. Copy the `TFT_eSPI_Configs_RP2040` folder into your Arduino libaries folder.
+Configuration of `TFT_eSPI` is handled inside of its library folder. To make things easier, the `libraries/TFT_eSPI_Configs_tty2pico` folder contains prebuilt configs for certain RP2040 board and display combinations. Copy the `TFT_eSPI_Configs_tty2pico` folder into your Arduino libaries folder.
 
-The `User_Setup_Select.h` file in the `TFT_eSPI` library folder needs to be modified to point to a custom configuration from the `TFT_eSPI_Configs_RP2040` folder that was just populated. Comment out any `#include` lines in the `USER_SETUP_LOADED` section at the top of the file, then add a new `#include` line to point to the configuration you want to use, something like:
+The `User_Setup_Select.h` file in the `TFT_eSPI` library folder needs to be modified to point to a custom configuration from the `TFT_eSPI_Configs_tty2pico` folder that was just populated. Comment out any `#include` lines in the `USER_SETUP_LOADED` section at the top of the file, then add a new `#include` line to point to the configuration you want to use, something like:
 
 ```c
 #ifndef USER_SETUP_LOADED //  Lets PlatformIO users define settings in
@@ -75,7 +77,7 @@ The `User_Setup_Select.h` file in the `TFT_eSPI` library folder needs to be modi
 
 // #include <User_Setup.h>           // Default setup is root library folder
 
-#include <../TFT_eSPI_Configs_RP2040/GC9A01_RoundyPi.h>
+#include <../TFT_eSPI_Configs_tty2pico/GC9A01_RoundyPi.h>
 ```
 
 ### Open Issues
