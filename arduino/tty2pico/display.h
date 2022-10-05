@@ -64,7 +64,7 @@ void setupDisplay()
 	tft.setTextFont(2);
 
 	// Clear display
-	tft.fillScreen(BACKGROUND_COLOR);
+	tft.fillScreen(TFT_BLACK);
 
 #if defined(TFT_BL)
 	delay(50); // Small delay to avoid garbage output
@@ -207,43 +207,63 @@ void gifDrawLine(GIFDRAW *pDraw)
 	}
 }
 
+static inline void displayGIF(void)
+{
+	tft.startWrite();
+
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.println("Play GIF start");
+	long runtime = micros();
+	int frames = 0;
+#endif
+
+	while (gif.playFrame(true, NULL))
+	{
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+		frames++;
+#endif
+		yield();
+	}
+	gif.close();
+	tft.endWrite();
+
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	runtime = micros() - runtime;
+	Serial.print("Ran GIF "); Serial.print(" at "); Serial.print(frames / (runtime / 1000000.0)); Serial.println(" fps");
+#endif
+}
+
+void showGIF(uint8_t *data, int size)
+{
+	gif.begin(BIG_ENDIAN_PIXELS);
+
+	if (gif.open(data, size, gifDrawLine))
+	{
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.print("Opened GIF "); Serial.print(" with resolution "); Serial.print(gif.getCanvasWidth()); Serial.print(" x "); Serial.println(gif.getCanvasHeight());
+#endif
+		xoffset = (TFT_DISPLAY_WIDTH - gif.getCanvasWidth()) / 2;
+		yoffset = (TFT_DISPLAY_HEIGHT - gif.getCanvasHeight()) / 2;
+		displayGIF();
+	}
+	else
+	{
+		Serial.println("Could not open GIF from RAM");
+	}
+}
+
 void showGIF(const char *path)
 {
-	displayState = DISPLAY_ANIMATED_GIF;
-
 	gif.begin(BIG_ENDIAN_PIXELS);
 
 	if (gif.open(path, gifOpen, gifClose, gifRead, gifSeek, gifDrawLine))
 	{
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-		Serial.print("Opened GIF "); Serial.print(path); Serial.print(" with resolution "); Serial.print(gif.getCanvasWidth()); Serial.print(" x "); Serial.println(gif.getCanvasHeight());
+	Serial.print("Opened GIF "); Serial.print(path); Serial.print(" with resolution "); Serial.print(gif.getCanvasWidth()); Serial.print(" x "); Serial.println(gif.getCanvasHeight());
 #endif
-
 		xoffset = (TFT_DISPLAY_WIDTH - gif.getCanvasWidth()) / 2;
 		yoffset = (TFT_DISPLAY_HEIGHT - gif.getCanvasHeight()) / 2;
-
-		tft.startWrite();
-
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-		Serial.println("Show GIF start");
-		long runtime = micros();
-		int frames = 0;
-#endif
-
-		while (gif.playFrame(true, NULL))
-		{
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-			frames++;
-#endif
-			yield();
-		}
-		gif.close();
-		tft.endWrite();
-
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-		runtime = micros() - runtime;
-		Serial.print("Ran GIF "); Serial.print(path); Serial.print(" at "); Serial.print(frames / (runtime / 1000000.0)); Serial.println(" fps");
-#endif
+		displayGIF();
 	}
 	else
 	{
@@ -268,24 +288,44 @@ int jpegDrawLine(JPEGDRAW *pDraw)
 	return 1;
 }
 
+static inline void displayJPEG(void)
+{
+	xoffset = (TFT_DISPLAY_WIDTH - jpeg.getWidth()) / 2;
+	yoffset = (TFT_DISPLAY_HEIGHT - jpeg.getHeight()) / 2;
+
+	if (jpeg.getWidth() < TFT_DISPLAY_WIDTH || jpeg.getHeight() < TFT_DISPLAY_HEIGHT)
+		tft.fillScreen(BACKGROUND_COLOR);
+
+	tft.startWrite();
+	jpeg.setPixelType(RGB565_BIG_ENDIAN);
+	jpeg.decode(xoffset, yoffset, 0);
+	jpeg.close();
+	tft.endWrite();
+}
+
+void showJPEG(uint8_t *data, int size)
+{
+	if (jpeg.openRAM(data, size, jpegDrawLine))
+	{
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+		Serial.print("Opened JPEG "); Serial.print(" with resolution "); Serial.print(jpeg.getWidth()); Serial.print(" x "); Serial.println(jpeg.getHeight());
+#endif
+		displayJPEG();
+	}
+	else
+	{
+		Serial.print("Could not open JPEG from RAM");
+	}
+}
+
 void showJPEG(const char *path)
 {
-	displayState = DISPLAY_STATIC_IMAGE;
-
-	if (jpeg.open(path, &jpegOpen, &jpegClose, &jpegRead, &jpegSeek, &jpegDrawLine))
+	if (jpeg.open(path, jpegOpen, jpegClose, jpegRead, jpegSeek, jpegDrawLine))
 	{
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
 		Serial.print("Opened JPEG "); Serial.print(path); Serial.print(" with resolution "); Serial.print(jpeg.getWidth()); Serial.print(" x "); Serial.println(jpeg.getHeight());
 #endif
-
-		xoffset = (TFT_DISPLAY_WIDTH - jpeg.getWidth()) / 2;
-		yoffset = (TFT_DISPLAY_HEIGHT - jpeg.getHeight()) / 2;
-
-		tft.startWrite();
-		jpeg.setPixelType(RGB565_BIG_ENDIAN);
-		jpeg.decode(xoffset, yoffset, 0);
-		jpeg.close();
-		tft.endWrite();
+		displayJPEG();
 	}
 	else
 	{
@@ -311,20 +351,46 @@ void pngDrawLine(PNGDRAW *pDraw)
 	tft.pushImage(xpos + xoffset, ypos + pDraw->y + yoffset, pDraw->iWidth, 1, lineBuffer);
 }
 
+static inline void displayPNG(void)
+{
+	xoffset = (TFT_DISPLAY_WIDTH - png.getWidth()) / 2;
+	yoffset = (TFT_DISPLAY_HEIGHT - png.getHeight()) / 2;
+
+	if (png.getWidth() < TFT_DISPLAY_WIDTH || png.getHeight() < TFT_DISPLAY_HEIGHT)
+		tft.fillScreen(BACKGROUND_COLOR);
+
+	tft.startWrite();
+	png.decode(NULL, 0);
+	tft.endWrite();
+}
+
+void showPNG(uint8_t *data, int size)
+{
+	if (png.openRAM(data, size, pngDrawLine) == PNG_SUCCESS)
+	{
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+		Serial.print("Opened PNG "); Serial.print(" with resolution "); Serial.print(png.getWidth()); Serial.print(" x "); Serial.println(png.getHeight());
+#endif
+		displayPNG();
+	}
+	else
+	{
+		Serial.print("Could not open PNG from RAM");
+	}
+}
+
 void showPNG(const char *path)
 {
-	displayState = DISPLAY_STATIC_IMAGE;
-
-	int16_t rc = png.open(path, &pngOpen, &pngClose, &pngRead, &pngSeek, &pngDrawLine);
-	if (rc == PNG_SUCCESS)
+	if (png.open(path, pngOpen, pngClose, pngRead, pngSeek, pngDrawLine) == PNG_SUCCESS)
 	{
-		xoffset = (TFT_DISPLAY_WIDTH - png.getWidth()) / 2;
-		yoffset = (TFT_DISPLAY_HEIGHT - png.getHeight()) / 2;
-
-		tft.fillScreen(BACKGROUND_COLOR);
-		tft.startWrite();
-		rc = png.decode(NULL, 0);
-		tft.endWrite();
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+		Serial.print("Opened PNG "); Serial.print(" with resolution "); Serial.print(png.getWidth()); Serial.print(" x "); Serial.println(png.getHeight());
+#endif
+		displayPNG();
+	}
+	else
+	{
+		Serial.print("Could not open PNG "); Serial.println(path);
 	}
 }
 
@@ -358,11 +424,20 @@ void showImage(const char *path)
 	currentImage = pathString;
 
 	if (currentImage.endsWith(".jpg") || currentImage.endsWith(".JPG") || currentImage.endsWith(".jpeg") || currentImage.endsWith(".JPEG"))
+	{
+		displayState = DISPLAY_STATIC_IMAGE;
 		showJPEG(path);
+	}
 	else if (currentImage.endsWith(".png") || currentImage.endsWith(".PNG"))
+	{
+		displayState = DISPLAY_STATIC_IMAGE;
 		showPNG(path);
+	}
 	else if (currentImage.endsWith(".gif") || currentImage.endsWith(".GIF"))
+	{
+		displayState = DISPLAY_ANIMATED_GIF;
 		showGIF(path);
+	}
 }
 
 void showImage(String path)
@@ -373,23 +448,7 @@ void showImage(String path)
 void showMister(void)
 {
 	displayState = DISPLAY_MISTER;
-
-	gif.begin(BIG_ENDIAN_PIXELS);
-
-	if (gif.open((uint8_t *)mister, sizeof(mister), gifDrawLine))
-	{
-		xoffset = (TFT_DISPLAY_WIDTH - gif.getCanvasWidth()) / 2;
-		yoffset = (TFT_DISPLAY_HEIGHT - gif.getCanvasHeight()) / 2;
-
-		// tft.fillScreen(BACKGROUND_COLOR);
-		tft.startWrite();
-		while (gif.playFrame(true, NULL))
-		{
-			yield();
-		}
-		gif.close();
-		tft.endWrite();
-	}
+	showGIF((uint8_t *)mister, sizeof(mister));
 }
 
 void showStartup(void)
