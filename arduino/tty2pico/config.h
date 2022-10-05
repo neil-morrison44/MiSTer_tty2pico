@@ -58,7 +58,7 @@
 // SILVER      0xC618      /* 192, 192, 192 */
 // SKYBLUE     0x867D      /* 135, 206, 235 */
 // VIOLET      0x915C      /* 180,  46, 226 */
-#define BACKGROUND_COLOR 0xF800 // The default background color
+#define BACKGROUND_COLOR 0x7BEF // The default background color
 #endif
 
 #ifndef SLIDESHOW_DELAY

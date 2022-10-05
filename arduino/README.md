@@ -113,8 +113,8 @@ The `User_Setup_Select.h` file in the `TFT_eSPI` library folder needs to be modi
 * [x] Add GIF support
 * [x] Add JPEG support
 * [ ] Add default assets
-* [ ] Support transparency (shows black for PNG)
-  * [ ] Allow setting up a background image/color
+* [x] Support transparency (shows black for PNG)
+  * [x] Allow setting up a background image/color
 * [x] Add configuration for SPI Micro SD breakouts
 * [ ] More LCD/OLED display configurations
   * [ ] ST7735 128x160
@@ -122,7 +122,7 @@ The `User_Setup_Select.h` file in the `TFT_eSPI` library folder needs to be modi
 
 ### Maybe TODO
 * Technical
-  * [ ] Multicore support (one for logic, the other for draw calls)
+  * [x] Multicore support (one for logic, the other for draw calls)
   * [ ] Move the "Software configuration" section of `config.h` into a text/json/xml/whatever file to be read from the filesystem on startup
 * 3D Models
   * [ ] Create variant of existing GC9A01 holder for the RoundyPi

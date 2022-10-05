@@ -74,7 +74,6 @@ void loop()
 		command = readTTY();
 		if (command != "")
 		{
-			Serial.print("TTY: "); Serial.println(command.c_str());
 			data = parseCommand(String(command));
 			queue_try_add(&cmdQ, &data);
 		}
@@ -88,7 +87,6 @@ void loop1()
 
 	while (queue_try_remove(&cmdQ, &data))
 	{
-		Serial.print("Received "); Serial.println(data.commandText);
 		runCommand(data);
 	}
 

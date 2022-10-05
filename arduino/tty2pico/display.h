@@ -307,7 +307,7 @@ static PNG png;
 void pngDrawLine(PNGDRAW *pDraw)
 {
 	uint16_t lineBuffer[MAX_IMAGE_WIDTH];
-	png.getLineAsRGB565(pDraw, lineBuffer, PNG_RGB565_BIG_ENDIAN, DISABLE_COLOR_MIXING);
+	png.getLineAsRGB565(pDraw, lineBuffer, PNG_RGB565_BIG_ENDIAN, tft.color16to24(BACKGROUND_COLOR));
 	tft.pushImage(xpos + xoffset, ypos + pDraw->y + yoffset, pDraw->iWidth, 1, lineBuffer);
 }
 
