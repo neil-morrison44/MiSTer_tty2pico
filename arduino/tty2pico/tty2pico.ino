@@ -29,6 +29,7 @@
 
 bool runLoop1 = false;
 queue_t cmdQ;
+uint32_t nextSerialRead;
 
 void setup()
 {
@@ -61,6 +62,28 @@ void setup1()
 
 void loop()
 {
+	static String command;
+	static CommandData data;
+
+#if defined(STORAGE_TYPE_FLASH_FS)
+	loopMSC();
+#endif
+
+	if (millis() > nextSerialRead)
+	{
+		command = readTTY();
+		if (command != "")
+		{
+			Serial.print("TTY: "); Serial.println(command.c_str());
+			data = parseCommand(String(command));
+			queue_try_add(&cmdQ, &data);
+		}
+		nextSerialRead = millis() + 500; // Delay the next read for better performance
+	}
+}
+
+void loop1()
+{
 	static CommandData data;
 
 	while (queue_try_remove(&cmdQ, &data))
@@ -70,22 +93,4 @@ void loop()
 	}
 
 	loopDisplay(millis());
-}
-
-void loop1()
-{
-#if defined(STORAGE_TYPE_FLASH_FS)
-	loopMSC();
-#endif
-
-	static String command;
-	static CommandData data;
-
-	command = readTTY();
-	if (command != "")
-	{
-		Serial.print("TTY: "); Serial.println(command.c_str());
-		data = parseCommand(String(command));
-		queue_try_add(&cmdQ, &data);
-	}
 }

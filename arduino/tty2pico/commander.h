@@ -148,16 +148,4 @@ bool runCommand(CommandData data)
 	}
 }
 
-void prepareDisplayState(TTY2CMD command)
-{
-	for (int i = 0; i < animationLoopCommandsCount; i++)
-	{
-		if (command == animationLoopCommands[i])
-		{
-			isAnimating = false;
-			break;
-		}
-	}
-}
-
 #endif
