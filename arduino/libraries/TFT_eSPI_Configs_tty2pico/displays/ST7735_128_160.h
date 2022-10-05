@@ -1,10 +1,14 @@
 #ifndef ST7735_128_160_H
 #define ST7735_128_160_H
 
+// Based on the Waveshare 128x160 1.8inch LCD Module
+// https://www.waveshare.com/wiki/1.8inch_LCD_Module
+
 #define ST7735_DRIVER
 #define ST7735_GREENTAB2
 #define TFT_WIDTH 128
 #define TFT_HEIGHT 160
+#define TFT_ROTATION 3
 
 /* Select speed */
 // #define SPI_FREQUENCY 80000000 // 80 MHz

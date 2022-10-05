@@ -1,6 +1,9 @@
 #ifndef GC9A01_240_240_H
 #define GC9A01_240_240_H
 
+// Based on the Waveshare 240x240 1.28inch Round LCD Module
+// https://www.waveshare.com/wiki/1.28inch_LCD_Module
+
 #define GC9A01_DRIVER
 #define TFT_WIDTH 240
 #define TFT_HEIGHT 240
