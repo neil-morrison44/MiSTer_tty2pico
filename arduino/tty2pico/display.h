@@ -145,7 +145,7 @@ void gifDrawLine(GIFDRAW *pDraw)
 			if (iCount) // any opaque pixels?
 			{
 				// DMA would degrtade performance here due to short line segments
-				tft.setAddrWindow(pDraw->iX + x, y, iCount, 1);
+				tft.setAddrWindow(pDraw->iX + x + xoffset, y + yoffset, iCount, 1);
 				tft.pushPixels(usTemp, iCount);
 				x += iCount;
 				iCount = 0;
@@ -177,11 +177,11 @@ void gifDrawLine(GIFDRAW *pDraw)
 
 #ifdef USE_DMA // 71.6 fps (ST7796 84.5 fps)
 		tft.dmaWait();
-		tft.setAddrWindow(pDraw->iX, y, iWidth, 1);
+		tft.setAddrWindow(pDraw->iX + xoffset, y + yoffset, iWidth, 1);
 		tft.pushPixelsDMA(&usTemp[dmaBuf][0], iCount);
 		dmaBuf = !dmaBuf;
 #else // 57.0 fps
-		tft.setAddrWindow(pDraw->iX, y, iWidth, 1);
+		tft.setAddrWindow(pDraw->iX + xoffset, y + yoffset, iWidth, 1);
 		tft.pushPixels(&usTemp[0][0], iCount);
 #endif
 
