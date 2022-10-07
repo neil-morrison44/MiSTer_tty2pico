@@ -1,0 +1,53 @@
+name: PlatformIO Release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: olegtarasov/get-tag@v2.1
+      id: tagName
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Cache pip
+      uses: actions/cache@v2
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    - name: Cache PlatformIO
+      uses: actions/cache@v2
+      with:
+        path: ~/.platformio
+        key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
+    - name: Set up Python
+      uses: actions/setup-python@v2
+    - name: Install PlatformIO
+      run: |
+        python -m pip install --upgrade pip
+        pip install --upgrade platformio
+        pio platform install https://github.com/maxgerhardt/platform-raspberrypi.git#5ce1a228e7cae453f366deb8962252b9b7356bbc
+    - name: Run PlatformIO
+      run: |
+        cd arduino/tty2pico
+        pio run -e pico-gc9a01
+        mv .pio/build/pico-gc9a01/firmware.uf2 .pio/build/pico-gc9a01/tty2pico-pico-gc9a01_${{ steps.tagName.outputs.tag }}.uf2
+        pio run -e pico16mb-gc9a01
+        mv .pio/build/pico16mb-gc9a01/firmware.uf2 .pio/build/pico16mb-gc9a01/tty2pico-pico16mb-gc9a01_${{ steps.tagName.outputs.tag }}.uf2
+        pio run -e roundypi
+        mv .pio/build/roundypi/firmware.uf2 .pio/build/roundypi/tty2pico-roundypi_${{ steps.tagName.outputs.tag }}.uf2
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: |
+          .pio/build/pico-gc9a01/tty2pico-pico-gc9a01_${{ steps.tagName.outputs.tag }}.uf2
+          .pio/build/pico16mb-gc9a01/tty2pico-pico16mb-gc9a01_${{ steps.tagName.outputs.tag }}.uf2
+          .pio/build/roundypi/tty2pico-roundypi_${{ steps.tagName.outputs.tag }}.uf2
