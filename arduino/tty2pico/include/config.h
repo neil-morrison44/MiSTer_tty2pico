@@ -1,7 +1,9 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include <User_Setup_Select.h> // This will pull in the TFT_eSPI configuration defines for the display
+#ifndef FLASHFS_SIZE_KB
+#define FLASHFS_SIZE_KB 512
+#endif
 
 /**************************
  * Software configuration

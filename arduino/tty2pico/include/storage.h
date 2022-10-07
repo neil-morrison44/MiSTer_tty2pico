@@ -20,7 +20,7 @@
 #elif defined(ARDUINO_ARCH_ESP32)
 	Adafruit_FlashTransport_ESP32 flashTransport;
 #elif defined(ARDUINO_ARCH_RP2040)
-	Adafruit_FlashTransport_RP2040 flashTransport;
+	Adafruit_FlashTransport_RP2040 flashTransport((1 * 1024 * FLASHFS_SIZE_KB), 0);
 #else
 	#if defined(EXTERNAL_FLASH_USE_QSPI)
 		Adafruit_FlashTransport_QSPI flashTransport;
