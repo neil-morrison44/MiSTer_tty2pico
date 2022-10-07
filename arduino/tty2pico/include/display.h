@@ -1,8 +1,6 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
-#define FS_NO_GLOBALS // Need this to fix import issues with LittleFS dependency
-
 #include "config.h"
 #include "storage.h"
 #include <SPI.h>

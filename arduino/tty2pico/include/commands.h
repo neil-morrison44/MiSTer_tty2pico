@@ -3,24 +3,17 @@
 
 #include "config.h"
 #include "display.h"
+#include "storage.h"
 
 typedef enum TTY2CMD {
-	TTY2CMD_NONE    =   0,
-	TTY2CMD_COR     =   1,
-	TTY2CMD_BYE     =   2,
-	TTY2CMD_SAVER   =   3,
-	TTY2CMD_SHOW    =   4,
-	TTY2CMD_SETTIME =   5,
-	TTY2CMD_UNKNOWN = 999,
-} TTY2CMD;
-
-const TTY2CMD animationLoopCommands[] = {
-	TTY2CMD_BYE,
+	TTY2CMD_NONE = 0,
 	TTY2CMD_COR,
+	TTY2CMD_BYE,
+	TTY2CMD_SAVER,
 	TTY2CMD_SHOW,
-};
-
-const int animationLoopCommandsCount = sizeof(animationLoopCommands) / sizeof(animationLoopCommands[0]);
+	TTY2CMD_SETTIME,
+	TTY2CMD_UNKNOWN,
+} TTY2CMD;
 
 struct CommandData
 {
@@ -73,9 +66,8 @@ static bool cmdSetCore(String command)
 	bool found = false;
 	for (int i = 0; i < imageExtensionCount; i++)
 	{
-		path = LOGO_PATH + coreName + String(imageExtensions[i]);
-		File file = getFile(path);
-		if (file)
+		path = LOGO_PATH + coreName + String(imageExtensions[i]);;
+		if (fileExists(path))
 		{
 			found = true;
 			Serial.print("Loading "); Serial.println(path.c_str());

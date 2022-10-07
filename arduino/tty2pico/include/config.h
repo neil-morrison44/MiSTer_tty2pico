@@ -4,20 +4,6 @@
 #include <User_Setup_Select.h> // This will pull in the TFT_eSPI configuration defines for the display
 
 /**************************
- * Board configuration
- **************************/
-
-#if defined(CONFIG_ROUNDYPI)
-#include "configs/roundypi.h"
-#elif defined(CONFIG_THINGPLUS)
-#include "configs/thingplus.h"
-#elif defined(CONFIG_PICO_SD)
-#include "configs/pico_sd.h"
-#else
-#include "configs/pico.h"
-#endif
-
-/**************************
  * Software configuration
  **************************/
 
@@ -29,8 +15,9 @@
 #define LOGO_PATH "/logos/" // Path to logo folder
 #endif
 
-// The logo to show on startup (when not in slideshow mode)
-// #define STARTUP_LOGO "/logos/mister.gif"
+// #ifndef STARTUP_LOGO
+// #define STARTUP_LOGO "/logos/mister.gif" // The logo to show on startup (when not in slideshow mode)
+// #endif
 
 #ifndef BACKGROUND_COLOR
 // Predefined values from TFT_eSPI:

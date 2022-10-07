@@ -6,22 +6,26 @@
 /*******************************************************************************
  * Configuration overrides - See "config.h" for more details
  *******************************************************************************/
-#define CONFIG_PICO                       // Valid options: CONFIG_PICO, CONFIG_PICO_SD, CONFIG_ROUNDYPI, CONFIG_THINGPLUS
-#define SLIDESHOW_ON_START 0              // Display the slideshow on startup instead of the STARTUP_LOGO
-#define WAIT_FOR_SERIAL    0              // Wait for serial connection before running program code
-#define VERBOSE_OUTPUT     0              // Log a lot of stuff to the serial output, only useful for debugging
-#define JPEGDEC_EXCLUDE_FS                // Hack to exclude the FS.h import in JPEGDEC, conflicts with custom FS stuff for FlashFS
-#define USE_DMA                           // Use DMA transfers for display communication
+#ifndef WAIT_FOR_SERIAL
+#define WAIT_FOR_SERIAL 0 // Wait for serial connection before running program code
+#endif
+#ifndef VERBOSE_OUTPUT
+#define VERBOSE_OUTPUT 0 // Log a lot of stuff to the serial output, only useful for debugging
+#endif
+// #ifndef STARTUP_LOGO
 // #define STARTUP_LOGO "/logos/mister.gif" // The logo to show on startup (when not in slideshow mode)
+// #endif
+#include "config.h"
 
 /*******************************************************************************
  * Includes
  *******************************************************************************/
-#include "config.h"
+#include <Arduino.h>
 #include "tty.h"
 #include "storage.h"
+#include "usbmsc.h"
 #include "display.h"
-#include "commander.h"
+#include "commands.h"
 
 /*******************************************************************************
  * Lifecycle functions
@@ -43,6 +47,7 @@ void setup()
 
 	setupTTY();
 	setupStorage();
+	setupUsbMsc();
 	setupDisplay();
 
 	setDirectory(LOGO_PATH);
@@ -65,9 +70,7 @@ void loop()
 	static String command;
 	static CommandData data;
 
-#if defined(STORAGE_TYPE_FLASH_FS)
 	loopMSC();
-#endif
 
 	if (millis() > nextSerialRead)
 	{
@@ -75,7 +78,8 @@ void loop()
 		if (command != "")
 		{
 			data = parseCommand(String(command));
-			queue_try_add(&cmdQ, &data);
+			if (data.command != TTY2CMD_NONE && data.command != TTY2CMD_UNKNOWN) // Could do some logging of unknown commands here
+				queue_try_add(&cmdQ, &data);
 		}
 		nextSerialRead = millis() + 500; // Delay the next read for better performance
 	}
