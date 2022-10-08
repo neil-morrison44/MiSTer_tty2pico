@@ -316,6 +316,7 @@ void setDirectory(String path)
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
 	Serial.print("Setting directory to: "); Serial.println(path.c_str());
 #endif
+	dirText = path;
 	dir = getFile(path);
 }
 
