@@ -1,8 +1,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#ifndef FLASHFS_SIZE_KB
-#define FLASHFS_SIZE_KB 512
+#ifndef RESERVED_FLASH_KB
+#define RESERVED_FLASH_KB 512 // The amount of flash (in KB) reserved for program code
 #endif
 
 /**************************
@@ -75,7 +75,9 @@
 #endif
 
 // If defined will use the DMA mode with TFT_eSPI library
-// This can live in either the board-specific config, or at the top of the .ino file
+// WARNING: This seems to drop performance by about 10% with the current image rendering methods
+// on the RP2040, so I wouldn't enable this unless those methods get more optimized, or it makes
+// sense when building for another platform.
 // #define USE_DMA
 
 /**************************

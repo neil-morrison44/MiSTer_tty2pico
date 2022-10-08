@@ -31,6 +31,17 @@ Select a board configuration from the `Raspberyy Pi Pico/RP2040` boards package.
 
 ## TODO
 
+### Optimizations
+
+#### File System Performance
+
+The Adafruit SdFat library fork has a few drawbacks currently:
+
+* It's based on the v1 branch of the mainline SdFat library
+* It's about 20% slower for data reads than mainline SdFat v2
+
+This is currently used for flash and SD card filesystem access. Consider a microSD only build until the performance issues can be addressed.
+
 ### Definitely TODO
 
 * [x] Migrate project to PlatformIO

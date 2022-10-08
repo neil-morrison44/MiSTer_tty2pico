@@ -20,7 +20,7 @@
 #elif defined(ARDUINO_ARCH_ESP32)
 	Adafruit_FlashTransport_ESP32 flashTransport;
 #elif defined(ARDUINO_ARCH_RP2040)
-	Adafruit_FlashTransport_RP2040 flashTransport((1 * 1024 * FLASHFS_SIZE_KB), 0);
+	Adafruit_FlashTransport_RP2040 flashTransport((1 * 1024 * RESERVED_FLASH_KB), 0);
 #else
 	#if defined(EXTERNAL_FLASH_USE_QSPI)
 		Adafruit_FlashTransport_QSPI flashTransport;
@@ -305,6 +305,20 @@ void printDirectory(const char *path, int numTabs)
 	}
 }
 
+inline int readFile(File *file, uint8_t *buffer, int32_t length, const char *errorMessage = nullptr)
+{
+	if (!file->available())
+	{
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+		Serial.println(errorMessage);
+#endif
+		return 0;
+	}
+
+	int byteCount = file->read(buffer, length);
+	return byteCount;
+}
+
 void rewindDirectory(void)
 {
 	dir.rewindDirectory();
@@ -362,22 +376,7 @@ void gifClose(void *handle)
 int32_t gifRead(GIFFILE *page, uint8_t *buffer, int32_t length)
 {
 	File *file = static_cast<File *>(page->fHandle);
-	if (!file->available())
-	{
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-		Serial.println("GIF not open");
-#endif
-		return 0;
-	}
-
-	int32_t byteCount;
-	byteCount = length;
-	// Note: If you read a file all the way to the last byte, seek() stops working
-	if ((page->iSize - page->iPos) < length)
-			byteCount = page->iSize - page->iPos - 1; // <-- ugly work-around
-	if (byteCount <= 0)
-			return 0;
-	byteCount = file->read(buffer, byteCount);
+	int32_t byteCount = readFile(file, buffer, length, "Couldn't read GIF file");
 	page->iPos = file->position();
 	return byteCount;
 }
@@ -386,7 +385,7 @@ int32_t gifSeek(GIFFILE *page, int32_t position)
 {
 	File *file = static_cast<File *>(page->fHandle);
 	file->seek(position);
-	page->iPos = (int32_t)file->position();
+	page->iPos = file->position();
 	return page->iPos;
 }
 
@@ -432,23 +431,14 @@ void jpegClose(void *handle)
 int32_t jpegRead(JPEGFILE *page, uint8_t *buffer, int32_t length)
 {
 	File *file = static_cast<File *>(page->fHandle);
-	if (!file->available())
-	{
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-		Serial.println("JPEG not open");
-#endif
-		return 0;
-	}
-
-	int byteCount = file->read(buffer, length);
-	return byteCount;
+	return readFile(file, buffer, length, "Couldn't read JPEG file");
 }
 
 int32_t jpegSeek(JPEGFILE *page, int32_t position)
 {
 	File *file = static_cast<File *>(page->fHandle);
 	file->seek(position);
-	page->iPos = (int32_t)file->position();
+	page->iPos = file->position();
 	return page->iPos;
 }
 
@@ -494,20 +484,14 @@ void pngClose(void *handle)
 int32_t pngRead(PNGFILE *page, uint8_t *buffer, int32_t length)
 {
 	File *file = static_cast<File *>(page->fHandle);
-	if (!file->available())
-	{
-		return 0;
-	}
-
-	int byteCount = file->read(buffer, length);
-	return byteCount;
+	return readFile(file, buffer, length, "Couldn't read PNG file");
 }
 
 int32_t pngSeek(PNGFILE *page, int32_t position)
 {
 	File *file = static_cast<File *>(page->fHandle);
 	file->seek(position);
-	page->iPos = (int32_t)file->position();
+	page->iPos = file->position();
 	return page->iPos;
 }
 
