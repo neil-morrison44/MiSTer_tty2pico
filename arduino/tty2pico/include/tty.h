@@ -23,6 +23,8 @@ String readTTY()
 	if (TTY_SERIAL.available())
 	{
 		command = TTY_SERIAL.readStringUntil('\n');
+		if (command.endsWith("\r"))
+			command = command.substring(0, command.length() - 1);
 		if (command.length() > 0)
 		{
 			TTY_SERIAL.print("Received Corename or Command: "); TTY_SERIAL.println(command.c_str());
