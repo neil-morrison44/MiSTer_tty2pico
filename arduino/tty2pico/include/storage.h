@@ -8,7 +8,6 @@
 #include <ff.h>
 #include <diskio.h>
 #include <AnimatedGIF.h>
-#include <JPEGDEC.h>
 #include <PNGdec.h>
 
 // Un-comment to run with custom flash storage
@@ -206,7 +205,9 @@ static void setupSD(void)
 void setupStorage(void)
 {
 	setupFlash();
+#ifdef SDCARD_SPI
 	setupSD();
+#endif
 }
 
 /*************************
@@ -382,59 +383,6 @@ int32_t gifRead(GIFFILE *page, uint8_t *buffer, int32_t length)
 }
 
 int32_t gifSeek(GIFFILE *page, int32_t position)
-{
-	File *file = static_cast<File *>(page->fHandle);
-	file->seek(position);
-	page->iPos = file->position();
-	return page->iPos;
-}
-
-/*************************
- * JPEG functions
- *************************/
-
-static File jpegfile;
-
-void *jpegOpen(const char *filename, int32_t *size)
-{
-	jpegfile = getFile(filename);
-
-	if (jpegfile.available())
-	{
-		*size = jpegfile.size();
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-		Serial.print("Opened file "); Serial.print(String(filename).c_str()); Serial.print(" with file size "); Serial.print(jpegfile.size()); Serial.println(" bytes");
-#endif
-		return (void *)&jpegfile;
-	}
-	else
-	{
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-		Serial.print("Failed to open "); Serial.println(String(filename).c_str());
-#endif
-		return NULL;
-	}
-}
-
-void jpegClose(void *handle)
-{
-	if (handle == nullptr)
-		return;
-
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-	Serial.println("Closing file");
-#endif
-	File *file = static_cast<File *>(handle);
-	file->close();
-}
-
-int32_t jpegRead(JPEGFILE *page, uint8_t *buffer, int32_t length)
-{
-	File *file = static_cast<File *>(page->fHandle);
-	return readFile(file, buffer, length, "Couldn't read JPEG file");
-}
-
-int32_t jpegSeek(JPEGFILE *page, int32_t position)
 {
 	File *file = static_cast<File *>(page->fHandle);
 	file->seek(position);

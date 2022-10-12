@@ -6,7 +6,6 @@
 #include <SPI.h>
 #include <TFT_eSPI.h>
 #include <AnimatedGIF.h>
-#include <JPEGDEC.h>
 #include <PNGdec.h>
 #include "mister.h"
 
@@ -22,8 +21,6 @@ typedef enum DisplayState {
 const char *imageExtensions[] = {
 	".gif",
 	".png",
-	".jpg",
-	".jpeg",
 };
 const int imageExtensionCount = sizeof(imageExtensions) / sizeof(imageExtensions[0]);
 
@@ -275,68 +272,6 @@ void showGIF(String path)
 }
 
 /*******************************************************************************
- * JPEG
- *******************************************************************************/
-
-static JPEGDEC jpeg;
-
-int jpegDrawLine(JPEGDRAW *pDraw)
-{
-	tft.pushImage(pDraw->x, pDraw->y, pDraw->iWidth, pDraw->iHeight, pDraw->pPixels);
-	return 1;
-}
-
-static inline void displayJPEG(void)
-{
-	xoffset = (TFT_DISPLAY_WIDTH - jpeg.getWidth()) / 2;
-	yoffset = (TFT_DISPLAY_HEIGHT - jpeg.getHeight()) / 2;
-
-	if (jpeg.getWidth() < TFT_DISPLAY_WIDTH || jpeg.getHeight() < TFT_DISPLAY_HEIGHT)
-		tft.fillScreen(BACKGROUND_COLOR);
-
-	tft.startWrite();
-	jpeg.setPixelType(RGB565_BIG_ENDIAN);
-	jpeg.decode(xoffset, yoffset, 0);
-	jpeg.close();
-	tft.endWrite();
-}
-
-void showJPEG(uint8_t *data, int size)
-{
-	if (jpeg.openRAM(data, size, jpegDrawLine))
-	{
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-		Serial.print("Opened JPEG "); Serial.print(" with resolution "); Serial.print(jpeg.getWidth()); Serial.print(" x "); Serial.println(jpeg.getHeight());
-#endif
-		displayJPEG();
-	}
-	else
-	{
-		Serial.print("Could not open JPEG from RAM");
-	}
-}
-
-void showJPEG(const char *path)
-{
-	if (jpeg.open(path, jpegOpen, jpegClose, jpegRead, jpegSeek, jpegDrawLine))
-	{
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-		Serial.print("Opened JPEG "); Serial.print(path); Serial.print(" with resolution "); Serial.print(jpeg.getWidth()); Serial.print(" x "); Serial.println(jpeg.getHeight());
-#endif
-		displayJPEG();
-	}
-	else
-	{
-		Serial.print("Could not open JPEG "); Serial.println(path);
-	}
-}
-
-void showJPEG(String path)
-{
-	showJPEG(path.c_str());
-}
-
-/*******************************************************************************
  * PNG
  *******************************************************************************/
 
@@ -421,12 +356,7 @@ void showImage(const char *path)
 	pathString.trim();
 	currentImage = pathString;
 
-	if (currentImage.endsWith(".jpg") || currentImage.endsWith(".JPG") || currentImage.endsWith(".jpeg") || currentImage.endsWith(".JPEG"))
-	{
-		displayState = DISPLAY_STATIC_IMAGE;
-		showJPEG(path);
-	}
-	else if (currentImage.endsWith(".png") || currentImage.endsWith(".PNG"))
+	if (currentImage.endsWith(".png") || currentImage.endsWith(".PNG"))
 	{
 		displayState = DISPLAY_STATIC_IMAGE;
 		showPNG(path);
