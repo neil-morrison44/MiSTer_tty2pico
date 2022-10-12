@@ -12,15 +12,23 @@
 #ifndef VERBOSE_OUTPUT
 #define VERBOSE_OUTPUT 0 // Log a lot of stuff to the serial output, only useful for debugging
 #endif
-// #ifndef STARTUP_LOGO
-// #define STARTUP_LOGO "/logos/mister.gif" // The logo to show on startup (when not in slideshow mode)
-// #endif
-#include "config.h"
+#ifndef STARTUP_LOGO
+#define STARTUP_LOGO "/logos/pattern.gif" // The logo to show on startup (when not in slideshow mode)
+#endif
+
+// #define BACKGROUND_COLOR 0x0000 // The default background color
+// #define OVERCLOCK_RP2040
 
 /*******************************************************************************
  * Includes
  *******************************************************************************/
+#include "config.h"
+#ifdef OVERCLOCK_RP2040
+#include "pico/stdlib.h"
+#include "hardware/vreg.h"
+#endif
 #include <Arduino.h>
+#include "config.h"
 #include "tty.h"
 #include "storage.h"
 #include "usbmsc.h"
@@ -37,11 +45,14 @@ uint32_t nextSerialRead;
 
 void setup()
 {
-	// Configure peripheral clock source to allow increased max SPI frequency when RP2040 is overclocked.
-	// This also gives a slight performance boost to SPI transfers for the display when not overclocking.
-	// Referenced here: https://github.com/Bodmer/TFT_eSPI/issues/1460#issuecomment-1006661452
-	uint32_t freq = clock_get_hz(clk_sys);
-	clock_configure(clk_peri, 0, CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS, freq, freq);
+#ifdef OVERCLOCK_RP2040
+	// Apply an overclock to 250MHz (2x stock) and voltage tweak to stablize most RP2040 boards.
+	// If it's good enough for pixel-pushing in MicroPython, it's good enough for us :P
+	// https://github.com/micropython/micropython/issues/8208
+	vreg_set_voltage(VREG_VOLTAGE_1_20); // Set voltage to 1.2v
+	delay(10); // Allow vreg time to stabilize
+	set_sys_clock_khz(250000, true); // Overclock to 250MHz
+#endif
 
 	queue_init(&cmdQ, sizeof(CommandData), 1);
 
