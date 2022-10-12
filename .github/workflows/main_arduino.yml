@@ -33,6 +33,6 @@ jobs:
     - name: Run PlatformIO
       run: |
         cd arduino/tty2pico
-        pio run -e pico-gc9a01
-        pio run -e pico16mb-gc9a01
-        pio run -e roundypi
+        pio run -e Pico-GC9A01
+        pio run -e Pico16MB-GC9A01
+        pio run -e RoundyPi

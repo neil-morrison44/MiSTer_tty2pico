@@ -37,17 +37,17 @@ jobs:
     - name: Run PlatformIO
       run: |
         cd arduino/tty2pico
-        pio run -e pico-gc9a01
-        mv .pio/build/pico-gc9a01/firmware.uf2 .pio/build/pico-gc9a01/tty2pico-pico-gc9a01_${{ steps.tagName.outputs.tag }}.uf2
-        pio run -e pico16mb-gc9a01
-        mv .pio/build/pico16mb-gc9a01/firmware.uf2 .pio/build/pico16mb-gc9a01/tty2pico-pico16mb-gc9a01_${{ steps.tagName.outputs.tag }}.uf2
-        pio run -e roundypi
-        mv .pio/build/roundypi/firmware.uf2 .pio/build/roundypi/tty2pico-roundypi_${{ steps.tagName.outputs.tag }}.uf2
+        pio run -e Pico-GC9A01
+        mv .pio/build/Pico-GC9A01/firmware.uf2 .pio/build/Pico-GC9A01/tty2pico-Pico-GC9A01_${{ steps.tagName.outputs.tag }}.uf2
+        pio run -e Pico16MB-GC9A01
+        mv .pio/build/Pico16MB-GC9A01/firmware.uf2 .pio/build/Pico16MB-GC9A01/tty2pico-Pico16MB-GC9A01_${{ steps.tagName.outputs.tag }}.uf2
+        pio run -e RoundyPi
+        mv .pio/build/RoundyPi/firmware.uf2 .pio/build/RoundyPi/tty2pico-RoundyPi_${{ steps.tagName.outputs.tag }}.uf2
     - name: Release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
         files: |
-          .pio/build/pico-gc9a01/tty2pico-pico-gc9a01_${{ steps.tagName.outputs.tag }}.uf2
-          .pio/build/pico16mb-gc9a01/tty2pico-pico16mb-gc9a01_${{ steps.tagName.outputs.tag }}.uf2
-          .pio/build/roundypi/tty2pico-roundypi_${{ steps.tagName.outputs.tag }}.uf2
+          .pio/build/Pico-GC9A01/tty2pico-Pico-GC9A01_${{ steps.tagName.outputs.tag }}.uf2
+          .pio/build/Pico16MB-GC9A01/tty2pico-Pico16MB-GC9A01_${{ steps.tagName.outputs.tag }}.uf2
+          .pio/build/RoundyPi/tty2pico-RoundyPi_${{ steps.tagName.outputs.tag }}.uf2
