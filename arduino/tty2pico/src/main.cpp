@@ -12,9 +12,9 @@
 #ifndef VERBOSE_OUTPUT
 #define VERBOSE_OUTPUT 0 // Log a lot of stuff to the serial output, only useful for debugging
 #endif
-#ifndef STARTUP_LOGO
-#define STARTUP_LOGO "/logos/pattern.gif" // The logo to show on startup (when not in slideshow mode)
-#endif
+// #ifndef STARTUP_LOGO
+// #define STARTUP_LOGO "/logos/pattern.gif" // The logo to show on startup (when not in slideshow mode)
+// #endif
 
 // #define BACKGROUND_COLOR 0x0000 // The default background color
 // #define OVERCLOCK_RP2040
