@@ -66,17 +66,25 @@ static bool cmdSetCore(String command)
 	bool found = false;
 	for (int i = 0; i < imageExtensionCount; i++)
 	{
-		path = LOGO_PATH + coreName + String(imageExtensions[i]);;
-		if (fileExists(path))
+		// Check for animated file(s) first
+		path = LOGO_PATH + coreName + ".loop" + String(imageExtensions[i]);
+		found = fileExists(path);
+		if (!found)
 		{
-			found = true;
-			Serial.print("Loading "); Serial.println(path.c_str());
-			break;
+			// Check for static files
+			path = LOGO_PATH + coreName + String(imageExtensions[i]);
+			found = fileExists(path);
 		}
+
+		if (found)
+			break;
 	}
 
 	if (found)
+	{
+		Serial.print("Loading "); Serial.println(path.c_str());
 		showImage(path);
+	}
 
 	return found;
 }
