@@ -103,14 +103,14 @@ File getFile(const char *path, oflag_t oflag = O_RDONLY)
 		// SD card
 		if (!sdfs.exists(path))
 		{
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+#if VERBOSE_OUTPUT == 1
 			Serial.print("File not found: "); Serial.println(path);
 #endif
 			return file;
 		}
 
 		file.close(); // Ensure any previous file has been closed
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+#if VERBOSE_OUTPUT == 1
 		if (file.open(&sdfs, path, oflag))
 			Serial.print("Opened file: "); Serial.println(path);
 #else
@@ -122,14 +122,14 @@ File getFile(const char *path, oflag_t oflag = O_RDONLY)
 		// Flash filesystem
 		if (!flashfs.exists(path))
 		{
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+#if VERBOSE_OUTPUT == 1
 			Serial.print("File not found: "); Serial.println(path);
 #endif
 			return file;
 		}
 
 		file.close(); // Ensure any previous file has been closed
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+#if VERBOSE_OUTPUT == 1
 		if (file.open(&flashfs, path, oflag))
 			Serial.print("Opened file: "); Serial.println(path);
 #else
@@ -310,7 +310,7 @@ inline int readFile(File *file, uint8_t *buffer, int32_t length, const char *err
 {
 	if (!file->available())
 	{
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+#if VERBOSE_OUTPUT == 1
 		Serial.println(errorMessage);
 #endif
 		return 0;
@@ -328,7 +328,7 @@ void rewindDirectory(void)
 void setDirectory(String path)
 {
 	dir.close();
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+#if VERBOSE_OUTPUT == 1
 	Serial.print("Setting directory to: "); Serial.println(path.c_str());
 #endif
 	dirText = path;
@@ -348,14 +348,14 @@ void *gifOpen(const char *filename, int32_t *size)
 	if (giffile.available())
 	{
 		*size = giffile.size();
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+#if VERBOSE_OUTPUT == 1
 		Serial.print("Opened file "); Serial.print(String(filename).c_str()); Serial.print(" with file size "); Serial.print(giffile.size()); Serial.println(" bytes");
 #endif
 		return (void *)&giffile;
 	}
 	else
 	{
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+#if VERBOSE_OUTPUT == 1
 		Serial.print("Failed to open "); Serial.println(String(filename).c_str());
 #endif
 		return NULL;
@@ -367,7 +367,7 @@ void gifClose(void *handle)
 	if (handle == nullptr)
 		return;
 
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+#if VERBOSE_OUTPUT == 1
 	Serial.println("Closing file");
 #endif
 	File *file = static_cast<File *>(handle);
@@ -403,14 +403,14 @@ void *pngOpen(const char *filename, int32_t *size)
 	if (pngfile.available())
 	{
 		*size = pngfile.size();
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+#if VERBOSE_OUTPUT == 1
 		Serial.print("Opened file "); Serial.print(String(filename).c_str()); Serial.print(" with file size "); Serial.print(pngfile.size()); Serial.println(" bytes");
 #endif
 		return &pngfile;
 	}
 	else
 	{
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+#if VERBOSE_OUTPUT == 1
 		Serial.print("Failed to open "); Serial.println(String(filename).c_str());
 #endif
 		return NULL;
@@ -422,7 +422,7 @@ void pngClose(void *handle)
 	if (handle == nullptr)
 		return;
 
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+#if VERBOSE_OUTPUT == 1
 	Serial.println("Closing file");
 #endif
 	File *file = static_cast<File *>(handle);

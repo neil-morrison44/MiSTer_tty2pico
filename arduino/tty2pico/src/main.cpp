@@ -16,8 +16,10 @@
 // #define STARTUP_LOGO "/logos/pattern.gif" // The logo to show on startup (when not in slideshow mode)
 // #endif
 
+// #define SLIDESHOW_ON_START 1
 // #define BACKGROUND_COLOR 0x0000 // The default background color
 // #define OVERCLOCK_RP2040
+// #define USE_GIF_BUFFERING
 
 /*******************************************************************************
  * Includes
@@ -60,12 +62,7 @@ void setup()
 	setupStorage();
 	setupUsbMsc();
 	setupDisplay();
-
 	setDirectory(LOGO_PATH);
-
-#if !defined(SLIDESHOW_ON_START) || SLIDESHOW_ON_START == 0
-	showStartup();
-#endif
 
 	runLoop1 = true;
 }
@@ -74,6 +71,10 @@ void setup1()
 {
 	// Pause core 1 until setup() is done
 	while (!runLoop1) delay(1);
+
+#if !defined(SLIDESHOW_ON_START) || SLIDESHOW_ON_START == 0
+	showStartup();
+#endif
 }
 
 void loop()
