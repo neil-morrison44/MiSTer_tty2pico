@@ -147,6 +147,11 @@ File getFile(String path, oflag_t oflag = O_RDONLY)
 	return getFile(path.c_str(), oflag);
 }
 
+bool getHasSD(void)
+{
+	return hasSD;
+}
+
 /*************************
  * Setup functions
  *************************/

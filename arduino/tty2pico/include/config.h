@@ -106,6 +106,9 @@
 #endif
 #endif
 
+#define TFT_MIDPOINT_X (TFT_DISPLAY_WIDTH / 2)
+#define TFT_MIDPOINT_Y (TFT_DISPLAY_HEIGHT / 2)
+
 #ifndef MAX_IMAGE_WIDTH
 #define MAX_IMAGE_WIDTH TFT_DISPLAY_WIDTH // This value is used to allocate line buffers, so usually set to your display width
 #endif

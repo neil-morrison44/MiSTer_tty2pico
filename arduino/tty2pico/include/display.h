@@ -12,12 +12,24 @@
 #define DISABLE_COLOR_MIXING 0xffffffff
 
 typedef enum DisplayState {
-	DISPLAY_STATIC_IMAGE,
 	DISPLAY_ANIMATED_GIF,
 	DISPLAY_ANIMATED_GIF_LOOPING,
-	DISPLAY_SLIDESHOW,
 	DISPLAY_MISTER,
+	DISPLAY_RANDOM_SHAPES,
+	DISPLAY_SLIDESHOW,
+	DISPLAY_STATIC_IMAGE,
+	DISPLAY_STATIC_TEXT,
 } DisplayState;
+
+typedef enum Fonts {
+	// GFXFF =  FreeFonts. Include access to the 48 Adafruit_GFX free fonts FF1 to FF48 and custom fonts
+	GLCD = 1, // Font 1. Original Adafruit 8 pixel font needs ~1820 bytes in FLASH
+	FONT2 = 2, // Font 2. Small 16 pixel high font, needs ~3534 bytes in FLASH, 96 characters
+	FONT4 = 4, // Font 4. Medium 26 pixel high font, needs ~5848 bytes in FLASH, 96 characters
+	FONT6 = 6, // Font 6. Large 48 pixel font, needs ~2666 bytes in FLASH, only characters 1234567890:-.apm
+	FONT7 = 7, // Font 7. 7 segment 48 pixel font, needs ~2438 bytes in FLASH, only characters 1234567890:.
+	FONT8 = 8, // Font 8. Large 75 pixel font needs ~3256 bytes in FLASH, only characters 1234567890:-.
+} Fonts;
 
 const char *imageExtensions[] = {
 	".gif",
@@ -72,6 +84,109 @@ void setupDisplay()
 inline void clearDisplay(void)
 {
 	tft.fillScreen(BACKGROUND_COLOR);
+}
+
+/*******************************************************************************
+ * Text and Graphics functions
+ *******************************************************************************/
+
+#define DEMO_SQUARE_SIZE (TFT_DISPLAY_WIDTH / 3)
+#define DEMO_CIRCLE_RADIUS (DEMO_SQUARE_SIZE / 2)
+#define DEMO_ELLIPSE_RADIUS_X (DEMO_SQUARE_SIZE / 3)
+#define DEMO_ELLIPSE_RADIUS_Y (DEMO_SQUARE_SIZE / 2)
+#define DEMO_TRIANGLE_SIZE (DEMO_SQUARE_SIZE / 2)
+
+void drawDemoShapes(int durationMS)
+{
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.println("Demo shapes start");
+	long runtime = micros();
+	int frames = 0;
+#endif
+	displayState = DISPLAY_RANDOM_SHAPES;
+
+	long startTime = millis();
+	long endTime = (durationMS <= 0) ? LONG_MAX : (startTime + durationMS);
+
+	int squareX = TFT_DISPLAY_WIDTH / 2;
+	const int minFrameCount = -(DEMO_SQUARE_SIZE / 2);
+	const int maxFrameCount = TFT_DISPLAY_WIDTH + (DEMO_SQUARE_SIZE / 2);
+	int frame = -DEMO_SQUARE_SIZE;
+	bool reverse = false;
+
+	displayBuffer.createSprite(TFT_DISPLAY_WIDTH, TFT_DISPLAY_HEIGHT);
+	while (millis() < endTime)
+	{
+		displayBuffer.fillScreen(TFT_BLACK);
+		displayBuffer.fillCircle(frame, TFT_DISPLAY_WIDTH - frame, DEMO_CIRCLE_RADIUS, TFT_RED);
+		displayBuffer.fillRoundRect(TFT_DISPLAY_WIDTH - (DEMO_SQUARE_SIZE / 2) - frame, frame - (DEMO_SQUARE_SIZE / 2), DEMO_SQUARE_SIZE, DEMO_SQUARE_SIZE, 3, TFT_GREEN);
+		displayBuffer.fillTriangle(frame, frame - DEMO_TRIANGLE_SIZE, frame - DEMO_TRIANGLE_SIZE, frame + DEMO_TRIANGLE_SIZE, frame + DEMO_TRIANGLE_SIZE, frame + DEMO_TRIANGLE_SIZE, TFT_BLUE);
+		displayBuffer.fillEllipse(TFT_DISPLAY_WIDTH - frame, TFT_DISPLAY_WIDTH - frame, DEMO_ELLIPSE_RADIUS_X, DEMO_ELLIPSE_RADIUS_Y, TFT_YELLOW);
+		displayBuffer.pushSprite(0, 0);
+
+		if (reverse)
+			frame--;
+		else
+			frame++;
+
+		if (frame == maxFrameCount)
+			reverse = true;
+		else if (frame == minFrameCount)
+			reverse = false;
+
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+		frames++;
+#endif
+	}
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	runtime = micros() - runtime;
+	Serial.print("Demo random shapes at "); Serial.print(frames / (runtime / 1000000.0)); Serial.println(" fps");
+#endif
+	displayBuffer.deleteSprite();
+}
+
+void showText(const char *displayText, uint8_t font = FONT4, uint16_t textColor = TFT_WHITE, uint16_t backgroundColor = TFT_BLACK)
+{
+	displayState = DISPLAY_STATIC_TEXT;
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.print("Showing message: "); Serial.println(displayText);
+#endif
+	displayBuffer.createSprite(TFT_DISPLAY_WIDTH, TFT_DISPLAY_HEIGHT);
+	displayBuffer.fillSprite(backgroundColor);
+	displayBuffer.setTextColor(textColor);
+	displayBuffer.drawCentreString(displayText, TFT_DISPLAY_WIDTH / 2, TFT_DISPLAY_HEIGHT / 2, font);
+	displayBuffer.pushSprite(0, 0);
+	displayBuffer.deleteSprite();
+}
+
+void showSystemInfo(void)
+{
+	displayState = DISPLAY_STATIC_TEXT;
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.println("Showing system info");
+#endif
+
+	displayBuffer.createSprite(TFT_DISPLAY_WIDTH, TFT_DISPLAY_HEIGHT);
+	displayBuffer.fillSprite(TFT_BLACK);
+	displayBuffer.setTextColor(TFT_WHITE);
+
+	String lines[] =
+	{
+		"TTY2PICO v" + String(TTY2PICO_VERSION),
+		String(TTY2PICO_BOARD),
+		String((clock_get_hz(clk_sys) / 1000000.0f)) + "MHz @ " + analogReadTemp() + "C",
+		String(TTY2PICO_DISPLAY) + " " + String(TFT_DISPLAY_WIDTH) + "x" + String(TFT_DISPLAY_HEIGHT) + " SPI@" + String(SPI_FREQUENCY / 1000000.0f) + "MHz",
+		(getHasSD() ? "SD Card: Yes" : "SD Card: No"),
+	};
+
+	displayBuffer.drawCentreString(lines[0], TFT_MIDPOINT_X, TFT_MIDPOINT_Y - 50, FONT4);
+	displayBuffer.drawCentreString(lines[1], TFT_MIDPOINT_X, TFT_MIDPOINT_Y - 20, FONT2);
+	displayBuffer.drawCentreString(lines[2], TFT_MIDPOINT_X, TFT_MIDPOINT_Y     , FONT2);
+	displayBuffer.drawCentreString(lines[3], TFT_MIDPOINT_X, TFT_MIDPOINT_Y + 20, FONT2);
+	displayBuffer.drawCentreString(lines[4], TFT_MIDPOINT_X, TFT_MIDPOINT_Y + 40, FONT2);
+
+	displayBuffer.pushSprite(0, 0);
+	displayBuffer.deleteSprite();
 }
 
 /*******************************************************************************
@@ -508,24 +623,23 @@ void showImage(const char *path)
 #if VERBOSE_OUTPUT == 1
 	Serial.print("Showing image: "); Serial.println(path);
 #endif
+	if (fileExists(path))
+	{
+		String pathString = String(path);
+		pathString.trim();
+		pathString.toLowerCase();
+		currentImage = pathString;
 
-	String pathString = String(path);
-	pathString.trim();
-	pathString.toLowerCase();
-	currentImage = pathString;
-
-	if (currentImage.endsWith(".loop.gif"))
-	{
-		showGIF(path, true);
+		if (currentImage.endsWith(".loop.gif"))
+			showGIF(path, true);
+		else if (currentImage.endsWith(".gif"))
+			showGIF(path);
+		else if (currentImage.endsWith(".png"))
+			showPNG(path);
+		else
+			showText(path);
 	}
-	else if (currentImage.endsWith(".gif"))
-	{
-		showGIF(path);
-	}
-	else if (currentImage.endsWith(".png"))
-	{
-		showPNG(path);
-	}
+	else showText(path);
 }
 
 void showImage(String path)
@@ -541,6 +655,9 @@ void showMister(void)
 
 void showStartup(void)
 {
+	showSystemInfo();
+	delay(3000);
+
 #if defined(STARTUP_LOGO)
   showImage(STARTUP_LOGO);
 #else

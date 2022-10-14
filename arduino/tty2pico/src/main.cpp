@@ -13,7 +13,7 @@
 #define VERBOSE_OUTPUT 0 // Log a lot of stuff to the serial output, only useful for debugging
 #endif
 // #ifndef STARTUP_LOGO
-// #define STARTUP_LOGO "/logos/pattern.gif" // The logo to show on startup (when not in slideshow mode)
+// #define STARTUP_LOGO "/logos/pattern.loop.gif" // The logo to show on startup (when not in slideshow mode)
 // #endif
 
 // #define SLIDESHOW_ON_START 1
@@ -55,6 +55,10 @@ void setup()
 	delay(10); // Allow vreg time to stabilize
 	set_sys_clock_khz(250000, true); // Overclock to 250MHz
 #endif
+
+	// Sync peripheral clock to CPU clock to get a boost to SPI performance
+	uint32_t freq = clock_get_hz(clk_sys);
+	clock_configure(clk_peri, 0, CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS, freq, freq);
 
 	queue_init(&cmdQ, sizeof(CommandData), 1);
 

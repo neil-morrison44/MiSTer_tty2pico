@@ -49,33 +49,35 @@ This is currently used for flash and SD card filesystem access. Consider a micro
 * [ ] Implement support for whatever commands make sense from:
   * [tty2oled](https://github.com/venice1200/MiSTer_tty2oled/wiki/Command_v2)
     * [x] CMDBYE - Show Sorgelig's Cat Icon
-    * [ ] CMDCLS - Clear and Update the Display
+    * [x] CMDCLS - Clear and Update the Display
     * [x] CMDCOR - Command to announce Corechange (no transitions)
-    * [ ] CMDDOFF - Switch Display off
-    * [ ] CMDDON - Power Display on
+    * [x] CMDDOFF - Switch Display off
+    * [x] CMDDON - Power Display on
     * [ ] CMDGEO - Show Geometric Figures
-    * [ ] CMDSAVER - Disable or Enable the ScreenSaver (currently only toggle)
+    * [x] CMDROT - Rotate screen relative to starting position (0=none, 1=180°, 2=90°, 3=270°)
+    * [x] CMDSAVER - Disable or Enable the ScreenSaver (currently only toggle)
     * [ ] CMDSETTIME - Set MCU clock, ESP32 only
-    * [ ] CMDSHTEMP - Read the temp sensor of the RP2040 if available
-    * [ ] CMDSHSYSHW - Show tty2pico system information
-    * [ ] CMDSNAM - Show actual loaded Corename
-    * [ ] CMDSWSAVER - Switch Screensaver on or off
-    * [ ] CMDTEST - Show a full screen test picture
-    * [ ] CMDTXT - Send Text to the Display
+    * [x] CMDSHTEMP - Alias to `CMDSHSYSHW` since that screen displays the CPU temp
+    * [x] CMDSHSYSHW - Show tty2pico system information
+    * [x] CMDSNAM - Show actual loaded Corename
+    * [x] CMDSORG - Show Startup screen, also an alias to `CMDSHSYSHW`
+    * [x] CMDSWSAVER - Switch Screensaver on or off
+    * [x] CMDTEST - Show a full screen test picture
+    * [x] CMDTXT - Send Text to the Display
   * [tty2tft](https://github.com/ojaksch/MiSTer_tty2tft/tree/main/doc#commands)
     * [ ] CMDDINVON - Invert screen on
     * [ ] CMDDINVOFF - Invert screen off
-    * [ ] CMDROT - Rotate screen (0=none/Portrait, 1=90°/Landscape, 2=180°, 3=270°)
     * [ ] CMDVIDEOPLAY,PARAM - Play videos or not (yes/no/may)
 * [x] Add GIF support
 * [x] Add JPEG support
-* [ ] Add default assets
+* [x] Add default assets
 * [x] Support transparency (shows black for PNG)
   * [x] Allow setting up a background image/color
 * [x] Add configuration for SPI Micro SD breakouts
-* [ ] More LCD/OLED display configurations
-  * [ ] ST7735 128x160
-  * [ ] ST7789V3 172x320
+* [x] More LCD/OLED display configurations
+  * [x] SSD1351 128x128 OLED
+  * [x] ST7735 128x160
+  * [x] ST7789V3 172x320
 
 ### Maybe TODO
 
