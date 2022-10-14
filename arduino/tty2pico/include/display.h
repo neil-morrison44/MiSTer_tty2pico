@@ -7,7 +7,7 @@
 #include <TFT_eSPI.h>
 #include <AnimatedGIF.h>
 #include <PNGdec.h>
-#include "mister.h"
+#include "mister_kun_blink.h"
 
 #define DISABLE_COLOR_MIXING 0xffffffff
 
@@ -183,8 +183,10 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 	int width = gif->getCanvasWidth();
 	int height = gif->getCanvasHeight();
 	xoffset = (TFT_DISPLAY_WIDTH - width) / 2;
-	yoffset = (TFT_DISPLAY_WIDTH - height) / 2;
+	yoffset = (TFT_DISPLAY_HEIGHT - height) / 2;
 	displayState = loop ? DISPLAY_ANIMATED_GIF_LOOPING : DISPLAY_ANIMATED_GIF;
+
+	displayBuffer.createSprite(TFT_DISPLAY_WIDTH, TFT_DISPLAY_HEIGHT);
 
 #if VERBOSE_OUTPUT == 1
 	Serial.println("Play GIF start");
@@ -192,18 +194,22 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 	int frames = 0;
 #endif
 
-	displayBuffer.createSprite(TFT_DISPLAY_WIDTH, TFT_DISPLAY_WIDTH);
-
 	while (gif->playFrame(true, NULL))
 	{
 #if VERBOSE_OUTPUT == 1
 		frames++;
 #endif
 		displayBuffer.pushSprite(0, 0);
+		// yield();
 	}
 
 	if (gif->getLastError() == GIF_SUCCESS)
+	{
+#if VERBOSE_OUTPUT == 1
+		frames++;
+#endif
 		displayBuffer.pushSprite(0, 0);
+	}
 
 #if VERBOSE_OUTPUT == 1
 	runtime = micros() - runtime;
@@ -334,7 +340,7 @@ static void gifDrawLine(GIFDRAW *pDraw)
 static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 {
 	xoffset = (TFT_DISPLAY_WIDTH - gif->getCanvasWidth()) / 2;
-	yoffset = (TFT_DISPLAY_WIDTH - gif->getCanvasHeight()) / 2;
+	yoffset = (TFT_DISPLAY_HEIGHT - gif->getCanvasHeight()) / 2;
 	displayState = loop ? DISPLAY_ANIMATED_GIF_LOOPING : DISPLAY_ANIMATED_GIF;
 	tft.startWrite();
 
@@ -529,7 +535,7 @@ void showImage(String path)
 
 void showMister(void)
 {
-	showGIF((uint8_t *)mister, sizeof(mister));
+	showGIF((uint8_t *)mister_kun_blink, sizeof(mister_kun_blink));
 	displayState = DISPLAY_MISTER; // Explicitly set display state since the displayGIF() method set it
 }
 

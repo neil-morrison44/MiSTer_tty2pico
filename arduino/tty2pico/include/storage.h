@@ -112,7 +112,7 @@ File getFile(const char *path, oflag_t oflag = O_RDONLY)
 		file.close(); // Ensure any previous file has been closed
 #if VERBOSE_OUTPUT == 1
 		if (file.open(&sdfs, path, oflag))
-			Serial.print("Opened file: "); Serial.println(path);
+			Serial.print("Opened file from SD: "); Serial.println(path);
 #else
 		file.open(&sdfs, path, oflag);
 #endif
@@ -131,7 +131,7 @@ File getFile(const char *path, oflag_t oflag = O_RDONLY)
 		file.close(); // Ensure any previous file has been closed
 #if VERBOSE_OUTPUT == 1
 		if (file.open(&flashfs, path, oflag))
-			Serial.print("Opened file: "); Serial.println(path);
+			Serial.print("Opened file from flash: "); Serial.println(path);
 #else
 		file.open(&flashfs, path, oflag);
 #endif
