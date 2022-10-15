@@ -4,29 +4,24 @@
 #include "Adafruit_TinyUSB.h"
 #include "storage.h"
 
-Adafruit_USBD_MSC usb_msc;
+Adafruit_USBD_MSC msc;
 
-// Callback invoked when received READ10 command.
-// Copy disk's data to buffer (up to bufsize) and return number of copied bytes (must be multiple of block size)
-int32_t mscReadCallback(uint32_t lba, void* buffer, uint32_t bufsize)
+/*******************************************************************************
+ * Flash MSC Callbacks
+ *******************************************************************************/
+
+int32_t mscFlashReadCallback(uint32_t lba, void* buffer, uint32_t bufsize)
 {
-	// Note: SPIFLash Block API: readBlocks/writeBlocks/syncBlocks already include 4K sector caching internally. We don't need to cache it, yahhhh!!
 	return flash.readBlocks(lba, (uint8_t*) buffer, bufsize / 512) ? bufsize : -1;
 }
 
-// Callback invoked when received WRITE10 command.
-// Process data in buffer to disk's storage and return number of written bytes (must be multiple of block size)
-int32_t mscWriteCallback(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
+int32_t mscFlashWriteCallback(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
 {
 	digitalWrite(LED_BUILTIN, HIGH);
-
-	// Note: SPIFLash Block API: readBlocks/writeBlocks/syncBlocks already include 4K sector caching internally. We don't need to cache it, yahhhh!!
 	return flash.writeBlocks(lba, buffer, bufsize / 512) ? bufsize : -1;
 }
 
-// Callback invoked when WRITE10 command is completed (status received and accepted by host).
-// used to flush any pending cache.
-void mscFlushCallback(void)
+void mscFlashFlushCallback(void)
 {
 	flash.syncBlocks(); // sync with flash
 	flashfs.cacheClear(); // clear file system's cache to force refresh
@@ -34,38 +29,68 @@ void mscFlushCallback(void)
 	digitalWrite(LED_BUILTIN, LOW);
 }
 
+/*******************************************************************************
+ * SD MSC Callbacks
+ *******************************************************************************/
+
+int32_t mscSDReadCallback(uint32_t lba, void* buffer, uint32_t bufsize)
+{
+	return sdfs.card()->readBlocks(lba, (uint8_t *)buffer, bufsize / 512) ? bufsize : -1;
+}
+
+int32_t mscSDWriteCallback(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
+{
+	digitalWrite(LED_BUILTIN, HIGH);
+	return sdfs.card()->writeBlocks(lba, buffer, bufsize / 512) ? bufsize : -1;
+}
+
+void mscSDFlushCallback(void)
+{
+	sdfs.card()->syncBlocks();
+	sdfs.cacheClear(); // clear file system's cache to force refresh
+	sdfsChanged = true;
+	digitalWrite(LED_BUILTIN, LOW);
+}
+
+/*******************************************************************************
+ * Lifecycle functions
+ *******************************************************************************/
+
 void setupUsbMsc()
 {
-	// Set disk vendor id, product id and revision with string up to 8, 16, 4 characters respectively
-	usb_msc.setID("TTY2PICO", "Flash Storage", "1.0");
-
-	// Set callback
-	usb_msc.setReadWriteCallback(mscReadCallback, mscWriteCallback, mscFlushCallback);
-
-	// Set disk size, block size should be 512 regardless of spi flash page size
-	usb_msc.setCapacity(flash.size() / 512, 512);
-
-	// MSC is ready for read/write
-	usb_msc.setUnitReady(true);
-
-	usb_msc.begin();
+	if (getHasSD())
+	{
+		// Set disk vendor id, product id and revision with string up to 8, 16, 4 characters respectively
+		msc.setID("T2PSD", "SD Storage", "1.0");
+		msc.begin();
+		msc.setReadWriteCallback(mscSDReadCallback, mscSDWriteCallback, mscSDFlushCallback);
+		msc.setCapacity(sdfs.card()->cardSize(), 512); // Set disk size, block size should be 512 regardless
+		msc.setUnitReady(true); // MSC is ready for read/write
+	}
+	else
+	{
+		// Set disk vendor id, product id and revision with string up to 8, 16, 4 characters respectively
+		msc.setID("T2PFLASH", "Flash Storage", "1.0");
+		msc.begin();
+		msc.setReadWriteCallback(mscFlashReadCallback, mscFlashWriteCallback, mscFlashFlushCallback);
+		msc.setCapacity(flash.size() / 512, 512); // Set disk size, block size should be 512 regardless of spi flash page size
+		msc.setUnitReady(true); // MSC is ready for read/write
+	}
 
 	Serial.println("USB MSC storage setup complete");
 }
 
+// Lifecycle method for handle file system changes
 void loopMSC()
 {
 	if (flashfsChanged)
 	{
 		flashfsChanged = false;
+	}
 
-		// check if host formatted disk
-		if (!flashfsFormatted)
-			flashfsFormatted = flashfs.begin(&flash);
-
-		// skip if still not formatted
-		if (!flashfsFormatted)
-			return;
+	if (sdfsChanged)
+	{
+		sdfsChanged = false;
 	}
 }
 

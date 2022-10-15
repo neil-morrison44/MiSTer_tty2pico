@@ -39,6 +39,7 @@ bool flashfsChanged;
 
 static bool hasSD = false;
 SdFat sdfs(&SDCARD_SPI);
+bool sdfsChanged;
 
 /*************************
  * Helper functions
