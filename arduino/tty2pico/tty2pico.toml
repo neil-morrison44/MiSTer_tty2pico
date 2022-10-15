@@ -1,0 +1,16 @@
+title = "tty2pico Configuration"
+
+[tty2pico]
+backgroundColor = 0xFFFF
+tftWidth = 172
+tftHeight = 320
+tftRotation = 3
+disableSD = true
+enableOverclock = true
+waitForSerial = false
+imagePath = "/logos/"
+startupCommand = "CMDBYE"
+startupImage = "/logos/pattern.loop.gif"
+slideshowFolder = "/logos/"
+slideshowDelay = 5000
+ttyBaudRate = 115200

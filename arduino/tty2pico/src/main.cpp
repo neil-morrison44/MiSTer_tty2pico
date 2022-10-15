@@ -10,25 +10,17 @@
 #define WAIT_FOR_SERIAL 0 // Wait for serial connection before running program code
 #endif
 #ifndef VERBOSE_OUTPUT
-#define VERBOSE_OUTPUT 0 // Log a lot of stuff to the serial output, only useful for debugging
+#define VERBOSE_OUTPUT 1 // Log a lot of stuff to the serial output, only useful for debugging
 #endif
-// #ifndef STARTUP_LOGO
-// #define STARTUP_LOGO "/logos/pattern.loop.gif" // The logo to show on startup (when not in slideshow mode)
-// #endif
 
-// #define SLIDESHOW_ON_START 1
-// #define BACKGROUND_COLOR 0x0000 // The default background color
-// #define OVERCLOCK_RP2040
 // #define USE_GIF_BUFFERING
 
 /*******************************************************************************
  * Includes
  *******************************************************************************/
 #include "config.h"
-#ifdef OVERCLOCK_RP2040
 #include "pico/stdlib.h"
 #include "hardware/vreg.h"
-#endif
 #include <Arduino.h>
 #include "config.h"
 #include "tty.h"
@@ -47,26 +39,28 @@ uint32_t nextSerialRead;
 
 void setup()
 {
-#ifdef OVERCLOCK_RP2040
-	// Apply an overclock to 250MHz (2x stock) and voltage tweak to stablize most RP2040 boards.
-	// If it's good enough for pixel-pushing in MicroPython, it's good enough for us :P
-	// https://github.com/micropython/micropython/issues/8208
-	vreg_set_voltage(VREG_VOLTAGE_1_20); // Set voltage to 1.2v
-	delay(10); // Allow vreg time to stabilize
-	set_sys_clock_khz(250000, true); // Overclock to 250MHz
-#endif
+	setupTTY();
+	setupStorage();
+
+	if (config.enableOverclock)
+	{
+		// Apply an overclock to 250MHz (2x stock) and voltage tweak to stablize most RP2040 boards.
+		// If it's good enough for pixel-pushing in MicroPython, it's good enough for us :P
+		// https://github.com/micropython/micropython/issues/8208
+		vreg_set_voltage(VREG_VOLTAGE_1_20); // Set voltage to 1.2v
+		delay(10); // Allow vreg time to stabilize
+		set_sys_clock_khz(250000, true); // Overclock to 250MHz
+	}
 
 	// Sync peripheral clock to CPU clock to get a boost to SPI performance
 	uint32_t freq = clock_get_hz(clk_sys);
 	clock_configure(clk_peri, 0, CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS, freq, freq);
 
-	queue_init(&cmdQ, sizeof(CommandData), 1);
-
-	setupTTY();
-	setupStorage();
 	setupUsbMsc();
 	setupDisplay();
-	setDirectory(LOGO_PATH);
+	setDirectory(config.imagePath);
+
+	queue_init(&cmdQ, sizeof(CommandData), 1);
 
 	runLoop1 = true;
 }
@@ -76,9 +70,7 @@ void setup1()
 	// Pause core 1 until setup() is done
 	while (!runLoop1) delay(1);
 
-#if !defined(SLIDESHOW_ON_START) || SLIDESHOW_ON_START == 0
 	showStartup();
-#endif
 }
 
 void loop()

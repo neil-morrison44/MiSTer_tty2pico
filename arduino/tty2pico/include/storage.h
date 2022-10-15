@@ -153,9 +153,54 @@ bool getHasSD(void)
 	return hasSD;
 }
 
+void saveFile(String path, const char *data, int size, oflag_t oflag = (O_WRITE | O_CREAT | O_TRUNC))
+{
+	File file = getFile(path, oflag);
+
+	if (file.write(data, size))
+	{
+#if VERBOSE_OUTPUT == 1
+		Serial.print("Saved file "); Serial.println(path);
+#endif
+	}
+	else
+	{
+		String message = "Failed to save file " + path;
+		Serial.println(message.c_str());
+	}
+
+	file.close();
+}
+
 /*************************
  * Setup functions
  *************************/
+
+static void loadConfig(void)
+{
+	File configFile = getFile(CONFIG_FILE_PATH);
+	if (configFile)
+	{
+		// Read entire file into memory, should only be a few KB max
+		char *buffer = (char *)malloc(sizeof(char) * configFile.size());
+		configFile.read(buffer, configFile.size());
+		const char *error = parseConfig(buffer);
+		free(buffer);
+
+		// Couldn't parse config
+		if (error != nullptr)
+			Serial.println(error);
+	}
+}
+
+void saveConfig(void)
+{
+	int bufferSize = 4096;
+	char buffer[bufferSize]; // Allocate 4K buffer to handle config data
+	int size = exportConfig(buffer, bufferSize);
+	saveFile(CONFIG_FILE_PATH, buffer, size);
+	Serial.println("Config file saved to " + String(CONFIG_FILE_PATH));
+}
 
 static void setupFlash(void)
 {
@@ -214,6 +259,7 @@ void setupStorage(void)
 #ifdef SDCARD_SPI
 	setupSD();
 #endif
+	loadConfig();
 }
 
 /*************************

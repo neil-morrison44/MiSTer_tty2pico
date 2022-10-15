@@ -111,6 +111,8 @@ static void cmdRotate(String command)
 		rotationMode = (rotationMode + TFT_ROTATION) % 4;
 #endif
 		tft.setRotation(rotationMode);
+		config.tftRotation = rotationMode;
+		saveConfig();
 		Serial.print("Rotation changed to "); Serial.println(mode);
 	}
 	else Serial.println("No rotation command found");
@@ -147,12 +149,12 @@ static void cmdSetCore(String command)
 	for (int i = 0; i < imageExtensionCount; i++)
 	{
 		// Check for animated file(s) first
-		path = LOGO_PATH + coreName + ".loop" + String(imageExtensions[i]);
+		path = config.imagePath + coreName + ".loop" + String(imageExtensions[i]);
 		found = fileExists(path);
 		if (!found)
 		{
 			// Check for static files
-			path = LOGO_PATH + coreName + String(imageExtensions[i]);
+			path = config.imagePath + coreName + String(imageExtensions[i]);
 			found = fileExists(path);
 		}
 

@@ -1,8 +1,24 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include <Arduino.h>
+#include <stdint.h>
+#include "tomlcpp.hpp"
+
+#ifndef CONFIG_FILE_PATH
+#define CONFIG_FILE_PATH "/tty2pico.toml" // Path to tty2pico config file
+#endif
+
 #ifndef RESERVED_FLASH_KB
 #define RESERVED_FLASH_KB 512 // The amount of flash (in KB) reserved for program code
+#endif
+
+#ifndef DISK_LABEL
+#define DISK_LABEL "TTY2PICO" // Default label for newly formatted filesystem, limit of 11 characters
+#endif
+
+#ifndef VERBOSE_OUTPUT
+#define VERBOSE_OUTPUT 0 // Log a lot of stuff to the serial output, only useful for debugging
 #endif
 
 /**************************
@@ -54,24 +70,12 @@
 #define SLIDESHOW_DELAY 2000 // The time between slideshow changes
 #endif
 
-#ifndef SLIDESHOW_ON_START
-#define SLIDESHOW_ON_START 0 // Display the slideshow on startup instead of the STARTUP_LOGO
-#endif
-
 #ifndef WAIT_FOR_SERIAL
 #define WAIT_FOR_SERIAL 0 // Wait for serial connection before running program code
 #endif
 
-#ifndef VERBOSE_OUTPUT
-#define VERBOSE_OUTPUT 0 // Log a lot of stuff to the serial output, only useful for debugging
-#endif
-
 #ifndef TFT_ROTATION
 #define TFT_ROTATION 0 // Set the rotation position, values are from 0-3
-#endif
-
-#ifndef DISK_LABEL
-#define DISK_LABEL "TTY2PICO" // Default label for newly formatted filesystem, limit of 11 characters
 #endif
 
 // If defined will use the DMA mode with TFT_eSPI library
@@ -106,11 +110,127 @@
 #endif
 #endif
 
-#define TFT_MIDPOINT_X (TFT_DISPLAY_WIDTH / 2)
-#define TFT_MIDPOINT_Y (TFT_DISPLAY_HEIGHT / 2)
+/**************************
+ * Config data handling
+ **************************/
 
-#ifndef MAX_IMAGE_WIDTH
-#define MAX_IMAGE_WIDTH TFT_DISPLAY_WIDTH // This value is used to allocate line buffers, so usually set to your display width
-#endif
+typedef enum TTY2PICO_Font {
+	// GFXFF =  FreeFonts. Include access to the 48 Adafruit_GFX free fonts FF1 to FF48 and custom fonts
+	GLCD = 1, // Font 1. Original Adafruit 8 pixel font needs ~1820 bytes in FLASH
+	FONT2 = 2, // Font 2. Small 16 pixel high font, needs ~3534 bytes in FLASH, 96 characters
+	FONT4 = 4, // Font 4. Medium 26 pixel high font, needs ~5848 bytes in FLASH, 96 characters
+	FONT6 = 6, // Font 6. Large 48 pixel font, needs ~2666 bytes in FLASH, only characters 1234567890:-.apm
+	FONT7 = 7, // Font 7. 7 segment 48 pixel font, needs ~2438 bytes in FLASH, only characters 1234567890:.
+	FONT8 = 8, // Font 8. Large 75 pixel font needs ~3256 bytes in FLASH, only characters 1234567890:-.
+} TTY2PICO_Font;
+
+struct TTY2PICO_Config
+{
+	uint16_t backgroundColor = BACKGROUND_COLOR;
+	uint8_t tftRotation = TFT_ROTATION;
+	int tftWidth = TFT_WIDTH;
+	int tftHeight = TFT_HEIGHT;
+	bool disableSD = false;
+	bool enableOverclock = false;
+	bool waitForSerial = false;
+	String imagePath = LOGO_PATH;
+	String startupCommand = "CMDBYE";
+	String startupImage;
+	String slideshowFolder = LOGO_PATH;
+	int slideshowDelay = SLIDESHOW_DELAY;
+	uint32_t ttyBaudRate = TTY_BAUDRATE;
+
+	int getDisplayHeight() const { return (tftRotation % 2) ? tftWidth : tftHeight; }
+	int getDisplayWidth() const { return (tftRotation % 2) ? tftHeight : tftWidth; }
+	int getMidpointX() const { return getDisplayWidth() / 2; }
+	int getMidpointY() const { return getDisplayHeight() / 2; }
+	int getLineBufferSize() const { return getDisplayWidth(); }
+	int getFontSmall() const { return getDisplayHeight() < 160 ? GLCD : FONT2; }
+	int getFontLarge() const { return getDisplayHeight() < 160 ? FONT2 : FONT4; }
+	int getFontSmallSize() const { return getDisplayHeight() < 160 ? 8 : 16; }
+	int getFontLargeSize() const { return getDisplayHeight() < 160 ? 16 : 26; }
+};
+
+TTY2PICO_Config config;
+
+const char *parseConfig(char *buffer)
+{
+	// Do we have a config to parse?
+	if (buffer == nullptr || sizeof(buffer) < 1)
+		return nullptr;
+
+	auto res = toml::parse(buffer);
+	if (!res.table)
+		return res.errmsg.c_str();
+
+	auto tty2pico = res.table->getTable("tty2pico");
+	if (!tty2pico)
+		return "Invalid configuration file, missing [tty2pico] config section";
+
+	auto [backgroundColorOK, backgroundColor] = tty2pico->getInt("backgroundColor");
+	if (backgroundColorOK) config.backgroundColor = (uint16_t)backgroundColor;
+
+	auto [tftRotationOK, tftRotation] = tty2pico->getInt("tftRotation");
+	if (tftRotationOK) config.tftRotation = (uint8_t)tftRotation;
+
+	auto [tftWidthOK, tftWidth] = tty2pico->getInt("tftWidth");
+	if (tftWidthOK) config.tftWidth = (uint16_t)tftWidth;
+
+	auto [tftHeightOK, tftHeight] = tty2pico->getInt("tftHeight");
+	if (tftHeightOK) config.tftHeight = (uint16_t)tftHeight;
+
+	auto [disableSDOK, disableSD] = tty2pico->getBool("disableSD");
+	if (disableSDOK) config.disableSD = disableSD;
+
+	auto [enableOverclockOK, enableOverclock] = tty2pico->getBool("enableOverclock");
+	if (enableOverclockOK) config.enableOverclock = enableOverclock;
+
+	auto [waitForSerialOK, waitForSerial] = tty2pico->getBool("waitForSerial");
+	if (waitForSerialOK) config.waitForSerial = waitForSerial;
+
+	auto [imagePathOK, imagePath] = tty2pico->getString("imagePath");
+	if (imagePathOK) config.imagePath = imagePath.c_str();
+
+	auto [startupCommandOK, startupCommand] = tty2pico->getString("startupCommand");
+	if (startupCommandOK) config.startupCommand = startupCommand.c_str();
+
+	auto [startupImageOK, startupImage] = tty2pico->getString("startupImage");
+	if (startupImageOK) config.startupImage = startupImage.c_str();
+
+	auto [slideshowFolderOK, slideshowFolder] = tty2pico->getString("slideshowFolder");
+	if (slideshowFolderOK) config.slideshowFolder = slideshowFolder.c_str();
+
+	auto [slideshowDelayOK, slideshowDelay] = tty2pico->getInt("slideshowDelay");
+	if (slideshowDelayOK) config.slideshowDelay = (uint32_t)slideshowDelay;
+
+	auto [ttyBaudRateOK, ttyBaudRate] = tty2pico->getInt("ttyBaudRate");
+	if (ttyBaudRateOK) config.ttyBaudRate = (uint32_t)ttyBaudRate;
+
+	return nullptr;
+}
+
+int exportConfig(char *buffer, int bufferSize)
+{
+	String commandText =
+		String("title = \"tty2pico Configuration\"\n") +
+		"\n[tty2pico]" +
+		"\nbackgroundColor = " + String(config.backgroundColor) +
+		"\ntftWidth = " + String(config.tftWidth) +
+		"\ntftHeight = " + String(config.tftHeight) +
+		"\ntftRotation = " + String(config.tftRotation) +
+		"\ndisableSD = " + String(config.disableSD ? "true" : "false") +
+		"\nenableOverclock = " + String(config.enableOverclock ? "true" : "false") +
+		"\nwaitForSerial = " + String(config.waitForSerial ? "true" : "false") +
+		"\nimagePath = \"" + config.imagePath + "\"" +
+		"\nstartupCommand = \"" + config.startupCommand + "\"" +
+		"\nstartupImage = \"" + config.startupImage + "\"" +
+		"\nslideshowFolder = \"" + config.slideshowFolder + "\"" +
+		"\nslideshowDelay = " + String(config.slideshowDelay) +
+		"\nttyBaudRate = " + String(config.ttyBaudRate);
+
+	int size = (commandText.length() > bufferSize) ? bufferSize : commandText.length();
+	memcpy(buffer, commandText.c_str(), size);
+	return size;
+}
 
 #endif

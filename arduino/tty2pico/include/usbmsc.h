@@ -61,7 +61,7 @@ void setupUsbMsc()
 	if (getHasSD())
 	{
 		// Set disk vendor id, product id and revision with string up to 8, 16, 4 characters respectively
-		msc.setID("T2PSD", "SD Storage", "1.0");
+		msc.setID("tty2pico", "SD Storage", "1.0");
 		msc.begin();
 		msc.setReadWriteCallback(mscSDReadCallback, mscSDWriteCallback, mscSDFlushCallback);
 		msc.setCapacity(sdfs.card()->cardSize(), 512); // Set disk size, block size should be 512 regardless
@@ -70,7 +70,7 @@ void setupUsbMsc()
 	else
 	{
 		// Set disk vendor id, product id and revision with string up to 8, 16, 4 characters respectively
-		msc.setID("T2PFLASH", "Flash Storage", "1.0");
+		msc.setID("tty2pico", "Flash Storage", "1.0");
 		msc.begin();
 		msc.setReadWriteCallback(mscFlashReadCallback, mscFlashWriteCallback, mscFlashFlushCallback);
 		msc.setCapacity(flash.size() / 512, 512); // Set disk size, block size should be 512 regardless of spi flash page size

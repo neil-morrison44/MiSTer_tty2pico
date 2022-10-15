@@ -9,10 +9,11 @@
 
 void setupTTY()
 {
-	TTY_SERIAL.begin(TTY_BAUDRATE);
-#if defined(WAIT_FOR_SERIAL) && WAIT_FOR_SERIAL == 1
-	while (!TTY_SERIAL) delay(10);
-#endif
+	TTY_SERIAL.begin(config.ttyBaudRate);
+	if (config.waitForSerial)
+		while (!TTY_SERIAL)
+			delay(10);
+
 	TTY_SERIAL.println("Serial setup complete");
 }
 
