@@ -24,11 +24,15 @@ The [RoundyPi](https://github.com/sbcshop/RoundyPi) module combines all three pi
 
 Manual build configurations are available for the following RP2040 boards:
 
-* Raspberry Pi Pico
-* Pico clones with 16MB flash (e.g. Pimoroni Pico LiPo)
-* [RoundyPi](https://github.com/sbcshop/RoundyPi)
-* Sparkfun Pro Micro RP2040 (16MB flash and easily available)
-* Sparkfun Thing Plus RP2040 (16MB flash and built-in SD reader)
+| Board | Flash Size | SD Reader? | Display? | Remarks |
+| ----- | ---------- | ---------- | -------- | ------- |
+| Raspberry Pi Pico | 2 MB | No | No | The original |
+| Pico clones | 16 MB | No | No | e.g. Pimoroni Pico LiPo |
+| [RoundyPi](https://github.com/sbcshop/RoundyPi) | 2 MB | Yes | Round 1.28" 240x240 GC9A01 | Just add an (optional) SD card! |
+| Sparkfun Pro Micro RP2040 | 16 MB | No | No | Easily available and relatively cheap |
+| Sparkfun Thing Plus RP2040 | 16 MB | Yes | No | A bit expensive but allows a lot of flexibility |
+
+Each build is also preconfigured to use an external SD reader if one isn't built-in. See the relevant `env/[BoardName].ini` file for pin mapping via the `SDCARD_` defines.
 
 ### Displays
 
@@ -36,12 +40,14 @@ In theory tty2pico can support any SPI display controller the TFT_eSPI library s
 
 The tty2pico project has prebuilt configurations for the following displays:
 
-* [GC9A01](https://www.waveshare.com/wiki/1.28inch_LCD_Module) - Round 240x240 1.28inch IPS LCD Module
-* [ST7789V](https://www.waveshare.com/wiki/1.47inch_LCD_Module) - High density 320x172 1.47inch IPS LCD Module
-* [ST7735](https://www.waveshare.com/wiki/1.8inch_LCD_Module) - 160x128 1.8inch TFT LCD Module
-* [SSD1351](https://www.waveshare.com/wiki/1.5inch_RGB_OLED_Module) - 128x128 1.5inch RGB OLED Module
+| Resolution | Tech | Module | Driver |
+| - | - | - | - |
+| 240x240 Round | IPS | [1.28inch LCD Module](https://www.waveshare.com/wiki/1.28inch_LCD_Module) | GC9A01 |
+| 320x172 | IPS | [1.47inch LCD Module](https://www.waveshare.com/wiki/1.47inch_LCD_Module) | ST7789V |
+| 160x128 | TFT | [1.8inch LCD Module](https://www.waveshare.com/wiki/1.8inch_LCD_Module) | ST7735 |
+| 128x128 | OLED | [1.5inch RGB OLED Module](https://www.waveshare.com/wiki/1.5inch_RGB_OLED_Module) | SSD1351 |
 
-All testing has been done against Waveshare branded displays, aside from the RoundyPi. These are common display modules and you can find the same display from other brands.
+All testing has been done against Waveshare branded displays, aside from the RoundyPi. These are common display modules and you can find the same display modules from other brands.
 
 ## Command List
 
@@ -99,17 +105,17 @@ slideshowDelay = 5000
 ttyBaudRate = 115200
 ```
 
-And a description of each available option:
+And a description of each available option (struckthrough items are not yet implemented):
 
 | Option | Valid Values | Default Value | Description |
 | ------ | --------- | ------------- | ----------- |
 | backgroundColor | 16-bit color value from TFT_eSPI | 0x7BEF (Dark Gray) | The default background color when using transparent images. |
-| disableSD | true/false | false | Force tty2pico to run from the flash filesystem. |
+| ~~disableSD~~ | true/false | false | Force tty2pico to run from the flash filesystem. |
 | enableOverclock | true/false | false | Overclock the RP2040 to 250MHz, up from the default 133MHz. This can dramatically speed up the refresh of the display. |
 | imagePath | string | "/logos/" | The default directory to search for images when a core is requested. |
 | slideshowDelay | 0+ | 2000 | The delay between switching images during the slideshow/screensaver. |
-| slideshowFolder | string | "/logos/" | The default directory to serach for slideshow images. |
-| startupCommand | string | "CMDSORG" | The [tty2pico command](#command-list) to run at startup. |
+| ~~slideshowFolder~~ | string | "/logos/" | The default directory to serach for slideshow images. |
+| ~~startupCommand~~ | string | "CMDSORG" | The [tty2pico command](#command-list) to run at startup. |
 | startupImage | string | "" | The image to display after the `startupCommand` runs. |
 | tftRotation | 0 = none<br>1 = 180°<br>2 = 90°<br>3 = 270° | Display specific | Set the rotation of the display. Same values as `CMDROT`. |
 | tftHeight | 0-240 | Display specific | The the native height of the display in pixels. |
@@ -181,9 +187,9 @@ All platform, framework and external library dependencies required to build will
 * [ ] Create variant of existing GC9A01 holder for the RoundyPi
 * [ ] Modify the [MiSTer Multisystem dust cover](https://www.printables.com/model/159379-mister-multisystem-v5-2022-classic-gaming-console-/files) to support GC9A01/RoundyPi and possibly other display modules
 
-### Optimizations
+### Refactoring and Optimizations
 
-#### File System Performance
+**File System Performance**
 
 The Adafruit SdFat library fork has a few drawbacks:
 
@@ -191,3 +197,11 @@ The Adafruit SdFat library fork has a few drawbacks:
 * It's about 20-30% slower for data reads than mainline SdFat v2
 
 This is currently used for flash and SD card filesystem access. **Consider a microSD only build using SdFat v2 until the performance issues can be addressed.**
+
+**Remove Arduino String dependency**
+
+Replace instances of Arudino `String` with `std::string` or `const char *`.
+
+**Refactor Display Logic**
+
+Display logic is in a bunch of global methods and tracking variables. We can make this more flexible by creating a base `Scene` class (or whatever naming) and then extend for each type of display logic, like `PngScene`, `GifScene`, `InfoScreenScene`, etc. This base display class has a static reference to the `TFT_eSprite` used as the display buffer, then we keep whatever `Scene` subclass in memory while it's used. This should allow easier composing of complex display sequences and transitions between display states.
