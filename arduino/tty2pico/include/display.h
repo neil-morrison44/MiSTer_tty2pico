@@ -31,6 +31,12 @@ typedef enum Fonts {
 	FONT8 = 8, // Font 8. Large 75 pixel font needs ~3256 bytes in FLASH, only characters 1234567890:-.
 } Fonts;
 
+#define FONT_SMALL (TFT_DISPLAY_HEIGHT < 160 ? GLCD : FONT2)
+#define FONT_LARGE (TFT_DISPLAY_HEIGHT < 160 ? FONT2 : FONT4)
+#define FONT_SMALL_SIZE (TFT_DISPLAY_HEIGHT < 160 ? 8 : 16)
+#define FONT_LARGE_SIZE (TFT_DISPLAY_HEIGHT < 160 ? 16 : 26)
+#define DISPLAY_TEXT_MARGIN 4
+
 const char *imageExtensions[] = {
 	".gif",
 	".png",
@@ -145,7 +151,7 @@ void drawDemoShapes(int durationMS)
 	displayBuffer.deleteSprite();
 }
 
-void showText(const char *displayText, uint8_t font = FONT4, uint16_t textColor = TFT_WHITE, uint16_t backgroundColor = TFT_BLACK)
+void showText(const char *displayText, uint8_t font = FONT_LARGE, uint16_t textColor = TFT_WHITE, uint16_t backgroundColor = TFT_BLACK)
 {
 	displayState = DISPLAY_STATIC_TEXT;
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
@@ -159,34 +165,43 @@ void showText(const char *displayText, uint8_t font = FONT4, uint16_t textColor 
 	displayBuffer.deleteSprite();
 }
 
-void showSystemInfo(void)
+void showHeaderedText(String lines[], int lineCount)
 {
 	displayState = DISPLAY_STATIC_TEXT;
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-	Serial.println("Showing system info");
-#endif
-
 	displayBuffer.createSprite(TFT_DISPLAY_WIDTH, TFT_DISPLAY_HEIGHT);
 	displayBuffer.fillSprite(TFT_BLACK);
 	displayBuffer.setTextColor(TFT_WHITE);
 
-	String lines[] =
+	int start = -(lineCount / 2);
+	int yOffset = 0;
+	for (int i = 0; i < lineCount; i++)
 	{
-		"TTY2PICO v" + String(TTY2PICO_VERSION),
-		String(TTY2PICO_BOARD),
-		String((clock_get_hz(clk_sys) / 1000000.0f)) + "MHz @ " + analogReadTemp() + "C",
-		String(TTY2PICO_DISPLAY) + " " + String(TFT_DISPLAY_WIDTH) + "x" + String(TFT_DISPLAY_HEIGHT) + " SPI@" + String(SPI_FREQUENCY / 1000000.0f) + "MHz",
-		(getHasSD() ? "SD Card: Yes" : "SD Card: No"),
-	};
-
-	displayBuffer.drawCentreString(lines[0], TFT_MIDPOINT_X, TFT_MIDPOINT_Y - 50, FONT4);
-	displayBuffer.drawCentreString(lines[1], TFT_MIDPOINT_X, TFT_MIDPOINT_Y - 20, FONT2);
-	displayBuffer.drawCentreString(lines[2], TFT_MIDPOINT_X, TFT_MIDPOINT_Y     , FONT2);
-	displayBuffer.drawCentreString(lines[3], TFT_MIDPOINT_X, TFT_MIDPOINT_Y + 20, FONT2);
-	displayBuffer.drawCentreString(lines[4], TFT_MIDPOINT_X, TFT_MIDPOINT_Y + 40, FONT2);
+		yOffset = ((i == 0) ? FONT_LARGE_SIZE : 0) + (-(i + start + 1) * FONT_SMALL_SIZE) + (3 * DISPLAY_TEXT_MARGIN);
+		displayBuffer.drawCentreString(lines[i], TFT_MIDPOINT_X, TFT_MIDPOINT_Y - yOffset, (i == 0) ? FONT_LARGE : FONT_SMALL);
+	}
 
 	displayBuffer.pushSprite(0, 0);
 	displayBuffer.deleteSprite();
+}
+
+void showSystemInfo(void)
+{
+#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
+	Serial.println("Showing system info");
+#endif
+
+	String lines[] =
+	{
+		String("tty2pico"),
+		"v" + String(TTY2PICO_VERSION),
+		String(TTY2PICO_BOARD),
+		String((clock_get_hz(clk_sys) / 1000000.0f)) + "MHz @ " + analogReadTemp() + "C",
+		String(TFT_DISPLAY_WIDTH) + "x" + String(TFT_DISPLAY_HEIGHT) + " " + String(TTY2PICO_DISPLAY),
+		"SPI @ " + String(SPI_FREQUENCY / 1000000.0f) + "MHz",
+		getHasSD() ? "SD Filesystem" : "Flash Filesystem",
+	};
+
+	showHeaderedText(lines, 7);
 }
 
 /*******************************************************************************
