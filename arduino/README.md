@@ -131,11 +131,11 @@ If you would like to add a build for a board/display that isn't supported, copy 
 
 All platform, framework and external library dependencies required to build will be automatically downloaded by PlatformIO when executing a build. The external library dependencies are:
 
-* Adafruit SPIFlash
-* Adafruit SdFat (SdFat v1 fork)
-* AnimatedGIF
-* PNGdec
-* TFT_eSPI
+* adafruit/Adafruit SPIFlash@3.11.0
+* adafruit/SdFat - Adafruit Fork@1.5.1
+* bitbank2/AnimatedGIF@1.4.7
+* bitbank2/PNGdec@1.0.1
+* bodmer/TFT_eSPI@2.4.77
 
 ## Roadmap
 
