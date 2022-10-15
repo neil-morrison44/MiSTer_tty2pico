@@ -195,11 +195,12 @@ static void loadConfig(void)
 
 void saveConfig(void)
 {
-	int bufferSize = 4096;
-	char buffer[bufferSize]; // Allocate 4K buffer to handle config data
-	int size = exportConfig(buffer, bufferSize);
-	saveFile(CONFIG_FILE_PATH, buffer, size);
-	Serial.println("Config file saved to " + String(CONFIG_FILE_PATH));
+	Serial.println("Config file saving temporarily disabled");
+	// int bufferSize = 4096;
+	// char buffer[bufferSize]; // Allocate 4K buffer to handle config data
+	// int size = exportConfig(buffer, bufferSize);
+	// saveFile(CONFIG_FILE_PATH, buffer, size);
+	// Serial.println("Config file saved to " + String(CONFIG_FILE_PATH));
 }
 
 static void setupFlash(void)
