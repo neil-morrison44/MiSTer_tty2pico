@@ -54,7 +54,7 @@ void loop()
 		command = readTTY();
 		if (command != "")
 		{
-			data = parseCommand(command);
+			data = CommandData::parseCommand(command);
 			addToQueue(data);
 		}
 		nextRead = millis() + 500; // Delay the next read for better performance

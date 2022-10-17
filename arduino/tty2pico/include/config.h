@@ -33,6 +33,10 @@
 #define LOGO_PATH "/logos/" // Path to logo folder
 #endif
 
+#ifndef STARTUP_DELAY
+#define STARTUP_DELAY 5000 // The amount of time to display the startup screen
+#endif
+
 #ifndef STARTUP_LOGO
 #define STARTUP_LOGO "" // The logo to show on startup (when not in slideshow mode)
 #endif
@@ -135,6 +139,7 @@ struct TTY2PICO_Config
 	bool waitForSerial = false;
 	String imagePath = LOGO_PATH;
 	String startupCommand = "CMDBYE";
+	uint16_t startupDelay = STARTUP_DELAY;
 	String startupImage = STARTUP_LOGO;
 	String slideshowFolder = LOGO_PATH;
 	int slideshowDelay = SLIDESHOW_DELAY;
@@ -194,6 +199,9 @@ const char *parseConfig(char *buffer)
 	auto [startupCommandOK, startupCommand] = tty2pico->getString("startupCommand");
 	if (startupCommandOK) config.startupCommand = startupCommand.c_str();
 
+	auto [startupDelayOK, startupDelay] = tty2pico->getInt("startupDelay");
+	if (startupDelayOK) config.startupDelay = startupDelay;
+
 	auto [startupImageOK, startupImage] = tty2pico->getString("startupImage");
 	if (startupImageOK) config.startupImage = startupImage.c_str();
 
@@ -223,6 +231,7 @@ int exportConfig(char *buffer, int bufferSize)
 		"\nwaitForSerial = " + String(config.waitForSerial ? "true" : "false") +
 		"\nimagePath = \"" + config.imagePath + "\"" +
 		"\nstartupCommand = \"" + config.startupCommand + "\"" +
+		"\nstartupDelay = \"" + config.startupDelay + "\"" +
 		"\nstartupImage = \"" + config.startupImage + "\"" +
 		"\nslideshowFolder = \"" + config.slideshowFolder + "\"" +
 		"\nslideshowDelay = " + String(config.slideshowDelay) +

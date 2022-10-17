@@ -82,7 +82,7 @@ These commands are specific to `tty2pico`:
 
 | Command | Function | Example |
 | ------- | -------- | ------- |
-| CMDGETSYS | Retreive a pipe-separated system identifier string composed from the build flags with the `TTY2PICO_` prefix that can be used to remotely manage tty2pico options and updates, for example:<br><br>`version=1.0.0|board=Raspberry Pi Pico|display=GC9A01` | `CMDGETSYS` |
+| CMDGETSYS | Retreive a pipe-separated system identifier string composed from the build flags with the `TTY2PICO_` prefix that can be used to remotely manage tty2pico options and updates, example outpu:<br><br>`version=1.0.0\|board=Raspberry Pi Pico\|display=GC9A01` | `CMDGETSYS` |
 | CMDGETTIME | Get the current real-time clock value in the specified format | `CMDGETTIME`<br>`CMDGETTIME,[format]`<br><br>Formats are:<br>0 = Unix timestamp (default if missing)<br>1 = Human readable |
 | CMDSHOW | Show an image from the active storage device | `CMDSHOW,/logos/pattern.loop.gif` |
 | CMDUSBMSC | Enable USB Mass Storage mode for the active filesystem, which makes tty2pico appear as a flash drive to MiSTer. | `CMDUSBMSC` |
@@ -92,10 +92,10 @@ These commands are specific to `tty2pico`:
 tty2pico uses a config file in [TOML](https://toml.io/en/) format named `tty2pico.toml` at the root of your storage device for some options that can be adjusted at runtime. A sample `tty2pico.toml` file with all available options:
 
 ```toml
-title = "tty2pico Configuration"
+title = "tty2pico Example Configuration"
 
 [tty2pico]
-backgroundColor = 0xFFFF
+backgroundColor = 0
 tftWidth = 240
 tftHeight = 240
 tftRotation = 0
@@ -103,8 +103,9 @@ disableSD = false
 enableOverclock = true
 waitForSerial = false
 imagePath = "/logos/"
-startupCommand = "CMDSORG"
-startupImage = "/logos/mister.loop.gif"
+startupCommand = "CMDBYE"
+startupDelay = 5000
+startupImage = "/logos/pattern.loop.gif"
 slideshowFolder = "/logos/"
 slideshowDelay = 5000
 ttyBaudRate = 115200
@@ -114,13 +115,14 @@ And a description of each available option (struckthrough items are not yet impl
 
 | Option | Valid Values | Default Value | Description |
 | ------ | --------- | ------------- | ----------- |
-| backgroundColor | 16-bit color value from TFT_eSPI | 0x7BEF (Dark Gray) | The default background color when using transparent images. |
+| backgroundColor | 16-bit RGB565 color value in integer form | 0 (Black) | The default background color when using transparent images. You will need to find an RGB565 color value usually in hex format like [the TFT_eSPI color definitions](https://github.com/Bodmer/TFT_eSPI/blob/13e62a88d07ed6e29d15fe76b132a927ec29e307/TFT_eSPI.h#L282), then convert the hex value to an integer value using an online tool or the `tools/hex-to-int.py` Python script like `python hex-to-int.py FFFF` |
 | ~~disableSD~~ | true/false | false | Force tty2pico to run from the flash filesystem. |
 | enableOverclock | true/false | false | Overclock the RP2040 to 250MHz, up from the default 133MHz. This can dramatically speed up the refresh of the display. |
 | imagePath | string | "/logos/" | The default directory to search for images when a core is requested. |
-| slideshowDelay | 0+ | 2000 | The delay between switching images during the slideshow/screensaver. |
+| slideshowDelay | 0+ | 2000 | The delay in milliseconds between switching images during the slideshow/screensaver. |
 | ~~slideshowFolder~~ | string | "/logos/" | The default directory to serach for slideshow images. |
 | ~~startupCommand~~ | string | "CMDSORG" | The [tty2pico command](#command-list) to run at startup. |
+| startupDelay | 0+ | 5000 | The delay in milliseconds to show the startup screen |
 | startupImage | string | "" | The image to display after the `startupCommand` runs. |
 | tftRotation | 0 = none<br>1 = 180°<br>2 = 90°<br>3 = 270° | Display specific | Set the rotation of the display. Same values as `CMDROT`. |
 | tftHeight | 0-240 | Display specific | The the native height of the display in pixels. |

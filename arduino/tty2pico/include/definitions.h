@@ -65,9 +65,41 @@ struct CommandData
 	CommandData(TTY2CMD command) : command(command) { }
 	CommandData(TTY2CMD command, String commandText) : command(command), commandText(commandText) { }
 
+	static CommandData parseCommand(String command)
+	{
+		if (command != "")
+		{
+			if      (command.startsWith(CMDBYE))                                  return CommandData(TTY2CMD_BYE, command);
+			else if (command.startsWith(CMDCLS))                                  return CommandData(TTY2CMD_CLS, command);
+			else if (command.startsWith(CMDDOFF))                                 return CommandData(TTY2CMD_DOFF, command);
+			else if (command.startsWith(CMDDON))                                  return CommandData(TTY2CMD_DON, command);
+			else if (command.startsWith(CMDENOTA))                                return CommandData(TTY2CMD_ENOTA, command);
+			else if (command.startsWith(CMDGETSYS))                               return CommandData(TTY2CMD_GETSYS, command);
+			else if (command.startsWith(CMDGETTIME))                              return CommandData(TTY2CMD_GETTIME, command);
+			else if (command.startsWith(CMDROT))                                  return CommandData(TTY2CMD_ROT, command);
+			else if (command.startsWith(CMDSAVER))                                return CommandData(TTY2CMD_SAVER, command);
+			else if (command.startsWith(CMDSETTIME))                              return CommandData(TTY2CMD_SETTIME, command);
+			else if (command.startsWith(CMDSHOW))                                 return CommandData(TTY2CMD_SHOW, command);
+			else if (command.startsWith(CMDSHSYSHW))                              return CommandData(TTY2CMD_SHSYSHW, command);
+			else if (command.startsWith(CMDSHTEMP))                               return CommandData(TTY2CMD_SHTEMP, command);
+			else if (command.startsWith(CMDSNAM))                                 return CommandData(TTY2CMD_SNAM, command);
+			else if (command.startsWith(CMDSORG))                                 return CommandData(TTY2CMD_SORG, command);
+			else if (command.startsWith(CMDSWSAVER))                              return CommandData(TTY2CMD_SWSAVER, command);
+			else if (command.startsWith(CMDTEST))                                 return CommandData(TTY2CMD_TEST, command);
+			else if (command.startsWith(CMDTXT))                                  return CommandData(TTY2CMD_TXT, command);
+			else if (command.startsWith(CMDUSBMSC))                               return CommandData(TTY2CMD_USBMSC, command);
+			else if (command.startsWith("CMD") && !command.startsWith(CMDCORE))   return CommandData(TTY2CMD_UNKNOWN, command);
+			else    /* Assume core name if no command was matched */              return CommandData(TTY2CMD_COR, command);
+		}
+
+		return CommandData(TTY2CMD_NONE, command);
+	}
+
 	TTY2CMD command;
 	String commandText;
 };
+
+
 
 typedef enum DateTimeFormat {
 	DTF_UNIX = 0,
@@ -82,6 +114,7 @@ typedef enum DisplayState {
 	DISPLAY_SLIDESHOW,
 	DISPLAY_STATIC_IMAGE,
 	DISPLAY_STATIC_TEXT,
+	DISPLAY_SYSTEM_INFORMATION,
 } DisplayState;
 
 #endif

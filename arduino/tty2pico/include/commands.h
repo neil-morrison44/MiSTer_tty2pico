@@ -49,13 +49,13 @@ static void cmdGetTime(String command)
 			format = DTF_HUMAN;
 	}
 
-	char *time = getTime(format);
+	const char *time = getTime(format);
 	Serial.println(time);
 }
 
 static void cmdGetSysInfo()
 {
-	string info = string("version:")  + string(TTY2PICO_VERSION)
+	string info = string("version:")  + string(TTY2PICO_VERSION_STRING)
 	            + string("|board:")   + string(TTY2PICO_BOARD)
 	            + string("|display:") + string(TTY2PICO_DISPLAY);
 
@@ -171,7 +171,7 @@ static void cmdShowCoreName(void)
 
 static void cmdShowSystemInfo(void)
 {
-	showSystemInfo();
+	showSystemInfo(millis());
 }
 
 static void cmdTest(void)
@@ -180,7 +180,7 @@ static void cmdTest(void)
 	showText("3"); delay(1000);
 	showText("2"); delay(1000);
 	showText("1"); delay(1000);
-	showSystemInfo();
+	showSystemInfo(millis());
 	delay(3000);
 	showGIF((uint8_t *)mister_kun_blink, sizeof(mister_kun_blink));
 	drawDemoShapes(5000);
@@ -214,36 +214,6 @@ static void cmdUsbMsc()
 		showText("Starting USB MSC mode, this could take a while for SD...");
 		readyUsbMsc();
 	}
-}
-
-CommandData parseCommand(String command)
-{
-	if (command != "")
-	{
-		if      (command.startsWith(CMDBYE))                                  return CommandData(TTY2CMD_BYE, command);
-		else if (command.startsWith(CMDCLS))                                  return CommandData(TTY2CMD_CLS, command);
-		else if (command.startsWith(CMDDOFF))                                 return CommandData(TTY2CMD_DOFF, command);
-		else if (command.startsWith(CMDDON))                                  return CommandData(TTY2CMD_DON, command);
-		else if (command.startsWith(CMDENOTA))                                return CommandData(TTY2CMD_ENOTA, command);
-		else if (command.startsWith(CMDGETSYS))                               return CommandData(TTY2CMD_GETSYS, command);
-		else if (command.startsWith(CMDGETTIME))                              return CommandData(TTY2CMD_GETTIME, command);
-		else if (command.startsWith(CMDROT))                                  return CommandData(TTY2CMD_ROT, command);
-		else if (command.startsWith(CMDSAVER))                                return CommandData(TTY2CMD_SAVER, command);
-		else if (command.startsWith(CMDSETTIME))                              return CommandData(TTY2CMD_SETTIME, command);
-		else if (command.startsWith(CMDSHOW))                                 return CommandData(TTY2CMD_SHOW, command);
-		else if (command.startsWith(CMDSHSYSHW))                              return CommandData(TTY2CMD_SHSYSHW, command);
-		else if (command.startsWith(CMDSHTEMP))                               return CommandData(TTY2CMD_SHTEMP, command);
-		else if (command.startsWith(CMDSNAM))                                 return CommandData(TTY2CMD_SNAM, command);
-		else if (command.startsWith(CMDSORG))                                 return CommandData(TTY2CMD_SORG, command);
-		else if (command.startsWith(CMDSWSAVER))                              return CommandData(TTY2CMD_SWSAVER, command);
-		else if (command.startsWith(CMDTEST))                                 return CommandData(TTY2CMD_TEST, command);
-		else if (command.startsWith(CMDTXT))                                  return CommandData(TTY2CMD_TXT, command);
-		else if (command.startsWith(CMDUSBMSC))                               return CommandData(TTY2CMD_USBMSC, command);
-		else if (command.startsWith("CMD") && !command.startsWith(CMDCORE))   return CommandData(TTY2CMD_UNKNOWN, command);
-		else    /* Assume core name if no command was matched */              return CommandData(TTY2CMD_COR, command);
-	}
-
-	return CommandData(TTY2CMD_NONE, command);
 }
 
 void runCommand(CommandData data)

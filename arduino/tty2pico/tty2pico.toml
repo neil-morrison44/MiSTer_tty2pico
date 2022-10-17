@@ -1,4 +1,4 @@
-title = "tty2pico Configuration"
+title = "tty2pico Example Configuration"
 
 [tty2pico]
 backgroundColor = 0
@@ -10,6 +10,7 @@ enableOverclock = true
 waitForSerial = false
 imagePath = "/logos/"
 startupCommand = "CMDBYE"
+startupDelay = 5000
 startupImage = "/logos/pattern.loop.gif"
 slideshowFolder = "/logos/"
 slideshowDelay = 5000

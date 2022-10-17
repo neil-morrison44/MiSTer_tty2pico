@@ -38,20 +38,20 @@ static void mscFlashFlushCallback(void)
 
 static int32_t mscSDReadCallback(uint32_t lba, void* buffer, uint32_t bufsize)
 {
-	int32_t result = sdfs.card()->readBlocks(lba, (uint8_t *)buffer, bufsize / 512) ? bufsize : -1;
+	int32_t result = sdfs.card()->readSectors(lba, (uint8_t *)buffer, bufsize / 512) ? bufsize : -1;
 	return result;
 }
 
 static int32_t mscSDWriteCallback(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
 {
 	digitalWrite(LED_BUILTIN, HIGH);
-	int32_t result = sdfs.card()->writeBlocks(lba, buffer, bufsize / 512) ? bufsize : -1;
+	int32_t result = sdfs.card()->writeSectors(lba, buffer, bufsize / 512) ? bufsize : -1;
 	return result;
 }
 
 static void mscSDFlushCallback(void)
 {
-	sdfs.card()->syncBlocks();
+	sdfs.card()->syncDevice();
 	sdfs.cacheClear(); // clear file system's cache to force refresh
 	sdfsChanged = true;
 	digitalWrite(LED_BUILTIN, LOW);
@@ -87,7 +87,7 @@ void readyUsbMsc()
 	if (getHasSD())
 	{
 		msc.setReadWriteCallback(mscSDReadCallback, mscSDWriteCallback, mscSDFlushCallback);
-		msc.setCapacity(sdfs.card()->cardSize(), 512); // Set disk size, block size should be 512 regardless
+		msc.setCapacity(sdfs.card()->sectorCount(), 512); // Set disk size, block size should be 512 regardless
 		msc.setUnitReady(true); // MSC is ready for read/write
 	}
 	else

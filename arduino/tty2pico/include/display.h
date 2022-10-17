@@ -4,6 +4,7 @@
 #include "config.h"
 #include "definitions.h"
 #include "storage.h"
+#include "platform.h"
 #include <vector>
 #include <SPI.h>
 #include <TFT_eSPI.h>
@@ -130,7 +131,6 @@ void drawDemoShapes(int durationMS)
 
 void showText(String lines[], int lineCount, uint8_t font, uint16_t textColor = TFT_WHITE, uint16_t backgroundColor = TFT_BLACK)
 {
-	displayState = DISPLAY_STATIC_TEXT;
 	displayBuffer.createSprite(config.getDisplayWidth(), config.getDisplayHeight());
 	displayBuffer.fillSprite(backgroundColor);
 	displayBuffer.setTextColor(textColor);
@@ -147,6 +147,8 @@ void showText(String lines[], int lineCount, uint8_t font, uint16_t textColor = 
 
 	displayBuffer.pushSprite(0, 0);
 	displayBuffer.deleteSprite();
+
+	displayState = DISPLAY_STATIC_TEXT;
 }
 
 void showText(String lines[], int lineCount, uint16_t textColor = TFT_WHITE, uint16_t backgroundColor = TFT_BLACK)
@@ -259,7 +261,6 @@ void showText(String line, uint16_t textColor = TFT_WHITE, uint16_t backgroundCo
 
 void showHeaderedText(String lines[], int lineCount)
 {
-	displayState = DISPLAY_STATIC_TEXT;
 	displayBuffer.createSprite(config.getDisplayWidth(), config.getDisplayHeight());
 	displayBuffer.fillSprite(TFT_BLACK);
 	displayBuffer.setTextColor(TFT_WHITE);
@@ -277,26 +278,38 @@ void showHeaderedText(String lines[], int lineCount)
 
 	displayBuffer.pushSprite(0, 0);
 	displayBuffer.deleteSprite();
+
+	displayState = DISPLAY_STATIC_TEXT;
 }
 
-void showSystemInfo(void)
+void showSystemInfo(uint32_t frameTime)
 {
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-	Serial.println("Showing system info");
-#endif
+	static uint32_t nextFrameTime;
+	static int32_t frameTimeDiff;
 
-	String lines[] =
-	{
-		String("tty2pico"),
-		"v" + String(TTY2PICO_VERSION),
-		String(TTY2PICO_BOARD),
-		String((clock_get_hz(clk_sys) / 1000000.0f)) + "MHz @ " + analogReadTemp() + "C",
-		String(config.getDisplayWidth()) + "x" + String(config.getDisplayHeight()) + " " + String(TTY2PICO_DISPLAY),
-		"SPI @ " + String(SPI_FREQUENCY / 1000000.0f) + "MHz",
-		getHasSD() ? "SD Filesystem" : "Flash Filesystem",
-	};
+	frameTimeDiff = frameTime - nextFrameTime;
+	if (frameTimeDiff < 0)
+		return;
 
-	showHeaderedText(lines, 7);
+	vector<String> lines;
+	char lineBuffer[50];
+	lines.push_back("tty2pico");
+	lines.push_back("v" + String(TTY2PICO_VERSION_STRING));
+	lines.push_back(TTY2PICO_BOARD);
+	snprintf(lineBuffer, sizeof(lineBuffer), "RP2040 @ %.1fMHz %.1fC", (clock_get_hz(clk_sys) / 1000000.0f), analogReadTemp());
+	lines.push_back(lineBuffer);
+	memset(lineBuffer, 0, sizeof(lineBuffer));
+	snprintf(lineBuffer, sizeof(lineBuffer), "%s @ %dx%d %.1fMHz", TTY2PICO_DISPLAY, config.getDisplayWidth(), config.getDisplayHeight(), (SPI_FREQUENCY / 1000000.0));
+	lines.push_back(lineBuffer);
+	lines.push_back(String(getTime(DTF_HUMAN)));
+	lines.push_back(getHasSD() ? "SD Filesystem" : "Flash Filesystem");
+	memset(lineBuffer, 0, sizeof(lineBuffer));
+	snprintf(lineBuffer, sizeof(lineBuffer), "USB MSC %s", getMscReady() ? "Enabled" : "Disabled");
+	lines.push_back(lineBuffer);
+	showHeaderedText(lines.data(), lines.size());
+
+	displayState = DISPLAY_SYSTEM_INFORMATION;
+	nextFrameTime = frameTime + 1000; // Only update display once every second
 }
 
 /*******************************************************************************
@@ -777,16 +790,20 @@ void showMister(void)
 
 void showStartup(void)
 {
-	showSystemInfo();
-	delay(3000);
-
-	if (config.startupImage == nullptr)
+	if (config.startupCommand != "")
 	{
-		showMister();
+		CommandData command = CommandData::parseCommand(config.startupCommand);
+		addToQueue(command);
 	}
 	else
 	{
-		showImage(config.startupImage);
+		showSystemInfo(millis());
+		delay(config.startupDelay);
+
+		if (config.startupImage == "")
+			showMister();
+		else
+			showImage(config.startupImage);
 	}
 }
 
@@ -794,9 +811,9 @@ void showStartup(void)
  * Slideshow functions
  *******************************************************************************/
 
-static void runSlideshow(long time)
+static void runSlideshow(uint32_t time)
 {
-	static long nextChange = 0;
+	static uint32_t nextChange = 0;
 
 	if (time < nextChange)
 		return;
@@ -825,12 +842,13 @@ static void runSlideshow(long time)
  * Lifecycle functions
  *******************************************************************************/
 
-void loopDisplay(long time)
+void loopDisplay(uint32_t time)
 {
 	switch (displayState)
 	{
 		case DISPLAY_ANIMATED_GIF_LOOPING: showGIF(currentImage, true);   break;
 		case DISPLAY_SLIDESHOW:            runSlideshow(time);            break;
+		case DISPLAY_SYSTEM_INFORMATION:   showSystemInfo(time);          break;
 		case DISPLAY_MISTER:               showMister();                  break;
 		default:                                                          break;
 	}

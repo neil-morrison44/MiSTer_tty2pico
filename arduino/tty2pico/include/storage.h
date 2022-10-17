@@ -2,6 +2,7 @@
 #define STORAGE_H
 
 #include "config.h"
+#include "platform.h"
 #include <SPI.h>
 #include "SdFat.h"
 #include "Adafruit_SPIFlash.h"
@@ -233,10 +234,7 @@ static void setupSD(void)
 {
 	Serial.println("Setting up SD storage");
 
-	SDCARD_SPI.setRX(SDCARD_MISO_PIN);
-	SDCARD_SPI.setTX(SDCARD_MOSI_PIN);
-	SDCARD_SPI.setSCK(SDCARD_SCK_PIN);
-	SdSpiConfig spiConfig(SDCARD_CS_PIN, DEDICATED_SPI, SD_SCK_HZ(62500000), &SDCARD_SPI);
+	SdSpiConfig spiConfig(SDCARD_CS_PIN, DEDICATED_SPI, SPI_FULL_SPEED, getSpiSD());
 
 	if (!sdfs.begin(spiConfig))
 	{
