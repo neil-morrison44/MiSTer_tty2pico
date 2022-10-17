@@ -82,7 +82,7 @@ These commands are specific to `tty2pico`:
 
 | Command | Function | Example |
 | ------- | -------- | ------- |
-| CMDGETSYS | Retreive a pipe-separated system identifier string composed from the build flags with the `TTY2PICO_` prefix that can be used to remotely manage tty2pico options and updates, example outpu:<br><br>`version=1.0.0\|board=Raspberry Pi Pico\|display=GC9A01` | `CMDGETSYS` |
+| CMDGETSYS | Retrieve a pipe-separated system identifier string composed from the build flags with the `TTY2PICO_` prefix that can be used to remotely manage tty2pico options and updates, example output:<br><br>`version=1.0.0\|board=Raspberry Pi Pico\|display=GC9A01` | `CMDGETSYS` |
 | CMDGETTIME | Get the current real-time clock value in the specified format | `CMDGETTIME`<br>`CMDGETTIME,[format]`<br><br>Formats are:<br>0 = Unix timestamp (default if missing)<br>1 = Human readable |
 | CMDSHOW | Show an image from the active storage device | `CMDSHOW,/logos/pattern.loop.gif` |
 | CMDUSBMSC | Enable USB Mass Storage mode for the active filesystem, which makes tty2pico appear as a flash drive to MiSTer. | `CMDUSBMSC` |

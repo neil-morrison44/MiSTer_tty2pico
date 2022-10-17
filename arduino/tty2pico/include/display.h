@@ -73,6 +73,7 @@ inline void clearDisplay(void)
  * Text and Graphics functions
  *******************************************************************************/
 
+// Draw various shapes on the screen and animate them for the specified duration
 void drawDemoShapes(int durationMS)
 {
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
@@ -129,6 +130,71 @@ void drawDemoShapes(int durationMS)
 	displayBuffer.deleteSprite();
 }
 
+// Draws a transparent overlay on top of whatever is in the display buffer
+void overlayText(String text, TFT_eSPI *parent)
+{
+	int font = config.getFontSmall();
+	TFT_eSprite overlay(parent);
+	int width = tft.textWidth(text, font) + (DISPLAY_TEXT_MARGIN * 2);
+	int height = tft.fontHeight(font) + (DISPLAY_TEXT_MARGIN * 2);
+	overlay.createSprite(width, height);
+	overlay.fillSprite(TFT_TRANSPARENT);
+	overlay.setTextColor(TFT_WHITE);
+	overlay.setTextFont(font);
+	overlay.drawString(text, DISPLAY_TEXT_MARGIN, DISPLAY_TEXT_MARGIN, font);
+	overlay.pushSprite((config.getDisplayWidth() - width) / 2, (config.getDisplayHeight() - height) / 2);
+	overlay.deleteSprite();
+}
+
+void overlayText(String text)
+{
+	overlayText(text, &tft);
+}
+
+#if SHOW_FPS == 1
+static double fps;
+
+// Show the last captured FPS value
+void showFPS(TFT_eSPI *parent)
+{
+	overlayText(String(fps), parent);
+}
+
+// Show the last captured FPS value
+void showFPS(void)
+{
+	overlayText(String(fps), &tft);
+}
+
+// Show FPS by providing a new value
+void showFPS(double newFPS, TFT_eSPI *parent)
+{
+	fps = newFPS;
+	overlayText(String(fps), parent);
+}
+
+// Show FPS by providing a new value
+void showFPS(double newFPS)
+{
+	fps = newFPS;
+	overlayText(String(fps), &tft);
+}
+
+// Show FPS by providing the during in microseconds of the last frame
+void showFPS(unsigned long micros, TFT_eSPI *parent)
+{
+	overlayText(String(1000000.0 / micros), parent);
+}
+
+// Show FPS by providing the during in microseconds of the last frame
+void showFPS(unsigned long micros)
+{
+	overlayText(String(1000000.0 / micros), &tft);
+}
+
+#endif
+
+// Draw lines of text on the screen with center alignment horizontally and veritcally
 void showText(String lines[], int lineCount, uint8_t font, uint16_t textColor = TFT_WHITE, uint16_t backgroundColor = TFT_BLACK)
 {
 	displayBuffer.createSprite(config.getDisplayWidth(), config.getDisplayHeight());
@@ -151,11 +217,13 @@ void showText(String lines[], int lineCount, uint8_t font, uint16_t textColor = 
 	displayState = DISPLAY_STATIC_TEXT;
 }
 
+// Draw lines of text on the screen with center alignment horizontally and veritcally
 void showText(String lines[], int lineCount, uint16_t textColor = TFT_WHITE, uint16_t backgroundColor = TFT_BLACK)
 {
 	showText(lines, lineCount, config.getFontLarge(), textColor, backgroundColor);
 }
 
+// Draw a string of text on the screen with automatic word breaks, word wrap and center alignment horizontally and veritcally
 void showText(String text, uint8_t font, uint16_t textColor = TFT_WHITE, uint16_t backgroundColor = TFT_BLACK)
 {
 	// Get font properties
@@ -254,11 +322,13 @@ void showText(String text, uint8_t font, uint16_t textColor = TFT_WHITE, uint16_
 	showText(lines.data(), lineIndex + 1, font, textColor, backgroundColor);
 }
 
+// Draw a string of text on the screen with automatic word breaks, word wrap and center alignment horizontally and veritcally
 void showText(String line, uint16_t textColor = TFT_WHITE, uint16_t backgroundColor = TFT_BLACK)
 {
 	showText(line, config.getFontLarge(), textColor, backgroundColor);
 }
 
+// Draw "message box" style text with the first line being the header, and center alignment horizontally and veritcally for all text
 void showHeaderedText(String lines[], int lineCount)
 {
 	displayBuffer.createSprite(config.getDisplayWidth(), config.getDisplayHeight());
@@ -272,7 +342,7 @@ void showHeaderedText(String lines[], int lineCount)
 
 	for (int i = 0; i < lineCount; i++)
 	{
-		yOffset = ((i == 0) ? config.getFontLargeSize() : 0) + (-(i + start + 1) * config.getFontSmallSize()) + (3 * DISPLAY_TEXT_MARGIN);
+		yOffset = ((i == 0) ? config.getFontLargeSize() : 0) + (-(i + start + 1) * config.getFontSmallSize()) + DISPLAY_TEXT_MARGIN;
 		displayBuffer.drawCentreString(lines[i], midpointX, midpointY - yOffset, (i == 0) ? config.getFontLarge() : config.getFontSmall());
 	}
 
@@ -282,12 +352,12 @@ void showHeaderedText(String lines[], int lineCount)
 	displayState = DISPLAY_STATIC_TEXT;
 }
 
+// Display a frame of the system information screen
 void showSystemInfo(uint32_t frameTime)
 {
 	static uint32_t nextFrameTime;
-	static int32_t frameTimeDiff;
 
-	frameTimeDiff = frameTime - nextFrameTime;
+	int32_t frameTimeDiff = frameTime - nextFrameTime;
 	if (frameTimeDiff < 0)
 		return;
 
@@ -587,24 +657,42 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 	displayState = loop ? DISPLAY_ANIMATED_GIF_LOOPING : DISPLAY_ANIMATED_GIF;
 	tft.startWrite();
 
-#if VERBOSE_OUTPUT == 1
-	Serial.println("Play GIF start");
-	long runtime = micros();
+#if SHOW_FPS == 1 || VERBOSE_OUTPUT == 1
+	int runStart = micros();
 	int frames = 0;
+#endif
+#if SHOW_FPS == 1
+	int frameStart = micros();
 #endif
 
 	while (gif->playFrame(true, NULL))
 	{
-#if VERBOSE_OUTPUT == 1
+#if SHOW_FPS == 1
+		showFPS(micros() - frameStart);
 		frames++;
 #endif
-		delay(0);
+#if SHOW_FPS == 1 || VERBOSE_OUTPUT == 1
+		frames++;
+#endif
+		delay(0); // delay(0) "yields" better performance than a yield()
+#if SHOW_FPS == 1
+		frameStart = micros();
+#endif
 	}
 
+#if SHOW_FPS == 1 || VERBOSE_OUTPUT == 1
+	if (gif->getLastError() == GIF_SUCCESS)
+	{
+	#if SHOW_FPS == 1
+		showFPS(micros() - frameStart);
+	#endif
+	#if VERBOSE_OUTPUT == 1
+		frames++;
+	#endif
+	}
+#endif
 #if VERBOSE_OUTPUT == 1
-	if (gif->getLastError() == GIF_SUCCESS) frames++;
-	runtime = micros() - runtime;
-	Serial.print("Ran GIF "); Serial.print(" at "); Serial.print(frames / (runtime / 1000000.0)); Serial.println(" fps");
+	Serial.print("Ran GIF at "); Serial.print(frames / ((micros() - runStart) / 1000000.0)); Serial.println(" fps");
 #endif
 
 	if (displayState == DISPLAY_ANIMATED_GIF_LOOPING)

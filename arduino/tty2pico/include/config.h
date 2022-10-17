@@ -82,6 +82,10 @@
 #define TFT_ROTATION 0 // Set the rotation position, values are from 0-3
 #endif
 
+#ifndef SHOW_FPS
+#define SHOW_FPS 0
+#endif
+
 // If defined will use the DMA mode with TFT_eSPI library
 // WARNING: This seems to drop performance by about 10% with the current image rendering methods
 // on the RP2040, so I wouldn't enable this unless those methods get more optimized, or it makes
@@ -138,7 +142,7 @@ struct TTY2PICO_Config
 	bool enableOverclock = false;
 	bool waitForSerial = false;
 	String imagePath = LOGO_PATH;
-	String startupCommand = "CMDBYE";
+	String startupCommand = "";
 	uint16_t startupDelay = STARTUP_DELAY;
 	String startupImage = STARTUP_LOGO;
 	String slideshowFolder = LOGO_PATH;

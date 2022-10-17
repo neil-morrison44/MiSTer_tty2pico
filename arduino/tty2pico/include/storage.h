@@ -175,6 +175,7 @@ static void loadConfig(void)
 	File32 configFile = getFile(CONFIG_FILE_PATH);
 	if (configFile)
 	{
+		Serial.println("Loading config file");
 		// Read entire file into memory, should only be a few KB max
 		char *buffer = (char *)malloc(sizeof(char) * configFile.size());
 		configFile.read(buffer, configFile.size());

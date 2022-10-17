@@ -3,13 +3,11 @@
  *******************************************************************************/
 
 // Configuration overrides - See "config.h" for more details
-#ifndef WAIT_FOR_SERIAL
-#define WAIT_FOR_SERIAL 0 // Wait for serial connection before running program code
-#endif
-#ifndef VERBOSE_OUTPUT
-#define VERBOSE_OUTPUT 1 // Log a lot of stuff to the serial output, only useful for debugging
-#endif
+// #define VERBOSE_OUTPUT 1
+// #define SHOW_FPS 1
 // #define USE_GIF_BUFFERING
+
+#define POLLING_LOOP_DELAY 500
 
 #include "config.h"
 #include <Arduino.h>
@@ -49,7 +47,8 @@ void loop()
 	static CommandData data;
 	static uint32_t nextRead;
 
-	if (millis() > nextRead)
+	uint32_t nextDiff = millis() - nextRead;
+	if (nextDiff >= 0)
 	{
 		command = readTTY();
 		if (command != "")
@@ -57,12 +56,12 @@ void loop()
 			data = CommandData::parseCommand(command);
 			addToQueue(data);
 		}
-		nextRead = millis() + 500; // Delay the next read for better performance
+		nextRead = millis() + POLLING_LOOP_DELAY; // Delay the next read for better performance
 	}
 
 	loopMSC();
 
-	delay(5); // 5ms delay here seems to increase FPS in testing
+	delay(POLLING_LOOP_DELAY); // Delay here seems to increase FPS in testing, 500ms seems optimal right now
 }
 
 void loop1()
@@ -70,5 +69,5 @@ void loop1()
 	loopQueue();
 	loopDisplay(millis());
 
-	delay(0); // 0ms delay here gives a very small, and I mean SMALL, performance boost
+	delay(0); // 0ms delay here gives a very small (and I mean SMALL) performance boost, marginally more than yield()
 }

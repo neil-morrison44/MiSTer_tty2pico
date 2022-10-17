@@ -19,16 +19,14 @@ void setupTTY()
 
 String readTTY()
 {
-	static String command;
-	command = "";
+	String command;
 
 	if (TTY_SERIAL.available())
 	{
+		yield(); // Let other things happen before we read the input
 		command = TTY_SERIAL.readStringUntil('\n');
 		if (command.length() > 0)
 		{
-			if (command.endsWith("\n"))
-				command = command.substring(0, command.length() - 1);
 			if (command.endsWith("\r"))
 				command = command.substring(0, command.length() - 1);
 
