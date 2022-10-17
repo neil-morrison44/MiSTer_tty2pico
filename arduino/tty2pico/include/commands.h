@@ -2,8 +2,13 @@
 #define COMMANDER_H
 
 #include "config.h"
+#include <string>
+#include "pico/bootrom.h"
 #include "display.h"
 #include "storage.h"
+#include "usbmsc.h"
+
+using namespace std;
 
 // When adding a new command do the following:
 // * Add a `const static String [CMDNAME]` variable for the command text
@@ -18,6 +23,7 @@ const static String CMDCLS     = "CMDCLS";
 const static String CMDCORE    = "CMDCOR";
 const static String CMDDOFF    = "CMDDOFF";
 const static String CMDDON     = "CMDDON";
+const static String CMDENOTA   = "CMDENOTA";
 const static String CMDROT     = "CMDROT";
 const static String CMDSAVER   = "CMDSAVER";
 const static String CMDSETTIME = "CMDSETTIME";
@@ -30,7 +36,9 @@ const static String CMDTEST    = "CMDTEST";
 const static String CMDTXT     = "CMDTXT";
 
 // tty2pico commands
+const static String CMDGETSYS  = "CMDGETSYS";
 const static String CMDSHOW    = "CMDSHOW";
+const static String CMDUSBMSC  = "CMDUSBMSC";
 
 typedef enum TTY2CMD {
 	TTY2CMD_NONE = 0,
@@ -39,6 +47,8 @@ typedef enum TTY2CMD {
 	TTY2CMD_BYE,
 	TTY2CMD_DOFF,
 	TTY2CMD_DON,
+	TTY2CMD_ENOTA,
+	TTY2CMD_GETSYS,
 	TTY2CMD_ROT,
 	TTY2CMD_SAVER,
 	TTY2CMD_SETTIME,
@@ -51,6 +61,7 @@ typedef enum TTY2CMD {
 	TTY2CMD_TEST,
 	TTY2CMD_TXT,
 	TTY2CMD_UNKNOWN,
+	TTY2CMD_USBMSC,
 } TTY2CMD;
 
 struct CommandData
@@ -83,6 +94,21 @@ static void cmdDisplayOff(void)
 static void cmdDisplayOn(void)
 {
 	digitalWrite(TFT_BL, HIGH);
+}
+
+static void cmdEnableOTA()
+{
+	Serial.println("Restarting in firmware update mode");
+	reset_usb_boot(0, 0);
+}
+
+static void cmdGetSysInfo()
+{
+	string info = string("version:")  + string(TTY2PICO_VERSION)
+	            + string("|board:")   + string(TTY2PICO_BOARD)
+	            + string("|display:") + string(TTY2PICO_DISPLAY);
+
+	Serial.println(info.c_str());
 }
 
 static void cmdRotate(String command)
@@ -149,15 +175,11 @@ static void cmdSetCore(String command)
 	for (int i = 0; i < imageExtensionCount; i++)
 	{
 		// Check for animated file(s) first
-		path = config.imagePath + coreName + ".loop" + String(imageExtensions[i]);
+		path = config.imagePath + coreName + String(imageExtensions[i]);
+#if VERBOSE_OUTPUT == 1
+	Serial.print("Checking for file "); Serial.println(path);
+#endif
 		found = fileExists(path);
-		if (!found)
-		{
-			// Check for static files
-			path = config.imagePath + coreName + String(imageExtensions[i]);
-			found = fileExists(path);
-		}
-
 		if (found)
 			break;
 	}
@@ -167,7 +189,11 @@ static void cmdSetCore(String command)
 		Serial.print("Loading "); Serial.println(path.c_str());
 		showImage(path);
 	}
-	else showText(coreName.c_str());
+	else
+	{
+		Serial.print("Couldn't find core display file for "); Serial.println(coreName);
+		showText(coreName);
+	}
 }
 
 static void cmdSetTime(String command)
@@ -184,7 +210,7 @@ static void cmdShow(String command)
 
 static void cmdShowCoreName(void)
 {
-	showText(coreName.c_str());
+	showText(coreName);
 }
 
 static void cmdShowSystemInfo(void)
@@ -214,7 +240,7 @@ static void cmdText(String command)
 	else
 		displayText = command;
 
-	showText(displayText.c_str());
+	showText(displayText);
 }
 
 static void cmdUnknown(String command)
@@ -222,7 +248,16 @@ static void cmdUnknown(String command)
 #if VERBOSE_OUTPUT == 1
 	Serial.print("Received unknown command: "); Serial.println(command);
 #endif
-	showText(command.c_str());
+	showText(command);
+}
+
+static void cmdUsbMsc()
+{
+	if (!getMscReady())
+	{
+		showText("Starting USB MSC mode, this could take a while for SD...");
+		readyUsbMsc();
+	}
 }
 
 CommandData parseCommand(String command)
@@ -233,6 +268,8 @@ CommandData parseCommand(String command)
 		else if (command.startsWith(CMDCLS))                                  return CommandData(TTY2CMD_CLS, command);
 		else if (command.startsWith(CMDDOFF))                                 return CommandData(TTY2CMD_DOFF, command);
 		else if (command.startsWith(CMDDON))                                  return CommandData(TTY2CMD_DON, command);
+		else if (command.startsWith(CMDENOTA))                                return CommandData(TTY2CMD_ENOTA, command);
+		else if (command.startsWith(CMDGETSYS))                               return CommandData(TTY2CMD_GETSYS, command);
 		else if (command.startsWith(CMDROT))                                  return CommandData(TTY2CMD_ROT, command);
 		else if (command.startsWith(CMDSAVER))                                return CommandData(TTY2CMD_SAVER, command);
 		else if (command.startsWith(CMDSETTIME))                              return CommandData(TTY2CMD_SETTIME, command);
@@ -244,6 +281,7 @@ CommandData parseCommand(String command)
 		else if (command.startsWith(CMDSWSAVER))                              return CommandData(TTY2CMD_SWSAVER, command);
 		else if (command.startsWith(CMDTEST))                                 return CommandData(TTY2CMD_TEST, command);
 		else if (command.startsWith(CMDTXT))                                  return CommandData(TTY2CMD_TXT, command);
+		else if (command.startsWith(CMDUSBMSC))                               return CommandData(TTY2CMD_USBMSC, command);
 		else if (command.startsWith("CMD") && !command.startsWith(CMDCORE))   return CommandData(TTY2CMD_UNKNOWN, command);
 		else    /* Assume core name if no command was matched */              return CommandData(TTY2CMD_COR, command);
 	}
@@ -260,6 +298,8 @@ void runCommand(CommandData data)
 		case TTY2CMD_COR:     return cmdSetCore(data.commandText);
 		case TTY2CMD_DOFF:    return cmdDisplayOff();
 		case TTY2CMD_DON:     return cmdDisplayOn();
+		case TTY2CMD_ENOTA:   return cmdEnableOTA();
+		case TTY2CMD_GETSYS:  return cmdGetSysInfo();
 		case TTY2CMD_ROT:     return cmdRotate(data.commandText);
 		case TTY2CMD_SAVER:   return cmdSaver(data.commandText);
 		case TTY2CMD_SETTIME: return cmdSetTime(data.commandText);
@@ -272,6 +312,7 @@ void runCommand(CommandData data)
 		case TTY2CMD_TEST:    return cmdTest();
 		case TTY2CMD_TXT:     return cmdText(data.commandText);
 		case TTY2CMD_UNKNOWN: return cmdUnknown(data.commandText);
+		case TTY2CMD_USBMSC:  return cmdUsbMsc();
 		case TTY2CMD_NONE:    return;
 
 		// If you get here you're missing an enum definition ^^^

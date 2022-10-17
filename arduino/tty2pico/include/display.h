@@ -3,11 +3,14 @@
 
 #include "config.h"
 #include "storage.h"
+#include <vector>
 #include <SPI.h>
 #include <TFT_eSPI.h>
 #include <AnimatedGIF.h>
 #include <PNGdec.h>
 #include "mister_kun_blink.h"
+
+using namespace std;
 
 #define DISABLE_COLOR_MIXING 0xffffffff
 
@@ -24,6 +27,7 @@ typedef enum DisplayState {
 #define DISPLAY_TEXT_MARGIN 4
 
 const char *imageExtensions[] = {
+	".loop.gif",
 	".gif",
 	".png",
 };
@@ -133,25 +137,133 @@ void drawDemoShapes(int durationMS)
 	displayBuffer.deleteSprite();
 }
 
-void showText(const char *displayText, uint8_t font, uint16_t textColor = TFT_WHITE, uint16_t backgroundColor = TFT_BLACK)
+void showText(String lines[], int lineCount, uint8_t font, uint16_t textColor = TFT_WHITE, uint16_t backgroundColor = TFT_BLACK)
 {
 	displayState = DISPLAY_STATIC_TEXT;
-#if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
-	Serial.print("Showing message: "); Serial.println(displayText);
-#endif
-	int displayWidth = config.getDisplayWidth();
-	int displayHeight = config.getDisplayHeight();
-	displayBuffer.createSprite(displayWidth, displayHeight);
+	displayBuffer.createSprite(config.getDisplayWidth(), config.getDisplayHeight());
 	displayBuffer.fillSprite(backgroundColor);
 	displayBuffer.setTextColor(textColor);
-	displayBuffer.drawCentreString(displayText, displayWidth / 2, displayHeight / 2, font);
+	displayBuffer.setTextFont(font);
+
+	int midpointX = config.getMidpointX();
+	int textWidth = displayBuffer.textWidth(" ", font);
+	int textHeight = displayBuffer.fontHeight(font);
+	int lineHeight = textHeight + DISPLAY_TEXT_MARGIN;
+	int yStart = config.getMidpointY() - (lineCount / 2.0 * lineHeight);
+
+	for (int i = 0; i < lineCount; i++)
+		displayBuffer.drawCentreString(lines[i], midpointX, yStart + (i * lineHeight), font);
+
 	displayBuffer.pushSprite(0, 0);
 	displayBuffer.deleteSprite();
 }
 
-void showText(const char *displayText, uint16_t textColor = TFT_WHITE, uint16_t backgroundColor = TFT_BLACK)
+void showText(String lines[], int lineCount, uint16_t textColor = TFT_WHITE, uint16_t backgroundColor = TFT_BLACK)
 {
-	showText(displayText, config.getFontLarge(), textColor, backgroundColor);
+	showText(lines, lineCount, config.getFontLarge(), textColor, backgroundColor);
+}
+
+void showText(String text, uint8_t font, uint16_t textColor = TFT_WHITE, uint16_t backgroundColor = TFT_BLACK)
+{
+	// Get font properties
+	int fontHeight = tft.textWidth(" ", font);
+	int fontWidth = tft.fontHeight(font);
+
+	// Calculate text area parameters
+	int maxLineWidth = (config.getDisplayWidth() / 5) * 4; // Use 1/5 margin
+	int startX = (config.getDisplayWidth() - maxLineWidth) / 2;
+	int charCount = text.length();
+	int charsPerLine = maxLineWidth / fontWidth;
+
+	// Split words on spaces
+	int lineIndex = 0;
+	int startWord = 0, endWord = 0;
+	vector<String> words;
+	words.push_back("");
+
+	for (int c = 0; c < charCount; c++)
+	{
+		char cc = text.charAt(c);
+		if (cc == ' ' && words[lineIndex].length() > 0)
+		{
+			words.push_back("");
+			lineIndex++;
+		}
+		else words[lineIndex] += cc;
+	}
+
+	// Align words to lines
+	const int spaceWidth = tft.textWidth(" ", font);
+	int charWidth = 0, wordWidth = 0, lineWidth = 0, wordCharCount = 0;
+	lineIndex = 0;
+	vector<String> lines;
+	lines.push_back("");
+
+	// Iterate each word
+	for (String word : words)
+	{
+		// Compute word width
+		wordWidth = 0;
+		wordCharCount = word.length();
+		for (int wc = 0; wc < wordCharCount; wc++)
+			wordWidth += tft.textWidth(String(word.charAt(wc)), font);
+
+		// Will word (with space prefix) fit on line?
+		if ((lineWidth + spaceWidth + wordWidth) < maxLineWidth)
+		{
+			// Append word (with space) to current line
+			lines[lineIndex] += " " + word;
+			lineWidth += (spaceWidth + wordWidth);
+		}
+		else
+		{
+			// Will word (without space prefix) fit on single full line?
+			if (wordWidth < maxLineWidth)
+			{
+				// Append word as new line
+				lines.push_back(word);
+				lineWidth = wordWidth;
+				lineIndex++;
+			}
+			else
+			{
+				// Take chars from beginning of temp string (plus '-') to max line width
+				int dashWidth = tft.textWidth("-", font);
+				lines.push_back("");
+				lineWidth = dashWidth;
+				wordCharCount = word.length();
+
+				for (int i = 0; i < wordCharCount; i++)
+				{
+					String wc = String(word.charAt(i));
+					charWidth = tft.textWidth(wc, font);
+
+					// Will temp char fit on the current line?
+					if ((charWidth + lineWidth) < maxLineWidth)
+					{
+						// Append char to current line
+						lines[lineIndex] += wc;
+						lineWidth += charWidth;
+					}
+					else
+					{
+						// Finish current line and append char to new line
+						lines[lineIndex] += "-";
+						lines.push_back(wc);
+						lineIndex++;
+						lineWidth = dashWidth + charWidth;
+					}
+				}
+			}
+		}
+	}
+
+	showText(lines.data(), lineIndex + 1, font, textColor, backgroundColor);
+}
+
+void showText(String line, uint16_t textColor = TFT_WHITE, uint16_t backgroundColor = TFT_BLACK)
+{
+	showText(line, config.getFontLarge(), textColor, backgroundColor);
 }
 
 void showHeaderedText(String lines[], int lineCount)
@@ -339,10 +451,13 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 // Draw a line of image directly on the LCD
 static void gifDrawLine(GIFDRAW *pDraw)
 {
+	static int bufferSize;
+	bufferSize = config.getLineBufferSize();
+
 	#ifdef USE_DMA
-	uint16_t usTemp[2][config.getLineBufferSize()]; // Global display buffer for DMA use
+	uint16_t usTemp[2][bufferSize]; // Global display buffer for DMA use
 	#else
-	uint16_t usTemp[1][config.getLineBufferSize()]; // Global display buffer
+	uint16_t usTemp[1][bufferSize]; // Global display buffer
 	#endif
 	bool dmaBuf = 0;
 
@@ -383,7 +498,7 @@ static void gifDrawLine(GIFDRAW *pDraw)
 		{
 			c = ucTransparent - 1;
 			d = &usTemp[0][0];
-			while (c != ucTransparent && s < pEnd && iCount < config.getLineBufferSize())
+			while (c != ucTransparent && s < pEnd && iCount < bufferSize)
 			{
 				c = *s++;
 				if (c == ucTransparent) // done, stop
@@ -423,11 +538,11 @@ static void gifDrawLine(GIFDRAW *pDraw)
 #ifdef USE_DMA // 71.6 fps (ST7796 84.5 fps)
 		// Unroll the first pass to boost DMA performance
 		// Translate the 8-bit pixels through the RGB565 palette (already byte reversed)
-		if (iWidth <= config.getLineBufferSize())
+		if (iWidth <= bufferSize)
 			for (iCount = 0; iCount < iWidth; iCount++)
 				usTemp[dmaBuf][iCount] = usPalette[*s++];
 		else
-			for (iCount = 0; iCount < config.getLineBufferSize(); iCount++)
+			for (iCount = 0; iCount < bufferSize; iCount++)
 				usTemp[dmaBuf][iCount] = usPalette[*s++];
 
 		tft.dmaWait();
@@ -436,7 +551,7 @@ static void gifDrawLine(GIFDRAW *pDraw)
 		dmaBuf = !dmaBuf;
 #else // 57.0 fps
 		tft.setAddrWindow(pDraw->iX + xoffset, y + yoffset, iWidth, 1);
-		tft.pushPixels(&usTemp[0][0], iCount);
+		tft.pushPixels(usTemp, iCount);
 #endif
 
 		iWidth -= iCount;
@@ -444,17 +559,17 @@ static void gifDrawLine(GIFDRAW *pDraw)
 		while (iWidth > 0)
 		{
 			// Translate the 8-bit pixels through the RGB565 palette (already byte reversed)
-			if (iWidth <= config.getLineBufferSize())
+			if (iWidth <= bufferSize)
 				for (iCount = 0; iCount < iWidth; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
 			else
-				for (iCount = 0; iCount < config.getLineBufferSize(); iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
+				for (iCount = 0; iCount < bufferSize; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
 
 #ifdef USE_DMA
 			tft.dmaWait();
 			tft.pushPixelsDMA(&usTemp[dmaBuf][0], iCount);
 			dmaBuf = !dmaBuf;
 #else
-			tft.pushPixels(&usTemp[0][0], iCount);
+			tft.pushPixels(usTemp, iCount);
 #endif
 			iWidth -= iCount;
 		}
@@ -479,14 +594,21 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 #if VERBOSE_OUTPUT == 1
 		frames++;
 #endif
-		yield();
+		delay(0);
 	}
-	tft.endWrite();
 
 #if VERBOSE_OUTPUT == 1
+	if (gif->getLastError() == GIF_SUCCESS) frames++;
 	runtime = micros() - runtime;
 	Serial.print("Ran GIF "); Serial.print(" at "); Serial.print(frames / (runtime / 1000000.0)); Serial.println(" fps");
 #endif
+
+	if (displayState == DISPLAY_ANIMATED_GIF_LOOPING)
+		gif->reset();
+	else
+		gif->close();
+
+	tft.endWrite();
 }
 #endif
 
@@ -501,7 +623,6 @@ static void showGIF(uint8_t *data, int size, bool loop = false)
 	Serial.print("Opened streamed GIF with resolution "); Serial.print(gif.getCanvasWidth()); Serial.print(" x "); Serial.println(gif.getCanvasHeight());
 #endif
 		displayGIF(&gif, loop);
-		gif.close();
 	}
 	else
 	{
@@ -520,7 +641,6 @@ static void showGIF(const char *path, bool loop = false)
 	Serial.print("Opened GIF "); Serial.print(path); Serial.print(" with resolution "); Serial.print(gif.getCanvasWidth()); Serial.print(" x "); Serial.println(gif.getCanvasHeight());
 #endif
 		displayGIF(&gif, loop);
-		gif.close();
 	}
 	else
 	{

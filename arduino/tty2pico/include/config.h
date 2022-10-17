@@ -33,9 +33,9 @@
 #define LOGO_PATH "/logos/" // Path to logo folder
 #endif
 
-// #ifndef STARTUP_LOGO
-// #define STARTUP_LOGO "/logos/mister.gif" // The logo to show on startup (when not in slideshow mode)
-// #endif
+#ifndef STARTUP_LOGO
+#define STARTUP_LOGO "" // The logo to show on startup (when not in slideshow mode)
+#endif
 
 #ifndef BACKGROUND_COLOR
 // Predefined values from TFT_eSPI:
@@ -135,7 +135,7 @@ struct TTY2PICO_Config
 	bool waitForSerial = false;
 	String imagePath = LOGO_PATH;
 	String startupCommand = "CMDBYE";
-	String startupImage;
+	String startupImage = STARTUP_LOGO;
 	String slideshowFolder = LOGO_PATH;
 	int slideshowDelay = SLIDESHOW_DELAY;
 	uint32_t ttyBaudRate = TTY_BAUDRATE;

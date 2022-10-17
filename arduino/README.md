@@ -64,6 +64,7 @@ These commands are adapted from `tty2oled` and should be (mostly) compatible:
 | CMDCOR | Command to announce core change, will try to display in the following order:<br>`[corename].loop.gif`<br>`[corename].gif`<br>`[corename].png` | `CMDCOR,[corename]`<br>`[corename]`<br>e.g.<br>`SNES`<br>`CMDCOR,SNES`<br>`CMDCOR,19XX` |
 | CMDDOFF | Switch Display off | `CMDDOFF` |
 | CMDDON | Power Display on | `CMDDON` |
+| CMDENOTA | Reboots tty2pico device into bootloader mode to receive a firmware update | `CMDENOTA` |
 | CMDROT | Rotate screen relative to starting position (0=none, 1=180°, 2=90°, 3=270°) | `CMDROT,0` for no rotation<br>`CMDROT,1` to flip screen |
 | CMDSAVER | Disable or Enable the ScreenSaver (currently only toggle) | `CMDSAVER` |
 | CMDSHTEMP | Alias to `CMDSHSYSHW` since that screen displays the CPU temp | `CMDSHTEMP` |
@@ -80,7 +81,9 @@ These commands are specific to `tty2pico`:
 
 | Command | Function | Example |
 | ------- | -------- | ------- |
+| CMDGETSYS | Retreive a pipe-separated system identifier string composed from the build flags with the `TTY2PICO_` prefix that can be used to remotely manage tty2pico options and updates, for example:<br><br>`version=1.0.0|board=Raspberry Pi Pico|display=GC9A01` | `CMDGETSYS` |
 | CMDSHOW | Show an image from the active storage device | `CMDSHOW,/logos/pattern.loop.gif` |
+| CMDUSBMSC | Enable or disable USB Mass Storage mode, which allows using the active filesystem (flash or SD) as an external drive on the MiSTer. | Enable:<br>`CMDUSBMSC`<br>`CMDUSBMSC,1`<br><br>Disable:<br>`CMDUSBMSC,0` |
 
 ## Configuration
 

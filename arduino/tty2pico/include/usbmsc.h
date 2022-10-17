@@ -4,24 +4,27 @@
 #include "Adafruit_TinyUSB.h"
 #include "storage.h"
 
-Adafruit_USBD_MSC msc;
+static Adafruit_USBD_MSC msc;
+static bool mscReady;
 
 /*******************************************************************************
  * Flash MSC Callbacks
  *******************************************************************************/
 
-int32_t mscFlashReadCallback(uint32_t lba, void* buffer, uint32_t bufsize)
+static int32_t mscFlashReadCallback(uint32_t lba, void* buffer, uint32_t bufsize)
 {
-	return flash.readBlocks(lba, (uint8_t*) buffer, bufsize / 512) ? bufsize : -1;
+	int32_t result = flash.readBlocks(lba, (uint8_t*) buffer, bufsize / 512) ? bufsize : -1;
+	return result;
 }
 
-int32_t mscFlashWriteCallback(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
+static int32_t mscFlashWriteCallback(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
 {
 	digitalWrite(LED_BUILTIN, HIGH);
-	return flash.writeBlocks(lba, buffer, bufsize / 512) ? bufsize : -1;
+	int32_t result = flash.writeBlocks(lba, buffer, bufsize / 512) ? bufsize : -1;
+	return result;
 }
 
-void mscFlashFlushCallback(void)
+static void mscFlashFlushCallback(void)
 {
 	flash.syncBlocks(); // sync with flash
 	flashfs.cacheClear(); // clear file system's cache to force refresh
@@ -33,18 +36,20 @@ void mscFlashFlushCallback(void)
  * SD MSC Callbacks
  *******************************************************************************/
 
-int32_t mscSDReadCallback(uint32_t lba, void* buffer, uint32_t bufsize)
+static int32_t mscSDReadCallback(uint32_t lba, void* buffer, uint32_t bufsize)
 {
-	return sdfs.card()->readBlocks(lba, (uint8_t *)buffer, bufsize / 512) ? bufsize : -1;
+	int32_t result = sdfs.card()->readBlocks(lba, (uint8_t *)buffer, bufsize / 512) ? bufsize : -1;
+	return result;
 }
 
-int32_t mscSDWriteCallback(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
+static int32_t mscSDWriteCallback(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
 {
 	digitalWrite(LED_BUILTIN, HIGH);
-	return sdfs.card()->writeBlocks(lba, buffer, bufsize / 512) ? bufsize : -1;
+	int32_t result = sdfs.card()->writeBlocks(lba, buffer, bufsize / 512) ? bufsize : -1;
+	return result;
 }
 
-void mscSDFlushCallback(void)
+static void mscSDFlushCallback(void)
 {
 	sdfs.card()->syncBlocks();
 	sdfs.cacheClear(); // clear file system's cache to force refresh
@@ -56,33 +61,51 @@ void mscSDFlushCallback(void)
  * Lifecycle functions
  *******************************************************************************/
 
+bool getMscReady()
+{
+	return mscReady;
+}
+
 void setupUsbMsc()
 {
+	// Set disk vendor id, product id and revision with string up to 8, 16, 4 characters respectively
+	if (getHasSD())
+		msc.setID("tty2pico", "SD Storage", "1.0");
+	else
+		msc.setID("tty2pico", "Flash Storage", "1.0");
+
+	msc.begin();
+
+	Serial.println("USB MSC setup complete");
+}
+
+void readyUsbMsc()
+{
+	if (mscReady)
+		return;
+
 	if (getHasSD())
 	{
-		// Set disk vendor id, product id and revision with string up to 8, 16, 4 characters respectively
-		msc.setID("tty2pico", "SD Storage", "1.0");
-		msc.begin();
 		msc.setReadWriteCallback(mscSDReadCallback, mscSDWriteCallback, mscSDFlushCallback);
 		msc.setCapacity(sdfs.card()->cardSize(), 512); // Set disk size, block size should be 512 regardless
 		msc.setUnitReady(true); // MSC is ready for read/write
 	}
 	else
 	{
-		// Set disk vendor id, product id and revision with string up to 8, 16, 4 characters respectively
-		msc.setID("tty2pico", "Flash Storage", "1.0");
-		msc.begin();
 		msc.setReadWriteCallback(mscFlashReadCallback, mscFlashWriteCallback, mscFlashFlushCallback);
 		msc.setCapacity(flash.size() / 512, 512); // Set disk size, block size should be 512 regardless of spi flash page size
 		msc.setUnitReady(true); // MSC is ready for read/write
 	}
 
-	Serial.println("USB MSC storage setup complete");
+	mscReady = true;
+	Serial.println("USB MSC ready");
 }
 
-// Lifecycle method for handle file system changes
+// Lifecycle method for handling file system changes
 void loopMSC()
 {
+	yield();
+
 	if (flashfsChanged)
 	{
 		flashfsChanged = false;

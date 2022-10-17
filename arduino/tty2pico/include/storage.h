@@ -3,7 +3,7 @@
 
 #include "config.h"
 #include <SPI.h>
-#include <SdFat.h>
+#include "SdFat.h"
 #include "Adafruit_SPIFlash.h"
 #include <ff.h>
 #include <diskio.h>
@@ -31,14 +31,14 @@
 #endif
 
 Adafruit_SPIFlash flash(&flashTransport);
-FatFileSystem flashfs;
+FatVolume flashfs;
 FATFS elmchamFatfs;
 uint8_t workbuf[4096];
 bool flashfsFormatted;
 bool flashfsChanged;
 
 static bool hasSD = false;
-SdFat sdfs(&SDCARD_SPI);
+SdFat sdfs;
 bool sdfsChanged;
 
 /*************************
@@ -52,7 +52,7 @@ void formatFlash(void)
 	// This is mostly copy/pasta of the example code for formatting using the FatFs lib:
 	// https://github.com/adafruit/Adafruit_SPIFlash/blob/master/examples/SdFat_format/SdFat_format.ino
 
-	// Call fatfs begin and passed flash object to initialize file system
+	// Call fatfs begin and passed flash object to initialize filesystem
 	Serial.println("Creating FAT filesystem (this takes ~60 seconds)...");
 
 	// Make filesystem.
@@ -95,10 +95,9 @@ void formatFlash(void)
 	}
 }
 
-File getFile(const char *path, oflag_t oflag = O_RDONLY)
+File32 getFile(const char *path, oflag_t oflag = O_RDONLY)
 {
-	File file;
-
+	File32 file;
 	if (hasSD)
 	{
 		// SD card
@@ -109,8 +108,6 @@ File getFile(const char *path, oflag_t oflag = O_RDONLY)
 #endif
 			return file;
 		}
-
-		file.close(); // Ensure any previous file has been closed
 #if VERBOSE_OUTPUT == 1
 		if (file.open(&sdfs, path, oflag))
 			Serial.print("Opened file from SD: "); Serial.println(path);
@@ -128,22 +125,18 @@ File getFile(const char *path, oflag_t oflag = O_RDONLY)
 #endif
 			return file;
 		}
-
-		file.close(); // Ensure any previous file has been closed
 #if VERBOSE_OUTPUT == 1
 		if (file.open(&flashfs, path, oflag))
 			Serial.print("Opened file from flash: "); Serial.println(path);
 #else
 		file.open(&flashfs, path, oflag);
 #endif
-
-		return file;
 	}
 
 	return file;
 }
 
-File getFile(String path, oflag_t oflag = O_RDONLY)
+File32 getFile(String path, oflag_t oflag = O_RDONLY)
 {
 	return getFile(path.c_str(), oflag);
 }
@@ -155,7 +148,7 @@ bool getHasSD(void)
 
 void saveFile(String path, const char *data, int size, oflag_t oflag = (O_WRITE | O_CREAT | O_TRUNC))
 {
-	File file = getFile(path, oflag);
+	File32 file = getFile(path, oflag);
 
 	if (file.write(data, size))
 	{
@@ -178,7 +171,7 @@ void saveFile(String path, const char *data, int size, oflag_t oflag = (O_WRITE 
 
 static void loadConfig(void)
 {
-	File configFile = getFile(CONFIG_FILE_PATH);
+	File32 configFile = getFile(CONFIG_FILE_PATH);
 	if (configFile)
 	{
 		// Read entire file into memory, should only be a few KB max
@@ -213,7 +206,7 @@ static void setupFlash(void)
 		while(1) yield();
 	}
 
-	// Init file system on the flash
+	// Init filesystem on the flash
 	flashfsFormatted = flashfs.begin(&flash);
 	if (!flashfsFormatted)
 	{
@@ -243,23 +236,39 @@ static void setupSD(void)
 	SDCARD_SPI.setRX(SDCARD_MISO_PIN);
 	SDCARD_SPI.setTX(SDCARD_MOSI_PIN);
 	SDCARD_SPI.setSCK(SDCARD_SCK_PIN);
+	SdSpiConfig spiConfig(SDCARD_CS_PIN, DEDICATED_SPI, SD_SCK_HZ(62500000), &SDCARD_SPI);
 
-	if (!sdfs.begin(SDCARD_CS_PIN, SPI_FULL_SPEED))
+	if (!sdfs.begin(spiConfig))
 	{
-		Serial.println("SD initialization failed!");
+		sdfs.errorPrint(&Serial);
 		return;
 	}
 
+	File32 root = sdfs.open("/", O_RDONLY);
+	if (!root)
+	{
+		Serial.print("SD filesystem intialization failed, error code: "); Serial.println(root.getError());
+		return;
+	}
+	if (!root.isDir())
+	{
+		root.close();
+		Serial.println("SD filesystem intialization failed, unable to locate root filesystem");
+		return;
+	}
+
+	root.close();
 	hasSD = true;
 	Serial.println("SD storage setup complete");
 }
 
 void setupStorage(void)
 {
-	setupFlash();
 #ifdef SDCARD_SPI
 	setupSD();
 #endif
+	setupFlash();
+
 	loadConfig();
 }
 
@@ -267,25 +276,28 @@ void setupStorage(void)
  * File/Directory functions
  *************************/
 
-static File dir;
+static File32 dir;
 static String dirText;
 
 bool fileExists(String path)
 {
+	bool exists = false;
 	if (hasSD)
-		return sdfs.exists(path.c_str());
+		exists = sdfs.exists(path.c_str());
 	else
-		return flashfs.exists(path.c_str());
+		exists = flashfs.exists(path.c_str());
+
+	return exists;
 }
 
-String getName(File *file)
+String getName(File32 *file)
 {
 	char filename[250];
 	file->getName(filename, 250);
 	return String(filename);
 }
 
-String getFullName(File *file, const char *directory = nullptr)
+String getFullName(File32 *file, const char *directory = nullptr)
 {
 	if (directory == nullptr)
 		return dirText + getName(file);
@@ -300,37 +312,36 @@ String getDirectory(void)
 
 int getFileCount(void)
 {
-	dir.rewindDirectory();
+	if (!dir)
+		return -1;
 
+	dir.rewindDirectory();
 	int count = 0;
 	while (true)
 	{
-		File entry = dir.openNextFile();
-		if (entry)
+		if (dir.openNextFile())
 			count += 1;
 		else
 			break;
 	}
-
 	dir.rewindDirectory();
 	return count;
 }
 
 String getNextFile(void)
 {
-	static File entry;
+	String name;
+	File32 entry = dir.openNextFile();
+	if (entry)
+		name = getFullName(&entry);
 
-	entry = dir.openNextFile();
-	if (!entry)
-		return "";
-
-	return getFullName(&entry);
+	return name;
 }
 
 void printDirectory(const char *path, int numTabs)
 {
-	File dir = getFile(path);
-	File entry;
+	File32 dir = getFile(path);
+	File32 entry;
 
 	while (entry.openNext(&dir, O_RDONLY))
 	{
@@ -359,28 +370,32 @@ void printDirectory(const char *path, int numTabs)
 	}
 }
 
-inline int readFile(File *file, uint8_t *buffer, int32_t length, const char *errorMessage = nullptr)
+inline int readFile(File32 *file, uint8_t *buffer, int32_t length, const char *errorMessage = nullptr)
 {
-	if (!file->available())
+	int byteCount = 0;
+	if (file->available())
+	{
+		byteCount = file->read(buffer, length);
+	}
+	else
 	{
 #if VERBOSE_OUTPUT == 1
 		Serial.println(errorMessage);
 #endif
-		return 0;
 	}
-
-	int byteCount = file->read(buffer, length);
 	return byteCount;
 }
 
 void rewindDirectory(void)
 {
-	dir.rewindDirectory();
+	if (dir)
+		dir.rewindDirectory();
 }
 
 void setDirectory(String path)
 {
-	dir.close();
+	if (dir)
+		dir.close();
 #if VERBOSE_OUTPUT == 1
 	Serial.print("Setting directory to: "); Serial.println(path.c_str());
 #endif
@@ -392,7 +407,7 @@ void setDirectory(String path)
  * GIF functions
  *************************/
 
-static File giffile;
+static File32 giffile;
 
 void *gifOpen(const char *filename, int32_t *size)
 {
@@ -423,13 +438,12 @@ void gifClose(void *handle)
 #if VERBOSE_OUTPUT == 1
 	Serial.println("Closing file");
 #endif
-	File *file = static_cast<File *>(handle);
-	file->close();
+	static_cast<File32 *>(handle)->close();
 }
 
 int32_t gifRead(GIFFILE *page, uint8_t *buffer, int32_t length)
 {
-	File *file = static_cast<File *>(page->fHandle);
+	File32 *file = static_cast<File32 *>(page->fHandle);
 	int32_t byteCount = readFile(file, buffer, length, "Couldn't read GIF file");
 	page->iPos = file->position();
 	return byteCount;
@@ -437,7 +451,7 @@ int32_t gifRead(GIFFILE *page, uint8_t *buffer, int32_t length)
 
 int32_t gifSeek(GIFFILE *page, int32_t position)
 {
-	File *file = static_cast<File *>(page->fHandle);
+	File32 *file = static_cast<File32 *>(page->fHandle);
 	file->seek(position);
 	page->iPos = file->position();
 	return page->iPos;
@@ -447,7 +461,7 @@ int32_t gifSeek(GIFFILE *page, int32_t position)
  * PNG functions
  *************************/
 
-static File pngfile;
+static File32 pngfile;
 
 void *pngOpen(const char *filename, int32_t *size)
 {
@@ -478,19 +492,18 @@ void pngClose(void *handle)
 #if VERBOSE_OUTPUT == 1
 	Serial.println("Closing file");
 #endif
-	File *file = static_cast<File *>(handle);
-	file->close();
+	static_cast<File32 *>(handle)->close();
 }
 
 int32_t pngRead(PNGFILE *page, uint8_t *buffer, int32_t length)
 {
-	File *file = static_cast<File *>(page->fHandle);
-	return readFile(file, buffer, length, "Couldn't read PNG file");
+	int byteCount = readFile(static_cast<File32 *>(page->fHandle), buffer, length, "Couldn't read PNG file");
+	return byteCount;
 }
 
 int32_t pngSeek(PNGFILE *page, int32_t position)
 {
-	File *file = static_cast<File *>(page->fHandle);
+	File32 *file = static_cast<File32 *>(page->fHandle);
 	file->seek(position);
 	page->iPos = file->position();
 	return page->iPos;
