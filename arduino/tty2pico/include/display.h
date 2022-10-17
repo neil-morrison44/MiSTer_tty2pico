@@ -2,6 +2,7 @@
 #define DISPLAY_H
 
 #include "config.h"
+#include "definitions.h"
 #include "storage.h"
 #include <vector>
 #include <SPI.h>
@@ -13,16 +14,6 @@
 using namespace std;
 
 #define DISABLE_COLOR_MIXING 0xffffffff
-
-typedef enum DisplayState {
-	DISPLAY_ANIMATED_GIF,
-	DISPLAY_ANIMATED_GIF_LOOPING,
-	DISPLAY_MISTER,
-	DISPLAY_RANDOM_SHAPES,
-	DISPLAY_SLIDESHOW,
-	DISPLAY_STATIC_IMAGE,
-	DISPLAY_STATIC_TEXT,
-} DisplayState;
 
 #define DISPLAY_TEXT_MARGIN 4
 

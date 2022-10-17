@@ -67,6 +67,7 @@ These commands are adapted from `tty2oled` and should be (mostly) compatible:
 | CMDENOTA | Reboots tty2pico device into bootloader mode to receive a firmware update | `CMDENOTA` |
 | CMDROT | Rotate screen relative to starting position (0=none, 1=180°, 2=90°, 3=270°) | `CMDROT,0` for no rotation<br>`CMDROT,1` to flip screen |
 | CMDSAVER | Disable or Enable the ScreenSaver (currently only toggle) | `CMDSAVER` |
+| CMDSETTIME | Set the time on the MCU RTC using a unix timestamp<br><br>Shell example: <br>`timeoffset=$(date +%:::z)`<br>`localtime=$(date '-d now '${timeoffset}' hour' +%s)`<br>`echo "CMDSETTIME,${localtime}" > /dev/ttyACM0` | `CMDSETTIME,[timestamp]`<br>`CMDSETTIME,1665971593` |
 | CMDSHTEMP | Alias to `CMDSHSYSHW` since that screen displays the CPU temp | `CMDSHTEMP` |
 | CMDSHSYSHW | Show tty2pico system information | `CMDSHSYSHW` |
 | CMDSNAM | Show actual loaded Corename | `CMDSNAM` |
@@ -82,8 +83,9 @@ These commands are specific to `tty2pico`:
 | Command | Function | Example |
 | ------- | -------- | ------- |
 | CMDGETSYS | Retreive a pipe-separated system identifier string composed from the build flags with the `TTY2PICO_` prefix that can be used to remotely manage tty2pico options and updates, for example:<br><br>`version=1.0.0|board=Raspberry Pi Pico|display=GC9A01` | `CMDGETSYS` |
+| CMDGETTIME | Get the current real-time clock value in the specified format | `CMDGETTIME`<br>`CMDGETTIME,[format]`<br><br>Formats are:<br>0 = Unix timestamp (default if missing)<br>1 = Human readable |
 | CMDSHOW | Show an image from the active storage device | `CMDSHOW,/logos/pattern.loop.gif` |
-| CMDUSBMSC | Enable or disable USB Mass Storage mode, which allows using the active filesystem (flash or SD) as an external drive on the MiSTer. | Enable:<br>`CMDUSBMSC`<br>`CMDUSBMSC,1`<br><br>Disable:<br>`CMDUSBMSC,0` |
+| CMDUSBMSC | Enable USB Mass Storage mode for the active filesystem, which makes tty2pico appear as a flash drive to MiSTer. | `CMDUSBMSC` |
 
 ## Configuration
 
@@ -140,11 +142,13 @@ If you would like to add a build for a board/display that isn't supported, copy 
 
 All platform, framework and external library dependencies required to build will be automatically downloaded by PlatformIO when executing a build. The external library dependencies are:
 
-* adafruit/Adafruit SPIFlash@3.11.0
-* adafruit/SdFat - Adafruit Fork@1.5.1
+* adafruit/Adafruit SPIFlash@4.0.0
+* adafruit/Adafruit TinyUSB Library@1.14.4
+* adafruit/SdFat - Adafruit Fork@2.2.1
 * bitbank2/AnimatedGIF@1.4.7
 * bitbank2/PNGdec@1.0.1
-* bodmer/TFT_eSPI@2.4.77
+* bodmer/TFT_eSPI@2.4.78
+* gyverlibs/UnixTime@1.1
 
 ## Roadmap
 
@@ -162,7 +166,7 @@ All platform, framework and external library dependencies required to build will
     * [ ] CMDGEO - Show Geometric Figures (maybe?)
     * [x] ~~CMDROT - Rotate screen relative to starting position (0=none, 1=180°, 2=90°, 3=270°)~~
     * [x] ~~CMDSAVER - Disable or Enable the ScreenSaver (currently only toggle)~~
-    * [ ] CMDSETTIME - Set MCU clock
+    * [x] ~CMDSETTIME - Set MCU clock~
     * [x] ~~CMDSHTEMP - Alias to `CMDSHSYSHW` since that screen displays the CPU temp~~
     * [x] ~~CMDSHSYSHW - Show tty2pico system information~~
     * [x] ~~CMDSNAM - Show actual loaded Corename~~
@@ -186,24 +190,15 @@ All platform, framework and external library dependencies required to build will
   * [x] ~~ST7789V3 172x320~~
 * [x] ~~Multicore support (one for logic, the other for draw calls)~~
 * [ ] Add support for other fast dual core chips like ESP32 and ESP32-S3
-* [ ] Move the "Software configuration" section of `config.h` into a text/json/xml/whatever file to be read from the filesystem on startup
+* [x] ~Move the "Software configuration" section of `config.h` into a text/json/xml/whatever file to be read from the filesystem on startup~
 * [ ] Create variant of existing GC9A01 holder for the RoundyPi
 * [ ] Modify the [MiSTer Multisystem dust cover](https://www.printables.com/model/159379-mister-multisystem-v5-2022-classic-gaming-console-/files) to support GC9A01/RoundyPi and possibly other display modules
 
 ### Refactoring and Optimizations
 
-**File System Performance**
-
-The Adafruit SdFat library fork has a few drawbacks:
-
-* It's based on the v1 branch of the mainline SdFat library
-* It's about 20-30% slower for data reads than mainline SdFat v2
-
-This is currently used for flash and SD card filesystem access. **Consider a microSD only build using SdFat v2 until the performance issues can be addressed.**
-
 **Remove Arduino String dependency**
 
-Replace instances of Arudino `String` with `std::string` or `const char *`.
+Consider replacing instances of Arudino `String` with `std::string` or `const char *`, at least in platform-specific areas of code that could be modularized.
 
 **Refactor Display Logic**
 

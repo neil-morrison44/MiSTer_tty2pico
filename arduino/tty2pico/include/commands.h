@@ -1,78 +1,15 @@
-#ifndef COMMANDER_H
-#define COMMANDER_H
+#ifndef COMMANDS_H
+#define COMMANDS_H
 
 #include "config.h"
 #include <string>
-#include "pico/bootrom.h"
+#include "definitions.h"
+#include "platform.h"
 #include "display.h"
 #include "storage.h"
 #include "usbmsc.h"
 
 using namespace std;
-
-// When adding a new command do the following:
-// * Add a `const static String [CMDNAME]` variable for the command text
-// * Add to TTY2CMD enum
-// * Add or use existing function for handling command, prefix function name with `cmd`
-// * Add handling to `parseCommand()` and `runCommand()`
-// * Document where appropriate
-
-// tty2oled commands
-const static String CMDBYE     = "CMDBYE";
-const static String CMDCLS     = "CMDCLS";
-const static String CMDCORE    = "CMDCOR";
-const static String CMDDOFF    = "CMDDOFF";
-const static String CMDDON     = "CMDDON";
-const static String CMDENOTA   = "CMDENOTA";
-const static String CMDROT     = "CMDROT";
-const static String CMDSAVER   = "CMDSAVER";
-const static String CMDSETTIME = "CMDSETTIME";
-const static String CMDSHSYSHW = "CMDSHSYSHW";
-const static String CMDSHTEMP  = "CMDSHTEMP";
-const static String CMDSNAM    = "CMDSNAM";
-const static String CMDSORG    = "CMDSORG";
-const static String CMDSWSAVER = "CMDSWSAVER";
-const static String CMDTEST    = "CMDTEST";
-const static String CMDTXT     = "CMDTXT";
-
-// tty2pico commands
-const static String CMDGETSYS  = "CMDGETSYS";
-const static String CMDSHOW    = "CMDSHOW";
-const static String CMDUSBMSC  = "CMDUSBMSC";
-
-typedef enum TTY2CMD {
-	TTY2CMD_NONE = 0,
-	TTY2CMD_CLS,
-	TTY2CMD_COR,
-	TTY2CMD_BYE,
-	TTY2CMD_DOFF,
-	TTY2CMD_DON,
-	TTY2CMD_ENOTA,
-	TTY2CMD_GETSYS,
-	TTY2CMD_ROT,
-	TTY2CMD_SAVER,
-	TTY2CMD_SETTIME,
-	TTY2CMD_SHOW,
-	TTY2CMD_SHSYSHW,
-	TTY2CMD_SHTEMP,
-	TTY2CMD_SNAM,
-	TTY2CMD_SORG,
-	TTY2CMD_SWSAVER,
-	TTY2CMD_TEST,
-	TTY2CMD_TXT,
-	TTY2CMD_UNKNOWN,
-	TTY2CMD_USBMSC,
-} TTY2CMD;
-
-struct CommandData
-{
-	CommandData() { }
-	CommandData(TTY2CMD command) : command(command) { }
-	CommandData(TTY2CMD command, String commandText) : command(command), commandText(commandText) { }
-
-	TTY2CMD command;
-	String commandText;
-};
 
 static String coreName;
 
@@ -99,7 +36,21 @@ static void cmdDisplayOn(void)
 static void cmdEnableOTA()
 {
 	Serial.println("Restarting in firmware update mode");
-	reset_usb_boot(0, 0);
+	resetForUpdate();
+}
+
+static void cmdGetTime(String command)
+{
+	int format = DTF_UNIX;
+	if (command.indexOf(',') > 0)
+	{
+		String mode = command.substring(command.indexOf(',') + 1, command.indexOf(',') + 2);
+		if (mode == "1")
+			format = DTF_HUMAN;
+	}
+
+	char *time = getTime(format);
+	Serial.println(time);
 }
 
 static void cmdGetSysInfo()
@@ -198,8 +149,13 @@ static void cmdSetCore(String command)
 
 static void cmdSetTime(String command)
 {
-	(void)command;
-	// TODO: Add for ESP32?
+	if (command.indexOf(",") > 0)
+	{
+		String unixTimestamp = command.substring(command.indexOf(",") + 1);
+		uint32_t timestamp = unixTimestamp.toInt();
+		setTime(timestamp);
+	}
+	else Serial.println("Cannot set date and time, no data received");
 }
 
 static void cmdShow(String command)
@@ -270,6 +226,7 @@ CommandData parseCommand(String command)
 		else if (command.startsWith(CMDDON))                                  return CommandData(TTY2CMD_DON, command);
 		else if (command.startsWith(CMDENOTA))                                return CommandData(TTY2CMD_ENOTA, command);
 		else if (command.startsWith(CMDGETSYS))                               return CommandData(TTY2CMD_GETSYS, command);
+		else if (command.startsWith(CMDGETTIME))                              return CommandData(TTY2CMD_GETTIME, command);
 		else if (command.startsWith(CMDROT))                                  return CommandData(TTY2CMD_ROT, command);
 		else if (command.startsWith(CMDSAVER))                                return CommandData(TTY2CMD_SAVER, command);
 		else if (command.startsWith(CMDSETTIME))                              return CommandData(TTY2CMD_SETTIME, command);
@@ -300,6 +257,7 @@ void runCommand(CommandData data)
 		case TTY2CMD_DON:     return cmdDisplayOn();
 		case TTY2CMD_ENOTA:   return cmdEnableOTA();
 		case TTY2CMD_GETSYS:  return cmdGetSysInfo();
+		case TTY2CMD_GETTIME: return cmdGetTime(data.commandText);
 		case TTY2CMD_ROT:     return cmdRotate(data.commandText);
 		case TTY2CMD_SAVER:   return cmdSaver(data.commandText);
 		case TTY2CMD_SETTIME: return cmdSetTime(data.commandText);
@@ -321,6 +279,14 @@ void runCommand(CommandData data)
 			Serial.println(data.command);
 			return;
 	}
+}
+
+void loopQueue(void)
+{
+	static CommandData data;
+
+	while (removeFromQueue(data))
+		runCommand(data);
 }
 
 #endif
