@@ -46,7 +46,7 @@ void setupDisplay()
 
 	// Setup screen
 	tft.init();
-#ifdef USE_DMA
+#if USE_DMA == 1
 	tft.initDMA();
 #endif
 	tft.setRotation(config.tftRotation);
@@ -125,7 +125,7 @@ void drawDemoShapes(int durationMS)
 	}
 #if defined(VERBOSE_OUTPUT) && VERBOSE_OUTPUT == 1
 	runtime = micros() - runtime;
-	Serial.print("Demo random shapes at "); Serial.print(frames / (runtime / 1000000.0)); Serial.println(" fps");
+	Serial.print("Demo random shapes at "); Serial.print(frames / (runtime / 1000000.0f)); Serial.println(" fps");
 #endif
 	displayBuffer.deleteSprite();
 }
@@ -152,7 +152,7 @@ void overlayText(String text)
 }
 
 #if SHOW_FPS == 1
-static double fps;
+static float fps;
 
 // Show the last captured FPS value
 void showFPS(TFT_eSPI *parent)
@@ -167,14 +167,14 @@ void showFPS(void)
 }
 
 // Show FPS by providing a new value
-void showFPS(double newFPS, TFT_eSPI *parent)
+void showFPS(float newFPS, TFT_eSPI *parent)
 {
 	fps = newFPS;
 	overlayText(String(fps), parent);
 }
 
 // Show FPS by providing a new value
-void showFPS(double newFPS)
+void showFPS(float newFPS)
 {
 	fps = newFPS;
 	overlayText(String(fps), &tft);
@@ -183,13 +183,13 @@ void showFPS(double newFPS)
 // Show FPS by providing the during in microseconds of the last frame
 void showFPS(unsigned long micros, TFT_eSPI *parent)
 {
-	overlayText(String(1000000.0 / micros), parent);
+	overlayText(String(1000000.0f / micros), parent);
 }
 
 // Show FPS by providing the during in microseconds of the last frame
 void showFPS(unsigned long micros)
 {
-	overlayText(String(1000000.0 / micros), &tft);
+	overlayText(String(1000000.0f / micros), &tft);
 }
 
 #endif
@@ -366,16 +366,29 @@ void showSystemInfo(uint32_t frameTime)
 	lines.push_back("tty2pico");
 	lines.push_back("v" + String(TTY2PICO_VERSION_STRING));
 	lines.push_back(TTY2PICO_BOARD);
+
 	snprintf(lineBuffer, sizeof(lineBuffer), "RP2040 @ %.1fMHz %.1fC", (clock_get_hz(clk_sys) / 1000000.0f), analogReadTemp());
 	lines.push_back(lineBuffer);
+
 	memset(lineBuffer, 0, sizeof(lineBuffer));
-	snprintf(lineBuffer, sizeof(lineBuffer), "%s @ %dx%d %.1fMHz", TTY2PICO_DISPLAY, config.getDisplayWidth(), config.getDisplayHeight(), (SPI_FREQUENCY / 1000000.0));
+	snprintf(lineBuffer, sizeof(lineBuffer), "%s @ %dx%d %.1fMHz", TTY2PICO_DISPLAY, config.getDisplayWidth(), config.getDisplayHeight(), getSpiRateDisplayMHz());
 	lines.push_back(lineBuffer);
+
 	lines.push_back(String(getTime(DTF_HUMAN)));
-	lines.push_back(getHasSD() ? "SD Filesystem" : "Flash Filesystem");
-	memset(lineBuffer, 0, sizeof(lineBuffer));
-	snprintf(lineBuffer, sizeof(lineBuffer), "USB MSC %s", getMscReady() ? "Enabled" : "Disabled");
-	lines.push_back(lineBuffer);
+
+	if (getHasSD())
+	{
+		memset(lineBuffer, 0, sizeof(lineBuffer));
+		snprintf(lineBuffer, sizeof(lineBuffer), "SD Filesystem @ %.1fMHz", getSpiRateSdMHz(), getMscReady() ? "Enabled" : "Disabled");
+		lines.push_back(lineBuffer);
+	}
+	else lines.push_back("Flash Filesystem");
+
+	if (getMscReady())
+		lines.push_back("USB MSC Enabled");
+	else
+		lines.push_back("USB MSC Disabled");
+
 	showHeaderedText(lines.data(), lines.size());
 
 	displayState = DISPLAY_SYSTEM_INFORMATION;
@@ -515,7 +528,7 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 
 #if VERBOSE_OUTPUT == 1
 	runtime = micros() - runtime;
-	Serial.print("Ran bufferred GIF "); Serial.print(" at "); Serial.print(frames / (runtime / 1000000.0)); Serial.println(" fps");
+	Serial.print("Ran bufferred GIF "); Serial.print(" at "); Serial.print(frames / (runtime / 1000000.0f)); Serial.println(" fps");
 #endif
 
 	displayBuffer.deleteSprite();
@@ -528,10 +541,10 @@ static void gifDrawLine(GIFDRAW *pDraw)
 	static int bufferSize;
 	bufferSize = config.getLineBufferSize();
 
-	#ifdef USE_DMA
-	uint16_t usTemp[2][bufferSize]; // Global display buffer for DMA use
+	#if USE_DMA == 1
+	uint16_t usTemp[2][bufferSize];
 	#else
-	uint16_t usTemp[1][bufferSize]; // Global display buffer
+	uint16_t usTemp[1][bufferSize];
 	#endif
 	bool dmaBuf = 0;
 
@@ -587,9 +600,14 @@ static void gifDrawLine(GIFDRAW *pDraw)
 			} // while looking for opaque pixels
 			if (iCount) // any opaque pixels?
 			{
-				// DMA would degrtade performance here due to short line segments
+#if USE_DMA == 1
+				tft.dmaWait();
+				tft.setAddrWindow(pDraw->iX + x + xoffset, y + yoffset, iCount, 1);
+				tft.pushPixelsDMA(&usTemp[dmaBuf][0], iCount);
+#else
 				tft.setAddrWindow(pDraw->iX + x + xoffset, y + yoffset, iCount, 1);
 				tft.pushPixels(usTemp, iCount);
+#endif
 				x += iCount;
 				iCount = 0;
 			}
@@ -609,7 +627,7 @@ static void gifDrawLine(GIFDRAW *pDraw)
 	{
 		s = pDraw->pPixels;
 
-#ifdef USE_DMA // 71.6 fps (ST7796 84.5 fps)
+#if USE_DMA == 1
 		// Unroll the first pass to boost DMA performance
 		// Translate the 8-bit pixels through the RGB565 palette (already byte reversed)
 		if (iWidth <= bufferSize)
@@ -623,7 +641,7 @@ static void gifDrawLine(GIFDRAW *pDraw)
 		tft.setAddrWindow(pDraw->iX + xoffset, y + yoffset, iWidth, 1);
 		tft.pushPixelsDMA(&usTemp[dmaBuf][0], iCount);
 		dmaBuf = !dmaBuf;
-#else // 57.0 fps
+#else
 		tft.setAddrWindow(pDraw->iX + xoffset, y + yoffset, iWidth, 1);
 		tft.pushPixels(usTemp, iCount);
 #endif
@@ -638,7 +656,7 @@ static void gifDrawLine(GIFDRAW *pDraw)
 			else
 				for (iCount = 0; iCount < bufferSize; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
 
-#ifdef USE_DMA
+#if USE_DMA == 1
 			tft.dmaWait();
 			tft.pushPixelsDMA(&usTemp[dmaBuf][0], iCount);
 			dmaBuf = !dmaBuf;
@@ -692,7 +710,7 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 	}
 #endif
 #if VERBOSE_OUTPUT == 1
-	Serial.print("Ran GIF at "); Serial.print(frames / ((micros() - runStart) / 1000000.0)); Serial.println(" fps");
+	Serial.print("Ran GIF at "); Serial.print(frames / ((micros() - runStart) / 1000000.0f)); Serial.println(" fps");
 #endif
 
 	if (displayState == DISPLAY_ANIMATED_GIF_LOOPING)

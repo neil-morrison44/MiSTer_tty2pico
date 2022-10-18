@@ -39,7 +39,7 @@ bool flashfsFormatted;
 bool flashfsChanged;
 
 static bool hasSD = false;
-SdFat sdfs;
+SdFat32 sdfs;
 bool sdfsChanged;
 
 /*************************
@@ -371,18 +371,17 @@ void printDirectory(const char *path, int numTabs)
 
 inline int readFile(File32 *file, uint8_t *buffer, int32_t length, const char *errorMessage = nullptr)
 {
-	int byteCount = 0;
 	if (file->available())
 	{
-		byteCount = file->read(buffer, length);
+		return file->read(buffer, length);
 	}
 	else
 	{
 #if VERBOSE_OUTPUT == 1
 		Serial.println(errorMessage);
 #endif
+		return 0;
 	}
-	return byteCount;
 }
 
 void rewindDirectory(void)
@@ -406,10 +405,10 @@ void setDirectory(String path)
  * GIF functions
  *************************/
 
-static File32 giffile;
-
 void *gifOpen(const char *filename, int32_t *size)
 {
+	static File32 giffile;
+
 	giffile = getFile(filename);
 
 	if (giffile.available())
@@ -420,13 +419,11 @@ void *gifOpen(const char *filename, int32_t *size)
 #endif
 		return (void *)&giffile;
 	}
-	else
-	{
+
 #if VERBOSE_OUTPUT == 1
-		Serial.print("Failed to open "); Serial.println(String(filename).c_str());
+	Serial.print("Failed to open "); Serial.println(String(filename).c_str());
 #endif
-		return NULL;
-	}
+	return NULL;
 }
 
 void gifClose(void *handle)

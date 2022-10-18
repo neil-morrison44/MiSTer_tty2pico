@@ -48,6 +48,22 @@ const char *getTime(int format)
 	}
 }
 
+float getSpiRateDisplayMHz()
+{
+	spi_inst_t *spi = TFT_SPI_PORT == 0 ? spi0 : spi1;
+	uint rate = spi_get_baudrate(spi);
+	if (rate == UINT_MAX)
+		rate = SPI_FREQUENCY;
+	return rate / 1000000.0f;
+}
+
+float getSpiRateSdMHz()
+{
+	spi_inst_t *spi = &SDCARD_SPI == &SPI ? spi0 : spi1;
+	uint rate = spi_get_baudrate(spi);
+	return rate / 1000000.0f;
+}
+
 void setTime(uint32_t timestamp)
 {
 	if (!rtc_running())
@@ -86,12 +102,12 @@ void setupCPU(void)
 
 	if (config.enableOverclock)
 	{
-		// Apply an overclock to 250MHz (2x stock) and voltage tweak to stablize most RP2040 boards.
+		// Apply an overclock for 2x performance and a voltage tweak to stablize most RP2040 boards.
 		// If it's good enough for pixel-pushing in MicroPython, it's good enough for us :P
 		// https://github.com/micropython/micropython/issues/8208
 		vreg_set_voltage(VREG_VOLTAGE_1_20); // Set voltage to 1.2v
 		delay(10); // Allow vreg time to stabilize
-		set_sys_clock_khz(250000, true); // Overclock to 250MHz
+		set_sys_clock_khz(266000, true); // Overclock to 266MHz
 	}
 }
 

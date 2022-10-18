@@ -86,11 +86,9 @@
 #define SHOW_FPS 0
 #endif
 
-// If defined will use the DMA mode with TFT_eSPI library
-// WARNING: This seems to drop performance by about 10% with the current image rendering methods
-// on the RP2040, so I wouldn't enable this unless those methods get more optimized, or it makes
-// sense when building for another platform.
-// #define USE_DMA
+#ifndef USE_DMA
+#define USE_DMA 1 // If defined will use the DMA mode with TFT_eSPI library for better performance on supported hardware
+#endif
 
 /**************************
  * Computed configuration

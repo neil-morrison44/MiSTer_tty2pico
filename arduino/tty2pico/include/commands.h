@@ -211,7 +211,7 @@ static void cmdUsbMsc()
 {
 	if (!getMscReady())
 	{
-		showText("Starting USB MSC mode, this could take a while for SD...");
+		showText("USB MSC mode enabled");
 		readyUsbMsc();
 	}
 }

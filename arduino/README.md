@@ -5,7 +5,7 @@ A full colour version of [tty2oled](https://github.com/venice1200/MiSTer_tty2ole
 * Support for PNG and animated GIF files
 * Uses the Raspberry Pi Pico and other RP2040 based variant
   * Utilizes multicore logic
-  * Optionally overclock RP2040 from 133MHz to 250MHz for better display performance
+  * Optionally overclock RP2040 from 133MHz to 266MHz for better display performance
 * Support for SPI displays up to 320x240 resolution
 * Can display images from built-in flash or microSD card if available
 * Targets compatiblity with the [tty2oled Command List](https://github.com/venice1200/MiSTer_tty2oled/wiki/Command_v2)
@@ -117,7 +117,7 @@ And a description of each available option (struckthrough items are not yet impl
 | ------ | --------- | ------------- | ----------- |
 | backgroundColor | 16-bit RGB565 color value in integer form | 0 (Black) | The default background color when using transparent images. You will need to find an RGB565 color value usually in hex format like [the TFT_eSPI color definitions](https://github.com/Bodmer/TFT_eSPI/blob/13e62a88d07ed6e29d15fe76b132a927ec29e307/TFT_eSPI.h#L282), then convert the hex value to an integer value using an online tool or the `tools/hex-to-int.py` Python script like `python hex-to-int.py FFFF` |
 | ~~disableSD~~ | true/false | false | Force tty2pico to run from the flash filesystem. |
-| enableOverclock | true/false | false | Overclock the RP2040 to 250MHz, up from the default 133MHz. This can dramatically speed up the refresh of the display. |
+| enableOverclock | true/false | false | Double the clock speed of the RP2040 from 133MHz to 266MHz. This will provide almost a 2x performance increase for display refreshes. Just about every RP2040 board should be able to handle this overclock while remaining passively cooled. |
 | imagePath | string | "/logos/" | The default directory to search for images when a core is requested. |
 | slideshowDelay | 0+ | 2000 | The delay in milliseconds between switching images during the slideshow/screensaver. |
 | ~~slideshowFolder~~ | string | "/logos/" | The default directory to serach for slideshow images. |
@@ -205,3 +205,7 @@ Consider replacing instances of Arudino `String` with `std::string` or `const ch
 **Refactor Display Logic**
 
 Display logic is in a bunch of global methods and tracking variables. We can make this more flexible by creating a base `Scene` class (or whatever naming) and then extend for each type of display logic, like `PngScene`, `GifScene`, `InfoScreenScene`, etc. This base display class has a static reference to the `TFT_eSprite` used as the display buffer, then we keep whatever `Scene` subclass in memory while it's used. This should allow easier composing of complex display sequences and transitions between display states.
+
+**Replace Instances of `Serial` with `TTY_SERIAL`**
+
+Use the define instead of the imported global object when intending to output data to client.
