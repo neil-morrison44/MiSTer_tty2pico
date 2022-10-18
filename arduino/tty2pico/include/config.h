@@ -144,7 +144,7 @@ struct TTY2PICO_Config
 	int tftHeight = TFT_HEIGHT;
 	bool disableSD = false;
 	bool enableOverclock = false;
-	bool waitForSerial = false;
+	bool waitForSerial = WAIT_FOR_SERIAL;
 	String imagePath = LOGO_PATH;
 	String startupCommand = "";
 	uint16_t startupDelay = STARTUP_DELAY;

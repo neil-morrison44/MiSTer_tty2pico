@@ -13,21 +13,20 @@ static bool mscReady;
 
 static int32_t mscFlashReadCallback(uint32_t lba, void* buffer, uint32_t bufsize)
 {
-	int32_t result = flash.readBlocks(lba, (uint8_t*) buffer, bufsize / 512) ? bufsize : -1;
+	int32_t result = flash.readBlocks(lba, (uint8_t*) buffer, bufsize / FS_BLOCK_SIZE) ? bufsize : -1;
 	return result;
 }
 
 static int32_t mscFlashWriteCallback(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
 {
 	digitalWrite(LED_BUILTIN, HIGH);
-	int32_t result = flash.writeBlocks(lba, buffer, bufsize / 512) ? bufsize : -1;
+	int32_t result = flash.writeBlocks(lba, buffer, bufsize / FS_BLOCK_SIZE) ? bufsize : -1;
 	return result;
 }
 
 static void mscFlashFlushCallback(void)
 {
-	flash.syncBlocks(); // sync with flash
-	flashfs.cacheClear(); // clear file system's cache to force refresh
+	flash.syncDevice();
 	flashfsChanged = true;
 	digitalWrite(LED_BUILTIN, LOW);
 }
@@ -38,21 +37,20 @@ static void mscFlashFlushCallback(void)
 
 static int32_t mscSDReadCallback(uint32_t lba, void* buffer, uint32_t bufsize)
 {
-	int32_t result = sdfs.card()->readSectors(lba, (uint8_t *)buffer, bufsize / 512) ? bufsize : -1;
+	int32_t result = sdfs.card()->readSectors(lba, (uint8_t *)buffer, bufsize / FS_BLOCK_SIZE) ? bufsize : -1;
 	return result;
 }
 
 static int32_t mscSDWriteCallback(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
 {
 	digitalWrite(LED_BUILTIN, HIGH);
-	int32_t result = sdfs.card()->writeSectors(lba, buffer, bufsize / 512) ? bufsize : -1;
+	int32_t result = sdfs.card()->writeSectors(lba, buffer, bufsize / FS_BLOCK_SIZE) ? bufsize : -1;
 	return result;
 }
 
 static void mscSDFlushCallback(void)
 {
 	sdfs.card()->syncDevice();
-	sdfs.cacheClear(); // clear file system's cache to force refresh
 	sdfsChanged = true;
 	digitalWrite(LED_BUILTIN, LOW);
 }
@@ -87,16 +85,16 @@ void readyUsbMsc()
 	if (getHasSD())
 	{
 		msc.setReadWriteCallback(mscSDReadCallback, mscSDWriteCallback, mscSDFlushCallback);
-		msc.setCapacity(sdfs.card()->sectorCount(), 512); // Set disk size, block size should be 512 regardless
-		msc.setUnitReady(true); // MSC is ready for read/write
+		msc.setCapacity(sdfs.card()->sectorCount(), FS_BLOCK_SIZE);
 	}
 	else
 	{
 		msc.setReadWriteCallback(mscFlashReadCallback, mscFlashWriteCallback, mscFlashFlushCallback);
-		msc.setCapacity(flash.size() / 512, 512); // Set disk size, block size should be 512 regardless of spi flash page size
-		msc.setUnitReady(true); // MSC is ready for read/write
+		msc.setCapacity(flash.size() / FS_BLOCK_SIZE, FS_BLOCK_SIZE);
 	}
 
+	// MSC is ready for read/write
+	msc.setUnitReady(true);
 	mscReady = true;
 	Serial.println("USB MSC ready");
 }

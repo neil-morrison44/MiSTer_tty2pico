@@ -865,10 +865,9 @@ void showImage(const char *path)
 #endif
 	if (fileExists(path))
 	{
-		String pathString = String(path);
-		pathString.trim();
-		pathString.toLowerCase();
-		currentImage = pathString;
+		currentImage = String(path);
+		currentImage.trim();
+		currentImage.toLowerCase();
 
 		if (currentImage.endsWith(".loop.gif"))
 			showGIF(path, true);
@@ -877,7 +876,10 @@ void showImage(const char *path)
 		else if (currentImage.endsWith(".png"))
 			showPNG(path);
 		else
+		{
+			currentImage = "";
 			showText(path);
+		}
 	}
 	else showText(path);
 }
