@@ -116,6 +116,12 @@
 #endif
 #endif
 
+#if TFT_DISPLAY_HEIGHT > TFT_DISPLAY_WIDTH
+#define TFT_DISPLAY_MAX TFT_DISPLAY_HEIGHT
+#else
+#define TFT_DISPLAY_MAX TFT_DISPLAY_WIDTH
+#endif
+
 /**************************
  * Config data handling
  **************************/

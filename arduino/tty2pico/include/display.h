@@ -534,18 +534,21 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 	displayBuffer.deleteSprite();
 }
 #else
+
+
 // From the examples in the https://github.com/bitbank2/AnimatedGIF repo
 // Draw a line of image directly on the LCD
 static void gifDrawLine(GIFDRAW *pDraw)
 {
-	static int bufferSize;
-	bufferSize = config.getLineBufferSize();
+#if USE_DMA == 1
+	static uint16_t usTemp[2][TFT_DISPLAY_MAX];
+#else
+	static uint16_t usTemp[1][TFT_DISPLAY_MAX];
+#endif
 
-	#if USE_DMA == 1
-	uint16_t usTemp[2][bufferSize];
-	#else
-	uint16_t usTemp[1][bufferSize];
-	#endif
+	static int displayWidth = config.getDisplayWidth();
+	static int displayHeight = config.getDisplayHeight();
+
 	bool dmaBuf = 0;
 
 	uint8_t *s;
@@ -553,13 +556,12 @@ static void gifDrawLine(GIFDRAW *pDraw)
 	int x, y, iWidth, iCount;
 
 	// Display bounds check and cropping
-	int displayWidth = config.getDisplayWidth();
 	iWidth = pDraw->iWidth;
 	if (iWidth + pDraw->iX > displayWidth)
 		iWidth = displayWidth - pDraw->iX;
 	usPalette = pDraw->pPalette;
 	y = pDraw->iY + pDraw->y; // current line
-	if (y >= config.getDisplayHeight() || pDraw->iX >= displayWidth || iWidth < 1)
+	if (y >= displayHeight || pDraw->iX >= displayWidth || iWidth < 1)
 		return;
 
 	// Old image disposal
@@ -585,7 +587,7 @@ static void gifDrawLine(GIFDRAW *pDraw)
 		{
 			c = ucTransparent - 1;
 			d = &usTemp[0][0];
-			while (c != ucTransparent && s < pEnd && iCount < bufferSize)
+			while (c != ucTransparent && s < pEnd && iCount < TFT_DISPLAY_MAX)
 			{
 				c = *s++;
 				if (c == ucTransparent) // done, stop
@@ -630,11 +632,11 @@ static void gifDrawLine(GIFDRAW *pDraw)
 #if USE_DMA == 1
 		// Unroll the first pass to boost DMA performance
 		// Translate the 8-bit pixels through the RGB565 palette (already byte reversed)
-		if (iWidth <= bufferSize)
+		if (iWidth <= TFT_DISPLAY_MAX)
 			for (iCount = 0; iCount < iWidth; iCount++)
 				usTemp[dmaBuf][iCount] = usPalette[*s++];
 		else
-			for (iCount = 0; iCount < bufferSize; iCount++)
+			for (iCount = 0; iCount < TFT_DISPLAY_MAX; iCount++)
 				usTemp[dmaBuf][iCount] = usPalette[*s++];
 
 		tft.dmaWait();
@@ -651,10 +653,10 @@ static void gifDrawLine(GIFDRAW *pDraw)
 		while (iWidth > 0)
 		{
 			// Translate the 8-bit pixels through the RGB565 palette (already byte reversed)
-			if (iWidth <= bufferSize)
+			if (iWidth <= TFT_DISPLAY_MAX)
 				for (iCount = 0; iCount < iWidth; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
 			else
-				for (iCount = 0; iCount < bufferSize; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
+				for (iCount = 0; iCount < TFT_DISPLAY_MAX; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
 
 #if USE_DMA == 1
 			tft.dmaWait();
@@ -676,33 +678,33 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 	tft.startWrite();
 
 #if SHOW_FPS == 1 || VERBOSE_OUTPUT == 1
-	int runStart = micros();
 	int frames = 0;
+	unsigned long runStart = micros();
 #endif
 #if SHOW_FPS == 1
-	int frameStart = micros();
+	unsigned long frameStart = micros();
 #endif
 
 	while (gif->playFrame(true, NULL))
 	{
 #if SHOW_FPS == 1
 		showFPS(micros() - frameStart);
-		frames++;
 #endif
 #if SHOW_FPS == 1 || VERBOSE_OUTPUT == 1
 		frames++;
 #endif
-		delay(0); // delay(0) "yields" better performance than a yield()
+		delay(0);
 #if SHOW_FPS == 1
 		frameStart = micros();
 #endif
 	}
 
 #if SHOW_FPS == 1 || VERBOSE_OUTPUT == 1
+	unsigned long runStop = micros();
 	if (gif->getLastError() == GIF_SUCCESS)
 	{
 	#if SHOW_FPS == 1
-		showFPS(micros() - frameStart);
+		showFPS(runStop - frameStart);
 	#endif
 	#if VERBOSE_OUTPUT == 1
 		frames++;
@@ -710,13 +712,10 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 	}
 #endif
 #if VERBOSE_OUTPUT == 1
-	Serial.print("Ran GIF at "); Serial.print(frames / ((micros() - runStart) / 1000000.0f)); Serial.println(" fps");
+	Serial.print("Ran GIF at "); Serial.print(frames / ((runStop - runStart) / 1000000.0f)); Serial.println(" fps");
 #endif
 
-	if (displayState == DISPLAY_ANIMATED_GIF_LOOPING)
-		gif->reset();
-	else
-		gif->close();
+	gif->close();
 
 	tft.endWrite();
 }
@@ -952,11 +951,11 @@ void loopDisplay(uint32_t time)
 {
 	switch (displayState)
 	{
-		case DISPLAY_ANIMATED_GIF_LOOPING: showGIF(currentImage, true);   break;
-		case DISPLAY_SLIDESHOW:            runSlideshow(time);            break;
-		case DISPLAY_SYSTEM_INFORMATION:   showSystemInfo(time);          break;
-		case DISPLAY_MISTER:               showMister();                  break;
-		default:                                                          break;
+		case DISPLAY_ANIMATED_GIF_LOOPING: showGIF(currentImage, true); break;
+		case DISPLAY_SLIDESHOW:            runSlideshow(time);          break;
+		case DISPLAY_SYSTEM_INFORMATION:   showSystemInfo(time);        break;
+		case DISPLAY_MISTER:               showMister();                break;
+		default:                                                        break;
 	}
 }
 
