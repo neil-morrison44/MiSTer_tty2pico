@@ -3,6 +3,7 @@
 
 #include "Adafruit_TinyUSB.h"
 #include "storage.h"
+#include "display.h"
 
 static Adafruit_USBD_MSC msc;
 static bool mscReady;
@@ -64,7 +65,7 @@ bool getMscReady()
 	return mscReady;
 }
 
-void setupUsbMsc()
+void beginUsbMsc()
 {
 	// Set disk vendor id, product id and revision with string up to 8, 16, 4 characters respectively
 	if (getHasSD())
@@ -74,7 +75,7 @@ void setupUsbMsc()
 
 	msc.begin();
 
-	Serial.println("USB MSC setup complete");
+	Serial.println("USB MSC started");
 }
 
 void readyUsbMsc()

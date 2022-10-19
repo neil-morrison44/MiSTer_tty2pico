@@ -87,7 +87,7 @@
 #endif
 
 #ifndef USE_DMA
-#define USE_DMA 1 // If defined will use the DMA mode with TFT_eSPI library for better performance on supported hardware
+#define USE_DMA 0 // If defined will use the DMA mode with TFT_eSPI library for better performance on supported hardware
 #endif
 
 /**************************
@@ -205,7 +205,7 @@ const char *parseConfig(char *buffer)
 	if (imagePathOK) config.imagePath = imagePath.c_str();
 
 	auto [startupCommandOK, startupCommand] = tty2pico->getString("startupCommand");
-	if (startupCommandOK) config.startupCommand = startupCommand.c_str();
+	if (startupCommandOK && startupCommand.c_str() != "") config.startupCommand = startupCommand.c_str();
 
 	auto [startupDelayOK, startupDelay] = tty2pico->getInt("startupDelay");
 	if (startupDelayOK) config.startupDelay = startupDelay;

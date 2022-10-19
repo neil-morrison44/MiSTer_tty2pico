@@ -41,11 +41,12 @@
 Adafruit_SPIFlash flash(&flashTransport);
 FsVolume flashfs;
 bool flashfsChanged;
-static bool flashfsFormatted;
 
 SdFs sdfs;
 bool sdfsChanged;
 static bool hasSD = false;
+
+FsVolume *volume; // Pointer to the active volume
 
 /*************************
  * Helper functions
@@ -53,13 +54,12 @@ static bool hasSD = false;
 
 void formatFlash(void)
 {
-	uint8_t sectorBuffer[FS_BLOCK_SIZE];
-	FatFormatter fatFormatter;
-	if (fatFormatter.format(&flash, sectorBuffer, &TTY_SERIAL))
+	FsFormatter formatter;
+	uint8_t buffer[FS_BLOCK_SIZE];
+	if (formatter.format(&flash, buffer, &TTY_SERIAL))
 	{
 		flash.syncDevice();
-		flashfsFormatted = flashfs.begin(&flash); // Try to mount one more time
-		if (!flashfsFormatted)
+		if (!flashfs.begin(&flash)) // Try to mount one more time
 		{
 			Serial.println("Error, failed to mount newly formatted filesystem!");
 			while(1) delay(1);
@@ -73,53 +73,27 @@ FsFile getFile(const char *path, oflag_t oflag = O_RDONLY)
 	Serial.print("Attempting to open file "); Serial.println(path);
 #endif
 	FsFile file;
-	if (hasSD)
+
+	if (volume->exists(path))
 	{
-		if (sdfs.exists(path))
-		{
-			file = sdfs.open(path, oflag);
+		file = volume->open(path, oflag);
 #if VERBOSE_OUTPUT == 1
-			if (file)
-			{
-				Serial.print("Opened file from SD: "); Serial.println(path);
-			}
-			else
-			{
-				Serial.print("Couldn't open file: "); Serial.print(path); Serial.print(", error code: "); Serial.println(file.getError());
-			}
+		if (file)
+		{
+			Serial.print("Opened file from SD: "); Serial.println(path);
 		}
 		else
 		{
-			Serial.print("File not found: "); Serial.print(path); Serial.print(", error code: "); Serial.println(file.getError());
+			Serial.print("Couldn't open file: "); Serial.print(path); Serial.print(", error code: "); Serial.println(file.getError());
 		}
-#else
-		}
-#endif
 	}
 	else
 	{
-		if (flashfs.exists(path))
-		{
-			file = flashfs.open(path, oflag);
-#if VERBOSE_OUTPUT == 1
-			if (file)
-			{
-				Serial.print("Opened file from flash: "); Serial.println(path);
-				return file;
-			}
-			else
-			{
-				Serial.print("Couldn't open file: "); Serial.print(path); Serial.print(", error code: "); Serial.println(file.getError());
-			}
-		}
-		else
-		{
-			Serial.print("File not found: "); Serial.print(path); Serial.print(", error code: "); Serial.println(file.getError());
-		}
-#else
-		}
-#endif
+		Serial.print("File not found: "); Serial.print(path); Serial.print(", error code: "); Serial.println(file.getError());
 	}
+#else
+	}
+#endif
 
 	return file;
 }
@@ -169,6 +143,7 @@ static void loadConfig(void)
 		// Read entire file into memory, should only be a few KB max
 		char *buffer = (char *)malloc(sizeof(char) * configFile.size());
 		configFile.read(buffer, configFile.size());
+		configFile.close();
 		const char *error = parseConfig(buffer);
 		free(buffer);
 
@@ -201,14 +176,13 @@ static void setupFlash(void)
 	}
 
 	// Init filesystem on the flash
-	flashfsFormatted = flashfs.begin(&flash);
-	if (!flashfsFormatted)
+	if (!flashfs.begin(&flash))
 	{
+		// Couldn't init filesystem, automatically format to ensure it's working
 		formatFlash();
 
 		// Try to mount one more time
-		flashfsFormatted = flashfs.begin(&flash);
-		if (!flashfsFormatted)
+		if (!flashfs.begin(&flash))
 		{
 			// Couldn't set up filesystem fallback, can't really do anything except message the user
 			Serial.println("Error, failed to mount newly formatted filesystem!");
@@ -221,13 +195,15 @@ static void setupFlash(void)
 	Serial.print("Flash size: "); Serial.print(flash.size() / 1024); Serial.println(" KB");
 
 	flashfsChanged = true;
+	volume = &flashfs;
 }
 
 static void setupSD(void)
 {
 	Serial.println("Setting up SD storage");
 
-	SdSpiConfig spiConfig(SDCARD_CS_PIN, DEDICATED_SPI, SPI_FULL_SPEED, getSpiSD());
+	auto *spiSD = getSpiSD();
+	SdSpiConfig spiConfig(SDCARD_CS_PIN, DEDICATED_SPI, SPI_FULL_SPEED, spiSD);
 	if (!sdfs.begin(spiConfig))
 	{
 		sdfs.errorPrint(&Serial);
@@ -239,20 +215,21 @@ static void setupSD(void)
 	{
 		if (root.isDir())
 		{
-			hasSD = true;
+			hasSD = root.isDir();
+			volume = sdfs.vol();
 			Serial.println("SD filesystem initialized");
 		}
 		else
 		{
 			Serial.println("SD filesystem intialization failed, unable to locate root filesystem");
 		}
-
 		root.close();
 	}
 	else
 	{
 		Serial.print("SD filesystem intialization failed, error code: "); Serial.println(root.getError());
 	}
+
 }
 
 void setupStorage(void)
@@ -260,7 +237,8 @@ void setupStorage(void)
 #ifdef SDCARD_SPI
 	setupSD();
 #endif
-	setupFlash();
+	if (!hasSD)
+		setupFlash();
 
 	loadConfig();
 }
@@ -274,13 +252,7 @@ static FsFile dir;
 
 bool fileExists(String path)
 {
-	bool exists = false;
-	if (hasSD)
-		exists = sdfs.exists(path.c_str());
-	else
-		exists = flashfs.exists(path.c_str());
-
-	return exists;
+	return volume->exists(path.c_str());
 }
 
 String getName(FsFile *file)

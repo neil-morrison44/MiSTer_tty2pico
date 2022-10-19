@@ -182,8 +182,11 @@ static void cmdTest(void)
 	showText("1"); delay(1000);
 	showSystemInfo(millis());
 	delay(3000);
-	showGIF((uint8_t *)mister_kun_blink, sizeof(mister_kun_blink));
+	for (int i = 0; i < 10; i++)
+		showGIF((uint8_t *)mister_kun_blink, sizeof(mister_kun_blink));
 	drawDemoShapes(5000);
+	if (fileExists(config.startupImage))
+		showImage(config.startupImage);
 	showText("Test complete!");
 	delay(3000);
 }

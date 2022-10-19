@@ -25,10 +25,11 @@ const char *imageExtensions[] = {
 };
 const int imageExtensionCount = sizeof(imageExtensions) / sizeof(imageExtensions[0]);
 
-int32_t xoffset = 0;
-int32_t yoffset = 0;
-String currentImage;
+static int32_t xoffset = 0;
+static int32_t yoffset = 0;
+static String currentImage;
 static DisplayState displayState = DISPLAY_STATIC_IMAGE;
+static float fps;
 
 /*******************************************************************************
  * Display setup
@@ -40,8 +41,9 @@ TFT_eSprite displayBuffer(&tft);
 void setupDisplay()
 {
 #if defined(TFT_BL)
+	// Turn off backlight before starting up screen
 	pinMode(TFT_BL, OUTPUT);
-	digitalWrite(TFT_BL, LOW); // Turn off backlight before starting up screen
+	digitalWrite(TFT_BL, LOW);
 #endif
 
 	// Setup screen
@@ -50,7 +52,7 @@ void setupDisplay()
 	tft.initDMA();
 #endif
 	tft.setRotation(config.tftRotation);
-	tft.setTextFont(2);
+	tft.setTextFont(config.getFontSmall());
 	tft.setTextWrap(true);
 
 	// Clear display
@@ -60,8 +62,6 @@ void setupDisplay()
 	delay(50); // Small delay to avoid garbage output
 	digitalWrite(TFT_BL, HIGH); // Turn backlight back on after init
 #endif
-
-	Serial.println("Display setup complete");
 }
 
 inline void clearDisplay(void)
@@ -151,9 +151,6 @@ void overlayText(String text)
 	overlayText(text, &tft);
 }
 
-#if SHOW_FPS == 1
-static float fps;
-
 // Show the last captured FPS value
 void showFPS(TFT_eSPI *parent)
 {
@@ -191,8 +188,6 @@ void showFPS(unsigned long micros)
 {
 	overlayText(String(1000000.0f / micros), &tft);
 }
-
-#endif
 
 // Draw lines of text on the screen with center alignment horizontally and veritcally
 void showText(String lines[], int lineCount, uint8_t font, uint16_t textColor = TFT_WHITE, uint16_t backgroundColor = TFT_BLACK)
@@ -337,7 +332,7 @@ void showHeaderedText(String lines[], int lineCount)
 
 	int midpointX = config.getMidpointX();
 	int midpointY = config.getMidpointY();
-	int start = -(lineCount / 2);
+	int start = -(lineCount / 2) - (lineCount % 2);
 	int yOffset = 0;
 
 	for (int i = 0; i < lineCount; i++)
@@ -367,7 +362,7 @@ void showSystemInfo(uint32_t frameTime)
 	lines.push_back("v" + String(TTY2PICO_VERSION_STRING));
 	lines.push_back(TTY2PICO_BOARD);
 
-	snprintf(lineBuffer, sizeof(lineBuffer), "RP2040 @ %.1fMHz %.1fC", (clock_get_hz(clk_sys) / 1000000.0f), analogReadTemp());
+	snprintf(lineBuffer, sizeof(lineBuffer), "RP2040 @ %.1fMHz %.1fC", getCpuSpeedMHz(), getCpuTemperature());
 	lines.push_back(lineBuffer);
 
 	memset(lineBuffer, 0, sizeof(lineBuffer));
@@ -379,15 +374,10 @@ void showSystemInfo(uint32_t frameTime)
 	if (getHasSD())
 	{
 		memset(lineBuffer, 0, sizeof(lineBuffer));
-		snprintf(lineBuffer, sizeof(lineBuffer), "SD Filesystem @ %.1fMHz", getSpiRateSdMHz(), getMscReady() ? "Enabled" : "Disabled");
+		snprintf(lineBuffer, sizeof(lineBuffer), "SD Filesystem @ %.1fMHz", getSpiRateSdMHz());
 		lines.push_back(lineBuffer);
 	}
 	else lines.push_back("Flash Filesystem");
-
-	if (getMscReady())
-		lines.push_back("USB MSC Enabled");
-	else
-		lines.push_back("USB MSC Disabled");
 
 	showHeaderedText(lines.data(), lines.size());
 
@@ -603,7 +593,6 @@ static void gifDrawLine(GIFDRAW *pDraw)
 			if (iCount) // any opaque pixels?
 			{
 #if USE_DMA == 1
-				tft.dmaWait();
 				tft.setAddrWindow(pDraw->iX + x + xoffset, y + yoffset, iCount, 1);
 				tft.pushPixelsDMA(&usTemp[dmaBuf][0], iCount);
 #else
@@ -639,7 +628,6 @@ static void gifDrawLine(GIFDRAW *pDraw)
 			for (iCount = 0; iCount < TFT_DISPLAY_MAX; iCount++)
 				usTemp[dmaBuf][iCount] = usPalette[*s++];
 
-		tft.dmaWait();
 		tft.setAddrWindow(pDraw->iX + xoffset, y + yoffset, iWidth, 1);
 		tft.pushPixelsDMA(&usTemp[dmaBuf][0], iCount);
 		dmaBuf = !dmaBuf;
@@ -659,7 +647,6 @@ static void gifDrawLine(GIFDRAW *pDraw)
 				for (iCount = 0; iCount < TFT_DISPLAY_MAX; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
 
 #if USE_DMA == 1
-			tft.dmaWait();
 			tft.pushPixelsDMA(&usTemp[dmaBuf][0], iCount);
 			dmaBuf = !dmaBuf;
 #else
@@ -675,7 +662,6 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 	xoffset = (config.getDisplayWidth() - gif->getCanvasWidth()) / 2;
 	yoffset = (config.getDisplayHeight() - gif->getCanvasHeight()) / 2;
 	displayState = loop ? DISPLAY_ANIMATED_GIF_LOOPING : DISPLAY_ANIMATED_GIF;
-	tft.startWrite();
 
 #if SHOW_FPS == 1 || VERBOSE_OUTPUT == 1
 	int frames = 0;
@@ -685,6 +671,7 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 	unsigned long frameStart = micros();
 #endif
 
+	tft.startWrite();
 	while (gif->playFrame(true, NULL))
 	{
 #if SHOW_FPS == 1
@@ -693,11 +680,13 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 #if SHOW_FPS == 1 || VERBOSE_OUTPUT == 1
 		frames++;
 #endif
-		delay(0);
+		// delay(0);
+		yield();
 #if SHOW_FPS == 1
 		frameStart = micros();
 #endif
 	}
+	tft.endWrite();
 
 #if SHOW_FPS == 1 || VERBOSE_OUTPUT == 1
 	unsigned long runStop = micros();
@@ -716,8 +705,6 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 #endif
 
 	gif->close();
-
-	tft.endWrite();
 }
 #endif
 
