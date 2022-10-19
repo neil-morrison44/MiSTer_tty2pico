@@ -23,10 +23,10 @@ static bool runLoop1 = false;
 
 void setup()
 {
-	setupUsbMsc();
 	setupTTY();
+	setupUsbMsc();
 	setupStorage();
-	setupCPU();
+	setupPlatform();
 	setupDisplay();
 	setupQueue();
 
@@ -62,7 +62,7 @@ void loop()
 
 	loopMSC();
 
-	delay(POLLING_LOOP_DELAY); // Delay here seems to increase FPS in testing, 500ms seems optimal right now
+	// delay(POLLING_LOOP_DELAY); // Delay here seems to increase FPS in testing, 500ms seems optimal right now
 }
 
 void loop1()

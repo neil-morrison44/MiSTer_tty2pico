@@ -169,8 +169,8 @@ TTY2PICO_Config config;
 const char *parseConfig(char *buffer)
 {
 	// Do we have a config to parse?
-	if (buffer == nullptr || sizeof(buffer) < 1)
-		return nullptr;
+	if (buffer == nullptr || sizeof(buffer) == 0)
+		return "No config data present";
 
 	auto res = toml::parse(buffer);
 	if (!res.table)

@@ -16,6 +16,7 @@
 #include "Adafruit_SPIFlash.h"
 #include <AnimatedGIF.h>
 #include <PNGdec.h>
+#include "mutex"
 
 // Un-comment to run with custom flash storage
 // #define FLASHFS_CUSTOM_CS   A5
@@ -68,6 +69,9 @@ void formatFlash(void)
 
 FsFile getFile(const char *path, oflag_t oflag = O_RDONLY)
 {
+#if VERBOSE_OUTPUT == 1
+	Serial.print("Attempting to open file "); Serial.println(path);
+#endif
 	FsFile file;
 	if (hasSD)
 	{
@@ -150,7 +154,6 @@ void saveFile(String path, const char *data, int size, oflag_t oflag = (O_WRITE 
 		String message = "Failed to save file " + path;
 		Serial.println(message.c_str());
 	}
-
 	file.close();
 }
 
@@ -163,16 +166,17 @@ static void loadConfig(void)
 	FsFile configFile = getFile(CONFIG_FILE_PATH);
 	if (configFile)
 	{
-		Serial.println("Loading config file from SD");
-		Serial.print("Config file size: "); Serial.println(configFile.size());
-		char buffer[configFile.size()];
-		configFile.read(buffer, configFile.size()); // Read entire file into memory, should only be a few KB max
-		Serial.println("Read config file");
+		// Read entire file into memory, should only be a few KB max
+		char *buffer = (char *)malloc(sizeof(char) * configFile.size());
+		configFile.read(buffer, configFile.size());
 		const char *error = parseConfig(buffer);
+		free(buffer);
 
 		// Couldn't parse config
 		if (error)
 			Serial.println(error);
+		else
+			Serial.println("Config file loaded");
 	}
 }
 
@@ -224,7 +228,6 @@ static void setupSD(void)
 	Serial.println("Setting up SD storage");
 
 	SdSpiConfig spiConfig(SDCARD_CS_PIN, DEDICATED_SPI, SPI_FULL_SPEED, getSpiSD());
-
 	if (!sdfs.begin(spiConfig))
 	{
 		sdfs.errorPrint(&Serial);
@@ -232,21 +235,24 @@ static void setupSD(void)
 	}
 
 	FsFile root = sdfs.open("/", O_RDONLY);
-	if (!root)
+	if (root)
+	{
+		if (root.isDir())
+		{
+			hasSD = true;
+			Serial.println("SD filesystem initialized");
+		}
+		else
+		{
+			Serial.println("SD filesystem intialization failed, unable to locate root filesystem");
+		}
+
+		root.close();
+	}
+	else
 	{
 		Serial.print("SD filesystem intialization failed, error code: "); Serial.println(root.getError());
-		return;
 	}
-	if (!root.isDir())
-	{
-		root.close();
-		Serial.println("SD filesystem intialization failed, unable to locate root filesystem");
-		return;
-	}
-
-	root.close();
-	hasSD = true;
-	Serial.println("SD storage setup complete");
 }
 
 void setupStorage(void)
@@ -312,6 +318,7 @@ int getFileCount(void)
 			break;
 	}
 	dir.rewindDirectory();
+
 	return count;
 }
 
@@ -356,16 +363,12 @@ void printDirectory(const char *path, int numTabs)
 inline int readFile(FsFile *file, uint8_t *buffer, int32_t length, const char *errorMessage = nullptr)
 {
 	if (file->available())
-	{
 		return file->read(buffer, length);
-	}
-	else
-	{
+
 #if VERBOSE_OUTPUT == 1
-		Serial.println(errorMessage);
+	Serial.println(errorMessage);
 #endif
-		return 0;
-	}
+	return 0;
 }
 
 void rewindDirectory(void)
@@ -384,13 +387,13 @@ void setDirectory(String path)
 	{
 		dirText = path;
 #if VERBOSE_OUTPUT == 1
-		Serial.print("SD directory set to: "); Serial.println(path.c_str());
+		Serial.print("Directory set to: "); Serial.println(path.c_str());
 #endif
 	}
 #if VERBOSE_OUTPUT == 1
 	else
 	{
-		Serial.print("Couldn't set SD directory to: "); Serial.print(path.c_str()); Serial.print(", error code "); Serial.println(dir.getError());
+		Serial.print("Couldn't set directory to: "); Serial.print(path.c_str()); Serial.print(", error code "); Serial.println(dir.getError());
 	}
 #endif
 }
@@ -434,7 +437,7 @@ void gifClose(void *handle)
 int32_t gifRead(GIFFILE *page, uint8_t *buffer, int32_t length)
 {
 	FsFile *file = static_cast<FsFile *>(page->fHandle);
-	int32_t byteCount = readFile(file, buffer, length, "Couldn't read GIF file");
+	int byteCount = readFile(file, buffer, length, "Couldn't read GIF file");
 	page->iPos = file->position();
 	return byteCount;
 }

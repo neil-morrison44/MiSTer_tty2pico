@@ -96,7 +96,7 @@ void resetForUpdate(void)
 	reset_usb_boot(0, 0);
 }
 
-void setupCPU(void)
+void setupPlatform(void)
 {
 	rp2040.enableDoubleResetBootloader();
 
