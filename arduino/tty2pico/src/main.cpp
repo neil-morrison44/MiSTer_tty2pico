@@ -25,13 +25,14 @@ void setup()
 {
 	/* NOTE: Most of these setup functions need to run in a particular order */
 
-	beginUsbMsc();                  // Start up USB MSC interface, must be BEFORE the serial interface so CDC doesn't take over
-	setupTTY();                     // Bring up the serial interface
-	setupStorage();                 // Configure storage
-	setupPlatform();                // Apply platform-specific code for the MCU (tune bus speed, overclock, etc.)
-	setupDisplay();                 // Configure and enable the display
-	readyUsbMsc();                  // Set USB MSC ready after storage is available
-	setupQueue();                   // Set up multicore queue
+	beginUsbMsc();   // Start up USB MSC interface, must be BEFORE the serial interface so CDC doesn't take over
+	setupTTY();      // Bring up the serial interface
+	setupStorage();  // Configure storage
+	readyUsbMsc();   // Set USB MSC ready after storage is available
+	setupPlatform(); // Apply platform-specific code for the MCU (tune bus speed, overclock, etc.)
+	setupDisplay();  // Configure and enable the display
+	setupQueue();    // Set up task queue
+
 	setDirectory(config.imagePath); // Set the working image path
 	showStartup();
 }
@@ -49,9 +50,12 @@ void loop()
 		nextRead = millis() + POLLING_LOOP_DELAY; // Delay the next read for better performance
 
 		if (command != "")
-			runCommand(CommandData::parseCommand(command));
+		{
+			data = CommandData::parseCommand(command);
+			addToQueue(data);
+		}
 	}
 
+	loopQueue();
 	loopDisplay(millis());
-	delay(0); // 0ms delay here gives a very small (and I mean SMALL) performance boost, marginally more than yield()
 }

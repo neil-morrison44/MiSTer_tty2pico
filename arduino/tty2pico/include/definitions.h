@@ -148,14 +148,23 @@ private:
 	SPISettings spiSettings;
 };
 
+class FsVolumeTS;
+
 class FsFileTS
 {
 public:
 	FsFileTS() { }
-	FsFileTS(FsFile file) : file(file) { }
-	~FsFileTS() { if (file) file.close(); }
+	FsFileTS(File32 file) : file32(file) { }
+	FsFileTS(FsFile file) : fsFile(file) { }
+	~FsFileTS()
+	{
+		if (fsFile) fsFile.close();
+		if (file32) file32.close();
+	}
 
-	explicit operator bool() const { return file; }
+	explicit operator bool() const { return file32 || fsFile; }
+
+	static void setActiveVolume(FsVolumeTS *volume) { activeVolume = volume; }
 
 	bool available(void);
 	bool close(void);
@@ -172,23 +181,34 @@ public:
 	size_t write(const void* buf, size_t count);
 
 private:
-	FsFile file;
+	static FsVolumeTS *activeVolume;
+	File32 file32;
+	FsFile fsFile;
 };
 
 class FsVolumeTS
 {
 public:
 	FsVolumeTS() { }
-	FsVolumeTS(FsVolume *vol) : vol(vol) { }
-	~FsVolumeTS() { vol = nullptr; }
+	FsVolumeTS(FatVolume *vol) : flashVol(vol) { }
+	FsVolumeTS(FsVolume *vol) : sdVol(vol) { }
+	~FsVolumeTS()
+	{
+		flashVol = nullptr;
+		sdVol = nullptr;
+	}
+
+	explicit operator bool() const { return flashVol || sdVol; }
 
 	bool exists(const char *path);
 	FsFileTS open(const char *path, oflag_t oflag);
 
-	FsVolume *getFsVol(void) { return vol; }
+	FatVolume *getFlashVol(void) { return flashVol; }
+	FsVolume *getSdVol(void) { return sdVol; }
 
 private:
-	FsVolume *vol;
+	FatVolume *flashVol;
+	FsVolume *sdVol;
 };
 
 #endif

@@ -41,8 +41,8 @@
 #endif
 
 Adafruit_SPIFlash flash(&flashTransport);
-FsVolume flashfs;
-bool flashfsFormatted = false;
+FatVolume flashfs;
+bool hasFlash = false;
 bool flashfsChanged = false;
 
 SdFs sdfs;
@@ -98,12 +98,6 @@ void formatFlash(void)
 	flash.syncDevice(); // sync to make sure all data is written to flash
 
 	Serial.println("Formatted flash!");
-
-	flashfsFormatted = flashfs.begin(&flash); // Try to mount one more time
-	if (!flashfsFormatted)
-	{
-		Serial.println("Error, failed to mount newly formatted filesystem! You may need to format the flash volume manually.");
-	}
 }
 
 FsFileTS getFile(const char *path, oflag_t oflag = O_RDONLY)
@@ -225,15 +219,25 @@ static void setupFlash(void)
 	Serial.print("JEDEC ID: 0x"); Serial.println(flash.getJEDECID(), HEX);
 	Serial.print("Flash size: "); Serial.print(flash.size() / 1024); Serial.println(" KB");
 
-	flashfsFormatted = flashfs.begin(&flash); // Init filesystem on the flash
-	if (!flashfsFormatted)
+	// Check we have a valid FAT partition
+	FatVolume fatfs;
+	hasFlash = fatfs.begin(&flash);
+  if (hasFlash)
 	{
-		formatFlash(); // Couldn't init filesystem, automatically format to ensure it's working
-
-		flashfsFormatted = flashfs.begin(&flash); // Try to mount one more time
-		if (!flashfsFormatted)
+		// Valid FAT volume but FsVolume.begin() doesn't think so.
+		// Call it to init filesystem on the flash and ignore the result.
+		flashfs.begin(&flash);
+	}
+	else
+	{
+		formatFlash();
+		hasFlash = fatfs.begin(&flash);
+		if (hasFlash)
 		{
-			// Couldn't set up filesystem fallback, can't really do anything except message the user
+			flashfs.begin(&flash);
+		}
+		else
+		{
 			Serial.println("Error, failed to mount filesystem! You may need to format it manually as a FAT32 partition.");
 		}
 	}
@@ -279,9 +283,13 @@ void setupStorage(void)
 	if (!hasSD)
 		setupFlash();
 
-	if (flashfsFormatted || hasSD)
+	if (hasSD || hasFlash)
 	{
-		volume = FsVolumeTS(hasSD ? sdfs.vol() : &flashfs);
+		if (hasSD)
+			volume = FsVolumeTS(sdfs.vol());
+		else
+			volume = FsVolumeTS(&flashfs);
+
 		loadConfig();
 	}
 }

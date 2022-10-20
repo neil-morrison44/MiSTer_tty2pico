@@ -40,6 +40,8 @@ TFT_eSprite displayBuffer(&tft);
 
 void setupDisplay()
 {
+	Serial.println("Setting up display...");
+
 #if defined(TFT_BL)
 	// Turn off backlight before starting up screen
 	pinMode(TFT_BL, OUTPUT);
@@ -62,6 +64,8 @@ void setupDisplay()
 	delay(50); // Small delay to avoid garbage output
 	digitalWrite(TFT_BL, HIGH); // Turn backlight back on after init
 #endif
+
+	Serial.println("Display setup complete");
 }
 
 inline void clearDisplay(void)

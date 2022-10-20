@@ -145,10 +145,16 @@ void setTime(uint32_t timestamp)
 	delayMicroseconds(64); // Need to delay for 3 RTC clock cycles which is 64us
 
 	// Validate RTC
-	rtc_get_datetime(&datetime);
-	memset(datetimeString, 0, sizeof(datetimeString));
-	datetime_to_str(datetimeString, sizeof(datetimeString), &datetime);
-	Serial.print("RTC date and time set to "); Serial.println(datetimeString);
+	if (rtc_get_datetime(&datetime))
+	{
+		memset(datetimeString, 0, sizeof(datetimeString));
+		datetime_to_str(datetimeString, sizeof(datetimeString), &datetime);
+		Serial.print("RTC date and time set to "); Serial.println(datetimeString);
+	}
+	else
+	{
+		Serial.print("Invalid timestamp: "); Serial.println(timestamp);
+	}
 }
 
 void resetForUpdate(void)
@@ -160,23 +166,47 @@ void setupPlatform(void)
 {
 	rp2040.enableDoubleResetBootloader();
 
-	if (config.enableOverclock)
+	int cpuMHz = 0;
+	bool syncPClk = false;
+
+	switch (config.overclockMode)
 	{
-		// Apply an overclock for 2x performance and a voltage tweak to stablize most RP2040 boards.
+		case TTY2PICO_OverclockMode::OVERCLOCKED:
+			cpuMHz = 250;
+			syncPClk = true;
+			break;
+
+		case TTY2PICO_OverclockMode::LUDICROUS_SPEED:
+			cpuMHz = 266;
+			syncPClk = true;
+			break;
+	}
+
+	if (cpuMHz)
+	{
+		// Apply an overclock for about 2x performance and a voltage tweak to stablize most RP2040 boards.
 		// If it's good enough for pixel-pushing in MicroPython, it's good enough for us :P
 		// https://github.com/micropython/micropython/issues/8208
 		vreg_set_voltage(VREG_VOLTAGE_1_20); // Set voltage to 1.2v
 		delay(10); // Allow vreg time to stabilize
-		set_sys_clock_khz(266000, true); // Overclock to 266MHz
+		set_sys_clock_khz(cpuMHz * 1000, true);
+		Serial.println("CPU overclocked to "); Serial.print(cpuMHz); Serial.println("MHz");
+	}
 
-		// Sync peripheral clock to CPU clock to get a boost to SPI performance
+	if (syncPClk)
+	{
+		// Sync peripheral clock to CPU clock to get a huge boost to SPI performance, mostly for SD transfers
 		uint32_t freq = clock_get_hz(clk_sys);
 		clock_configure(clk_peri, 0, CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS, freq, freq);
+		Serial.println("Peripheral bus overclock applied");
 	}
 
 	// Manually apply SPI frequencies so they're picked up and reported correctly, even if not overclocking
 	spi_set_baudrate(getSdSpi(), SPI_FULL_SPEED);
 	spi_set_baudrate(getDisplaySpi(), SPI_FREQUENCY);
+	Serial.println("SPI baud rates set");
+
+	Serial.println("Platform setup complete");
 }
 
 void setupQueue(void)
@@ -287,124 +317,192 @@ void SdSpiDriverT2P::setSckSpeed(uint32_t maxSck)
  * Custom file access implementation
  *******************************************************************************/
 
+FsVolumeTS *FsFileTS::activeVolume = nullptr;
+
 bool FsVolumeTS::exists(const char *path)
 {
-	pauseBackground();
-	bool exists = vol && vol->exists(path);
-	resumeBackground();
-	return exists;
+	if (sdVol)
+	{
+		pauseBackground();
+		bool exists = sdVol && sdVol->exists(path);
+		resumeBackground();
+		return exists;
+	}
+	else return flashVol->exists(path);
 }
 
 FsFileTS FsVolumeTS::open(const char *path, oflag_t oflag)
 {
-	pauseBackground();
-	FsFile tmpFile;
-	bool opened = vol && tmpFile.open(vol, path, oflag);
-	resumeBackground();
-	return opened ? FsFileTS(tmpFile) : FsFileTS();
+	if (sdVol)
+	{
+		FsFile tmpFile;
+		pauseBackground();
+		bool opened = sdVol && tmpFile.open(sdVol, path, oflag);
+		resumeBackground();
+		return opened ? FsFileTS(tmpFile) : FsFileTS();
+	}
+	else return FsFileTS(flashVol->open(path, oflag));
 }
 
 bool FsFileTS::available(void)
 {
-	pauseBackground();
-	int available = file ? file.available() : 0;
-	resumeBackground();
-	return available;
+	if (fsFile)
+	{
+		pauseBackground();
+		int available = fsFile ? fsFile.available() : 0;
+		resumeBackground();
+		return available;
+	}
+	else return file32.available();
 }
 
 bool FsFileTS::close(void)
 {
-	pauseBackground();
-	bool closed = file ? file.close() : true;
-	resumeBackground();
-	return closed;
+	if (fsFile)
+	{
+		pauseBackground();
+		bool closed = fsFile ? fsFile.close() : true;
+		resumeBackground();
+		return closed;
+	}
+	else return file32.close();
 }
 
 uint8_t FsFileTS::getError() const
 {
-	pauseBackground();
-	uint8_t error = file ? file.getError() : 0;
-	resumeBackground();
-	return error;
+	if (fsFile)
+	{
+		pauseBackground();
+		uint8_t error = fsFile ? fsFile.getError() : 0;
+		resumeBackground();
+		return error;
+	}
+	else return file32.getError();
 }
 
 size_t FsFileTS::getName(char* name, size_t len)
 {
-	pauseBackground();
-	size_t size = file ? file.getName(name, len) : 0;
-	resumeBackground();
-	return size;
+	if (fsFile)
+	{
+		pauseBackground();
+		size_t size = fsFile ? fsFile.getName(name, len) : 0;
+		resumeBackground();
+		return size;
+	}
+	else return file32.getName(name, len);
 }
 
 bool FsFileTS::isDir(void)
 {
-	pauseBackground();
-	bool isDir = file && file.isDir();
-	resumeBackground();
-	return isDir;
+	if (fsFile)
+	{
+		pauseBackground();
+		bool isDir = fsFile && fsFile.isDir();
+		resumeBackground();
+		return isDir;
+	}
+	else return file32.isDir();
 }
 
 FsFileTS FsFileTS::openNextFile(void)
 {
-	pauseBackground();
-	FsFileTS nextFile = file ? FsFileTS(file.openNextFile()) : FsFileTS();
-	resumeBackground();
-	return nextFile;
+	if (fsFile)
+	{
+		pauseBackground();
+		FsFileTS nextFile = fsFile ? FsFileTS(fsFile.openNextFile()) : FsFileTS();
+		resumeBackground();
+		return nextFile;
+	}
+	else return FsFileTS(file32.openNextFile());
 }
 
 bool FsFileTS::openNext(FsBaseFile* dir, oflag_t oflag)
 {
-	pauseBackground();
-	bool opened = file && file.openNext(dir, oflag);
-	resumeBackground();
-	return opened;
+	if (fsFile)
+	{
+		pauseBackground();
+		bool opened = fsFile && fsFile.openNext(dir, oflag);
+		resumeBackground();
+		return opened;
+	}
+	else
+	{
+		char dirName[255];
+		size_t dirNameLength = dir->getName(dirName, 255);
+		FatFile tmpFile = activeVolume->getFlashVol()->open(dirName, oflag);
+		return file32.openNext(&tmpFile, oflag);
+	}
 }
 
 uint64_t FsFileTS::position(void)
 {
-	pauseBackground();
-	uint64_t pos = file ? file.position() : 0;
-	resumeBackground();
-	return pos;
+	if (fsFile)
+	{
+		pauseBackground();
+		uint64_t pos = fsFile ? fsFile.position() : 0;
+		resumeBackground();
+		return pos;
+	}
+	else return file32.position();
 }
 
 int FsFileTS::read(void* buf, size_t count)
 {
-	pauseBackground();
-	int byteCount = file ? file.read(buf, count) : 0;
-	resumeBackground();
-	return byteCount;
+	if (fsFile)
+	{
+		pauseBackground();
+		int byteCount = fsFile ? fsFile.read(buf, count) : 0;
+		resumeBackground();
+		return byteCount;
+	}
+	else return file32.read(buf, count);
 }
 
 void FsFileTS::rewindDirectory(void)
 {
-	pauseBackground();
-	if (file) file.rewindDirectory();
-	resumeBackground();
+	if (fsFile)
+	{
+		pauseBackground();
+		if (fsFile) fsFile.rewindDirectory();
+		resumeBackground();
+	}
+	else file32.rewindDirectory();
 }
 
 bool FsFileTS::seek(uint64_t position)
 {
-	pauseBackground();
-	bool success = file && file.seek(position);
-	resumeBackground();
-	return success;
+	if (fsFile)
+	{
+		pauseBackground();
+		bool success = fsFile && fsFile.seek(position);
+		resumeBackground();
+		return success;
+	}
+	else return file32.seek(position);
 }
 
 uint64_t FsFileTS::size(void)
 {
-	pauseBackground();
-	uint64_t fileSize = file ? file.size() : 0;
-	resumeBackground();
-	return fileSize;
+	if (fsFile)
+	{
+		pauseBackground();
+		uint64_t fileSize = fsFile ? fsFile.size() : 0;
+		resumeBackground();
+		return fileSize;
+	}
+	else return file32.size();
 }
 
 size_t FsFileTS::write(const void* buf, size_t count)
 {
-	pauseBackground();
-	size_t byteCount = file ? file.write(buf, count) : 0;
-	resumeBackground();
-	return byteCount;
+	if (fsFile)
+	{
+		pauseBackground();
+		size_t byteCount = fsFile ? fsFile.write(buf, count) : 0;
+		resumeBackground();
+		return byteCount;
+	}
+	else return file32.write(buf, count);
 }
 
 #endif

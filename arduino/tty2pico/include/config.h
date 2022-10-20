@@ -143,7 +143,7 @@ struct TTY2PICO_Config
 	int tftWidth = TFT_WIDTH;
 	int tftHeight = TFT_HEIGHT;
 	bool disableSD = false;
-	bool enableOverclock = false;
+	uint8_t overclockMode = 0;
 	bool waitForSerial = WAIT_FOR_SERIAL;
 	String imagePath = LOGO_PATH;
 	String startupCommand = "";
@@ -165,6 +165,13 @@ struct TTY2PICO_Config
 };
 
 TTY2PICO_Config config;
+
+typedef enum TTY2PICO_OverclockMode
+{
+	STOCK = 0,
+	OVERCLOCKED = 1,
+	LUDICROUS_SPEED = 255,
+} TTY2PICO_OverclockMode;
 
 const char *parseConfig(char *buffer)
 {
@@ -195,8 +202,8 @@ const char *parseConfig(char *buffer)
 	auto [disableSDOK, disableSD] = tty2pico->getBool("disableSD");
 	if (disableSDOK) config.disableSD = disableSD;
 
-	auto [enableOverclockOK, enableOverclock] = tty2pico->getBool("enableOverclock");
-	if (enableOverclockOK) config.enableOverclock = enableOverclock;
+	auto [overclockModeOK, overclockMode] = tty2pico->getInt("overclockMode");
+	if (overclockModeOK) config.overclockMode = overclockMode;
 
 	auto [waitForSerialOK, waitForSerial] = tty2pico->getBool("waitForSerial");
 	if (waitForSerialOK) config.waitForSerial = waitForSerial;
@@ -235,7 +242,7 @@ int exportConfig(char *buffer, int bufferSize)
 		"\ntftHeight = " + String(config.tftHeight) +
 		"\ntftRotation = " + String(config.tftRotation) +
 		"\ndisableSD = " + String(config.disableSD ? "true" : "false") +
-		"\nenableOverclock = " + String(config.enableOverclock ? "true" : "false") +
+		"\noverclockMode = " + String(config.overclockMode) +
 		"\nwaitForSerial = " + String(config.waitForSerial ? "true" : "false") +
 		"\nimagePath = \"" + config.imagePath + "\"" +
 		"\nstartupCommand = \"" + config.startupCommand + "\"" +
