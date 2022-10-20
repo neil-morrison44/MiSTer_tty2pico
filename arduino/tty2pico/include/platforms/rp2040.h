@@ -2,8 +2,10 @@
 #define TTY2PICO_PLATFORM_IMPL_H
 
 #include "config.h"
-#include "SpiDriver/SdSpiDriver.h"
 #include "definitions.h"
+#include "SPI.h"
+#include "api/HardwareSPI.h"
+#include "SpiDriver/SdSpiDriver.h"
 #include "hardware/rtc.h"
 #include "hardware/spi.h"
 #include "hardware/vreg.h"
@@ -11,6 +13,8 @@
 #include "pico/stdlib.h"
 #include "pico/util/datetime.h"
 #include <UnixTime.h>
+
+static SdSpiDriverT2P sdSpiDriver;
 
 static queue_t cmdQ;
 static char datetimeString[37]; // Max date string could be 37 chars: Wednesday 17 November 01:59:49 2022
@@ -25,13 +29,9 @@ float getCpuTemperature(void)
 	return analogReadTemp();
 }
 
-SpiPort_t *getSpiSD(void)
+SdSpiConfig getSdSpiConfig(void)
 {
-	SDCARD_SPI.setRX(SDCARD_MISO_PIN);
-	SDCARD_SPI.setTX(SDCARD_MOSI_PIN);
-	SDCARD_SPI.setSCK(SDCARD_SCK_PIN);
-
-	return &SDCARD_SPI;
+	return SdSpiConfig(SDCARD_CS_PIN, DEDICATED_SPI, SPI_FULL_SPEED, &sdSpiDriver);
 }
 
 const char *getTime(int format)
@@ -134,6 +134,58 @@ void addToQueue(CommandData &data)
 bool removeFromQueue(CommandData &data)
 {
 	return queue_try_remove(&cmdQ, &data);
+}
+
+/*******************************************************************************
+ * Custom SPI driver implementation
+ *******************************************************************************/
+
+void SdSpiDriverT2P::activate()
+{
+	SDCARD_SPI.beginTransaction(m_spiSettings);
+}
+
+void SdSpiDriverT2P::begin(SdSpiConfig config)
+{
+	SDCARD_SPI.setRX(SDCARD_MISO_PIN);
+	SDCARD_SPI.setTX(SDCARD_MOSI_PIN);
+	SDCARD_SPI.setSCK(SDCARD_SCK_PIN);
+	SDCARD_SPI.setCS(config.csPin);
+	setSckSpeed(config.maxSck);
+	SDCARD_SPI.begin();
+}
+
+void SdSpiDriverT2P::deactivate()
+{
+	SDCARD_SPI.endTransaction();
+}
+
+uint8_t SdSpiDriverT2P::receive()
+{
+	return SDCARD_SPI.transfer(0XFF);
+}
+
+uint8_t SdSpiDriverT2P::receive(uint8_t *buf, size_t count)
+{
+	uint8_t xbuf[count];
+	memset(xbuf, 0XFF, count);
+	SDCARD_SPI.transfer((const void *)xbuf, (void *)buf, count);
+	return 0;
+}
+
+void SdSpiDriverT2P::send(uint8_t data)
+{
+	SDCARD_SPI.transfer(data);
+}
+
+void SdSpiDriverT2P::send(const uint8_t *buf, size_t count)
+{
+	SDCARD_SPI.transfer((void *)buf, count);
+}
+
+void SdSpiDriverT2P::setSckSpeed(uint32_t maxSck)
+{
+	m_spiSettings = SPISettings(maxSck, MSBFIRST, SPI_MODE0);
 }
 
 #endif

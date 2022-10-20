@@ -8,8 +8,6 @@
 // #define SHOW_FPS 1
 // #define USE_GIF_BUFFERING
 
-#define POLLING_LOOP_DELAY 500
-
 #include "config.h"
 #include <Arduino.h>
 #include "platform.h"
@@ -19,18 +17,22 @@
 #include "display.h"
 #include "commands.h"
 
+#define POLLING_LOOP_DELAY 500
+
 static bool runLoop1 = false;
 
 void setup()
 {
-	setupTTY();
-	setupUsbMsc();
-	setupStorage();
-	setupPlatform();
-	setupDisplay();
-	setupQueue();
+	/* NOTE: Most of these setup functions need to run in a particular order */
 
-	setDirectory(config.imagePath);
+	beginUsbMsc();                  // Start up USB MSC interface, must be BEFORE the serial interface so CDC doesn't take over
+	setupTTY();                     // Bring up the serial interface
+	setupStorage();                 // Configure storage
+	setupPlatform();                // Apply platform-specific code for the MCU (tune bus speed, overclock, etc.)
+	setupDisplay();                 // Configure and enable the display
+	// readyUsbMsc();                  // Set USB MSC ready after storage is available
+	setupQueue();                   // Set up multicore queue
+	setDirectory(config.imagePath); // Set the working image path
 
 	runLoop1 = true;
 }
@@ -59,8 +61,6 @@ void loop()
 		}
 		nextRead = millis() + POLLING_LOOP_DELAY; // Delay the next read for better performance
 	}
-
-	loopMSC();
 
 	delay(POLLING_LOOP_DELAY); // Delay here seems to increase FPS in testing, 500ms seems optimal right now
 }

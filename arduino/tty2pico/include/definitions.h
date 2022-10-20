@@ -2,6 +2,8 @@
 #define DEFINITIONS_H
 
 #include <Arduino.h>
+#include "SPI.h"
+#include "SpiDriver/SdSpiDriver.h"
 
 // When adding a new command do the following:
 // * Add a `const String [CMDNAME]` variable to commands.h
@@ -116,5 +118,30 @@ typedef enum DisplayState {
 	DISPLAY_STATIC_TEXT,
 	DISPLAY_SYSTEM_INFORMATION,
 } DisplayState;
+
+class SdSpiDriverT2P : public SdSpiBaseClass
+{
+public:
+	// Activate SPI hardware with correct speed and mode.
+	void activate();
+
+	// Initialize the SPI bus.
+	void begin(SdSpiConfig config);
+	// Deactivate SPI hardware.
+	void deactivate();
+	// Receive a byte.
+	uint8_t receive();
+	// Receive multiple bytes.
+	uint8_t receive(uint8_t *buf, size_t count);
+	// Send a byte.
+	void send(uint8_t data);
+	// Send multiple bytes.
+	void send(const uint8_t *buf, size_t count);
+	// Save SPISettings for new max SCK frequency
+	void setSckSpeed(uint32_t maxSck);
+
+private:
+	SPISettings m_spiSettings;
+};
 
 #endif

@@ -14,6 +14,8 @@
 #include <SPI.h>
 #include "SdFat.h"
 #include "Adafruit_SPIFlash.h"
+#include <ff.h>
+#include <diskio.h>
 #include <AnimatedGIF.h>
 #include <PNGdec.h>
 #include "mutex"
@@ -40,47 +42,87 @@
 
 Adafruit_SPIFlash flash(&flashTransport);
 FsVolume flashfs;
-bool flashfsChanged;
+bool flashfsFormatted = false;
+bool flashfsChanged = false;
 
 SdFs sdfs;
-bool sdfsChanged;
 static bool hasSD = false;
+bool sdfsChanged;
 
-FsVolume *volume; // Pointer to the active volume
+FsVolume *volume = nullptr; // Pointer to the active volume
+
+uint8_t workbuf[4096];
+FATFS fatfs;
 
 /*************************
  * Helper functions
  *************************/
 
+// Since SdFat won't format anything smaller than 6MB use Elm Cham's fatfs f_mkfs() to format
 void formatFlash(void)
 {
-	FsFormatter formatter;
-	uint8_t buffer[FS_BLOCK_SIZE];
-	if (formatter.format(&flash, buffer, &TTY_SERIAL))
+	// This is mostly copy/pasta of the example code for formatting using the FatFs lib:
+	// https://github.com/adafruit/Adafruit_SPIFlash/blob/master/examples/SdFat_format/SdFat_format.ino
+
+	// Call fatfs begin and passed flash object to initialize filesystem
+	Serial.println("Creating FAT filesystem (this takes ~60 seconds)...");
+
+	// Make filesystem.
+	FRESULT r = f_mkfs("", FM_FAT | FM_SFD, 0, workbuf, sizeof(workbuf));
+	if (r != FR_OK)
 	{
-		flash.syncDevice();
-		if (!flashfs.begin(&flash)) // Try to mount one more time
-		{
-			Serial.println("Error, failed to mount newly formatted filesystem!");
-			while(1) delay(1);
-		}
+		Serial.print("Error, f_mkfs failed with error code: "); Serial.println(r, DEC);
+		while(1) yield();
+	}
+
+	Serial.println("Filesystem created, attempting to mount");
+
+	r = f_mount(&fatfs, "0:", 1);
+	if (r != FR_OK)
+	{
+		Serial.print("Error, f_mount failed with error code: "); Serial.println(r, DEC);
+		while(1) yield();
+	}
+
+	Serial.println("Setting disk label to: " DISK_LABEL);
+
+	r = f_setlabel(DISK_LABEL);
+	if (r != FR_OK)
+	{
+		Serial.print("Error, f_setlabel failed with error code: "); Serial.println(r, DEC);
+		while(1) yield();
+	}
+
+	f_unmount("0:");
+
+	flash.syncDevice(); // sync to make sure all data is written to flash
+
+	Serial.println("Formatted flash!");
+
+	flashfsFormatted = flashfs.begin(&flash); // Try to mount one more time
+	if (!flashfsFormatted)
+	{
+		Serial.println("Error, failed to mount newly formatted filesystem! You may need to format the flash volume manually.");
 	}
 }
 
 FsFile getFile(const char *path, oflag_t oflag = O_RDONLY)
 {
-#if VERBOSE_OUTPUT == 1
-	Serial.print("Attempting to open file "); Serial.println(path);
-#endif
 	FsFile file;
 
+#if VERBOSE_OUTPUT == 1
+	Serial.print("Looking for file: "); Serial.println(path);
+#endif
 	if (volume->exists(path))
 	{
+#if VERBOSE_OUTPUT == 1
+	Serial.print("Attempting to open file: "); Serial.println(path);
+#endif
 		file = volume->open(path, oflag);
 #if VERBOSE_OUTPUT == 1
 		if (file)
 		{
-			Serial.print("Opened file from SD: "); Serial.println(path);
+			Serial.print("Opened file: "); Serial.println(path);
 		}
 		else
 		{
@@ -137,13 +179,16 @@ void saveFile(String path, const char *data, int size, oflag_t oflag = (O_WRITE 
 
 static void loadConfig(void)
 {
+	Serial.println("Trying to load config...");
 	FsFile configFile = getFile(CONFIG_FILE_PATH);
 	if (configFile)
 	{
 		// Read entire file into memory, should only be a few KB max
 		char *buffer = (char *)malloc(sizeof(char) * configFile.size());
+		Serial.println("Read config start");
 		configFile.read(buffer, configFile.size());
 		configFile.close();
+		Serial.println("Read config complete");
 		const char *error = parseConfig(buffer);
 		free(buffer);
 
@@ -153,6 +198,7 @@ static void loadConfig(void)
 		else
 			Serial.println("Config file loaded");
 	}
+	else Serial.println("No config file found");
 }
 
 void saveConfig(void)
@@ -175,35 +221,33 @@ static void setupFlash(void)
 		while(1) yield();
 	}
 
+	Serial.println("TTY2PICO Flash Storage");
+	Serial.print("JEDEC ID: 0x"); Serial.println(flash.getJEDECID(), HEX);
+	Serial.print("Flash size: "); Serial.print(flash.size() / 1024); Serial.println(" KB");
+
 	// Init filesystem on the flash
-	if (!flashfs.begin(&flash))
+	flashfsFormatted = flashfs.begin(&flash);
+	if (!flashfsFormatted)
 	{
 		// Couldn't init filesystem, automatically format to ensure it's working
 		formatFlash();
 
 		// Try to mount one more time
-		if (!flashfs.begin(&flash))
+		flashfsFormatted = flashfs.begin(&flash);
+		if (!flashfsFormatted)
 		{
 			// Couldn't set up filesystem fallback, can't really do anything except message the user
-			Serial.println("Error, failed to mount newly formatted filesystem!");
-			while(1) delay(1);
+			Serial.println("Error, failed to mount filesystem! You may need to format it manually as a FAT32 partition.");
 		}
 	}
-
-	Serial.println("TTY2PICO Flash Storage");
-	Serial.print("JEDEC ID: 0x"); Serial.println(flash.getJEDECID(), HEX);
-	Serial.print("Flash size: "); Serial.print(flash.size() / 1024); Serial.println(" KB");
-
-	flashfsChanged = true;
-	volume = &flashfs;
 }
 
 static void setupSD(void)
 {
 	Serial.println("Setting up SD storage");
 
-	auto *spiSD = getSpiSD();
-	SdSpiConfig spiConfig(SDCARD_CS_PIN, DEDICATED_SPI, SPI_FULL_SPEED, spiSD);
+	SdSpiConfig spiConfig = getSdSpiConfig();
+
 	if (!sdfs.begin(spiConfig))
 	{
 		sdfs.errorPrint(&Serial);
@@ -216,7 +260,6 @@ static void setupSD(void)
 		if (root.isDir())
 		{
 			hasSD = root.isDir();
-			volume = sdfs.vol();
 			Serial.println("SD filesystem initialized");
 		}
 		else
@@ -229,7 +272,6 @@ static void setupSD(void)
 	{
 		Serial.print("SD filesystem intialization failed, error code: "); Serial.println(root.getError());
 	}
-
 }
 
 void setupStorage(void)
@@ -240,7 +282,11 @@ void setupStorage(void)
 	if (!hasSD)
 		setupFlash();
 
-	loadConfig();
+	if (flashfsFormatted || hasSD)
+	{
+		volume = hasSD ? sdfs.vol() : &flashfs;
+		loadConfig();
+	}
 }
 
 /*************************
@@ -472,6 +518,75 @@ int32_t pngSeek(PNGFILE *page, int32_t position)
 	file->seek(position);
 	page->iPos = file->position();
 	return page->iPos;
+}
+
+/*************************
+ * FatFs implementation
+ *************************/
+
+DSTATUS disk_status ( BYTE pdrv )
+{
+	(void) pdrv;
+	return 0;
+}
+
+DSTATUS disk_initialize ( BYTE pdrv )
+{
+	(void) pdrv;
+	return 0;
+}
+
+DRESULT disk_read (
+	BYTE pdrv,    /* Physical drive nmuber to identify the drive */
+	BYTE *buff,   /* Data buffer to store read data */
+	DWORD sector, /* Start sector in LBA */
+	UINT count    /* Number of sectors to read */
+)
+{
+	(void) pdrv;
+	return flash.readSectors(sector, buff, count) ? RES_OK : RES_ERROR;
+}
+
+DRESULT disk_write (
+	BYTE pdrv,        /* Physical drive nmuber to identify the drive */
+	const BYTE *buff, /* Data to be written */
+	DWORD sector,     /* Start sector in LBA */
+	UINT count        /* Number of sectors to write */
+)
+{
+	(void) pdrv;
+	return flash.writeSectors(sector, buff, count) ? RES_OK : RES_ERROR;
+}
+
+DRESULT disk_ioctl (
+	BYTE pdrv,  /* Physical drive nmuber (0..) */
+	BYTE cmd,   /* Control code */
+	void *buff  /* Buffer to send/receive control data */
+)
+{
+	(void) pdrv;
+
+	switch ( cmd )
+	{
+		case CTRL_SYNC:
+			flash.syncDevice();
+			return RES_OK;
+
+		case GET_SECTOR_COUNT:
+			*((DWORD*) buff) = flash.size() / 512;
+			return RES_OK;
+
+		case GET_SECTOR_SIZE:
+			*((WORD*) buff) = 512;
+			return RES_OK;
+
+		case GET_BLOCK_SIZE:
+			*((DWORD*) buff) = 8; // erase block size in units of sector size
+			return RES_OK;
+
+		default:
+			return RES_PARERR;
+	}
 }
 
 #endif

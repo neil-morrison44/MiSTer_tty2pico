@@ -11,7 +11,7 @@
 
 float getCpuSpeedMHz(void);
 float getCpuTemperature(void);
-SpiPort_t *getSpiSD(void);
+SdSpiConfig getSdSpiConfig(void);
 const char *getTime(int format);
 float getSpiRateDisplayMHz();
 float getSpiRateSdMHz();
