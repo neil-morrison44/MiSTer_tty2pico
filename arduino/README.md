@@ -2,13 +2,10 @@
 
 A full colour version of [tty2oled](https://github.com/venice1200/MiSTer_tty2oled) display addon for the [MiSTer FPGA](https://github.com/MiSTer-devel) and features:
 
-* Support for PNG and animated GIF files
-* Uses the Raspberry Pi Pico and other RP2040 based variant
-  * Utilizes multicore logic
-  * Optionally overclock RP2040 from 133MHz to 266MHz for better display performance
-* Support for SPI displays up to 320x240 resolution
-* Can display images from built-in flash or microSD card if available
 * Targets compatiblity with the [tty2oled Command List](https://github.com/venice1200/MiSTer_tty2oled/wiki/Command_v2)
+* Supports PNG, static GIF, and animated GIF files at up to 50fps!
+* Can display files from built-in flash or microSD card if available
+* Support for SPI displays up to 320x240 resolution (may require manual build)
 
 ## Hardware
 
@@ -19,35 +16,6 @@ Each RP2040 board and display combination requires its own build since a lot of 
 * Optional SPI microSD reader
 
 The [RoundyPi](https://github.com/sbcshop/RoundyPi) module combines all three pieces of hardware on a single board, and is the recommended hardware to get started.
-
-### Boards
-
-Manual build configurations are available for the following RP2040 boards:
-
-| Board | Flash Size | SD Reader? | Display? | Remarks |
-| ----- | ---------- | ---------- | -------- | ------- |
-| Raspberry Pi Pico | 2 MB | No | No | The original |
-| Pico clones | 16 MB | No | No | e.g. Pimoroni Pico LiPo |
-| [RoundyPi](https://github.com/sbcshop/RoundyPi) | 2 MB | Yes | Round 1.28" 240x240 GC9A01 | Just add an (optional) SD card! |
-| Sparkfun Pro Micro RP2040 | 16 MB | No | No | Easily available and relatively cheap |
-| Sparkfun Thing Plus RP2040 | 16 MB | Yes | No | A bit expensive but allows a lot of flexibility |
-
-Each build is also preconfigured to use an external SD reader if one isn't built-in. See the relevant `env/[BoardName].ini` file for pin mapping via the `SDCARD_` defines.
-
-### Displays
-
-In theory tty2pico can support any SPI display controller the TFT_eSPI library supports, though each display requires some custom setup via `build_flags` and its own build in the PlatformIO environment. See the [Development](#development) section for more information.
-
-The tty2pico project has prebuilt configurations for the following displays:
-
-| Resolution | Tech | Module | Driver |
-| - | - | - | - |
-| 240x240 Round | IPS | [1.28inch LCD Module](https://www.waveshare.com/wiki/1.28inch_LCD_Module) | GC9A01 |
-| 320x172 | IPS | [1.47inch LCD Module](https://www.waveshare.com/wiki/1.47inch_LCD_Module) | ST7789V |
-| 160x128 | TFT | [1.8inch LCD Module](https://www.waveshare.com/wiki/1.8inch_LCD_Module) | ST7735 |
-| 128x128 | OLED | [1.5inch RGB OLED Module](https://www.waveshare.com/wiki/1.5inch_RGB_OLED_Module) | SSD1351 |
-
-All testing has been done against Waveshare branded displays, aside from the RoundyPi. These are common display modules and you can find the same display modules from other brands.
 
 ## Command List
 
@@ -114,14 +82,14 @@ And a description of each available option (struckthrough items are not yet impl
 | Option | Valid Values | Default Value | Description |
 | ------ | --------- | ------------- | ----------- |
 | backgroundColor | 16-bit RGB565 color value in integer form | 0 (Black) | The default background color when using transparent images. You will need to find an RGB565 color value usually in hex format like [the TFT_eSPI color definitions](https://github.com/Bodmer/TFT_eSPI/blob/13e62a88d07ed6e29d15fe76b132a927ec29e307/TFT_eSPI.h#L282), then convert the hex value to an integer value using an online tool or the `tools/hex-to-int.py` Python script like `python hex-to-int.py FFFF` |
-| overclockMode | 0 = Stock<br>1 = Overclocked<br>255 = [Ludicrous Speed](https://youtu.be/oApAdwuqtn8) (max tested overclock for the platform) | 0 | Double the clock speed of the RP2040 from 125MHz to 250MHz. This will provide almost a 2x performance increase for display refreshes. Just about every RP2040 board should be able to handle this overclock while remaining passively cooled.<br><br>For those that want to squeeze out every last drop of performance, the Ludicrious Speed setting will overclock the RP2040 to 266MHz and overclock the SPI buses in sync with the CPU clock. This works on a lot of boards, but sadly not the RoundyPi 😢 |
 | imagePath | string | "/logos/" | The default directory to search for images when a core is requested. |
+| overclockMode | 0 = Stock<br>1 = Overclocked<br>255 = [Ludicrous Speed](https://youtu.be/oApAdwuqtn8) (max tested overclock for the platform) | 0 | Set to `1` to double the clock speed of the RP2040 from 125MHz to 250MHz. This will provide almost a 2x performance increase for display refreshes and will allow well optimized GIFs to display at 50fps. Without an overclock 30fps is likely max, and there's no guarantee there.<br><br>For those that want to squeeze out every last drop of performance, the Ludicrious Speed setting will overclock the RP2040 to 266MHz and overclock the SPI buses in sync with the CPU clock. This works on a lot of boards, but sadly not the RoundyPi 😢<br><br>Just about every RP2040 board should be able to handle the basic overclock, and the RP2040 should not need any additional cooling to run the RP2040, though keep it in mind if mounting your device inside an enclosure. |
 | slideshowDelay | 0+ | 2000 | The delay in milliseconds between switching images during the slideshow/screensaver. |
 | startupCommand | string | "" | The [tty2pico command](#command-list) to run at startup. |
 | startupDelay | 0+ | 5000 | The delay in milliseconds to show the startup screen |
 | startupImage | string | "" | The image to display after the `startupCommand` runs. |
 | tftRotation | 0 = none<br>1 = 90°<br>2 = 180°<br>3 = 270° | Display specific | Override the default startup rotation of the display. NOT the same values as `CMDROT`. |
-| tftHeight | 0-240 | Display specific | Override the native height of the display in pixels. If your screen is natively portrait (like the ST7789V) this value should be larger than `tftWidth`. |
+| tftHeight | 0-320 | Display specific | Override the native height of the display in pixels. If your screen is natively portrait (like the ST7789V) this value should be larger than `tftWidth`. |
 | tftWidth | 0-320 | Display specific | Override the native width of the display in pixels. If your screen is natively portrait (like the ST7789V) this value should be smaller than `tftHeight`. |
 | ttyBaudRate | 9600, 14400, 19200, 38400, 57600, 115200, 128000, 256000, etc. | 115200 | The speed for serial communication. |
 | waitForSerial | true/false | false | Wait for serial connection before running the tty2pico program code. |
@@ -147,6 +115,35 @@ All platform, framework and external library dependencies required to build will
 * bitbank2/PNGdec@1.0.1
 * bodmer/TFT_eSPI@2.4.78
 * gyverlibs/UnixTime@1.1
+
+### Boards
+
+Manual build configurations are available for the following RP2040 boards:
+
+| Board | Flash Size | SD Reader? | Display? | Remarks |
+| ----- | ---------- | ---------- | -------- | ------- |
+| Raspberry Pi Pico | 2 MB | No | No | The original |
+| Pico clones | 16 MB | No | No | e.g. Pimoroni Pico LiPo |
+| [RoundyPi](https://github.com/sbcshop/RoundyPi) | 2 MB | Yes | Round 1.28" 240x240 GC9A01 | Just add an (optional) SD card! |
+| Sparkfun Pro Micro RP2040 | 16 MB | No | No | Easily available and relatively cheap |
+| Sparkfun Thing Plus RP2040 | 16 MB | Yes | No | A bit expensive but allows a lot of flexibility |
+
+Each build is also preconfigured to use an external SPI-based SD reader if one isn't built-in. See the relevant `env/[BoardName].ini` file for pin mapping via the `SDCARD_` defines.
+
+### Displays
+
+In theory tty2pico can support any SPI display controller the TFT_eSPI library supports, though each display requires some custom setup via `build_flags` and its own build in the PlatformIO environment. See the [Development](#development) section for more information.
+
+The development focus is on the round GC9A01 based display, though manual build configurations are available for the following displays:
+
+| Resolution | Tech | Module | Driver |
+| - | - | - | - |
+| 240x240 Round | IPS | [1.28inch LCD Module](https://www.waveshare.com/wiki/1.28inch_LCD_Module) | GC9A01 |
+| 320x172 | IPS | [1.47inch LCD Module](https://www.waveshare.com/wiki/1.47inch_LCD_Module) | ST7789V |
+| 160x128 | TFT | [1.8inch LCD Module](https://www.waveshare.com/wiki/1.8inch_LCD_Module) | ST7735 |
+| 128x128 | OLED | [1.5inch RGB OLED Module](https://www.waveshare.com/wiki/1.5inch_RGB_OLED_Module) | SSD1351 |
+
+All testing has been done against Waveshare branded displays, aside from the RoundyPi. These are common display modules and you can find the same display modules from other brands.
 
 ## Roadmap
 
@@ -186,8 +183,8 @@ All platform, framework and external library dependencies required to build will
   * [x] ~~SSD1351 128x128 OLED~~
   * [x] ~~ST7735 128x160~~
   * [x] ~~ST7789V3 172x320~~
-* [x] ~~Multicore support (one for logic, the other for draw calls)~~
-* [ ] Add support for other fast dual core chips like ESP32 and ESP32-S3
+* [ ] Multicore support (one for logic, the other for draw calls)
+* [ ] Add support for other fast chips like ESP32 and ESP32-S3
 * [x] ~Move the "Software configuration" section of `config.h` into a text/json/xml/whatever file to be read from the filesystem on startup~
 * [ ] Create variant of existing GC9A01 holder for the RoundyPi
 * [ ] Modify the [MiSTer Multisystem dust cover](https://www.printables.com/model/159379-mister-multisystem-v5-2022-classic-gaming-console-/files) to support GC9A01/RoundyPi and possibly other display modules
