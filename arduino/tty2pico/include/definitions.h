@@ -122,6 +122,8 @@ typedef enum DisplayState {
 class SdSpiDriverT2P : public SdSpiBaseClass
 {
 public:
+	SdSpiDriverT2P();
+
 	// Activate SPI hardware with correct speed and mode.
 	void activate();
 
@@ -141,7 +143,7 @@ public:
 	void setSckSpeed(uint32_t maxSck);
 
 private:
-	SPISettings m_spiSettings;
+	SPISettings spiSettings;
 };
 
 #endif
