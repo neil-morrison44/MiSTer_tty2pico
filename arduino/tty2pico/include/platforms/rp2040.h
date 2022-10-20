@@ -115,8 +115,6 @@ const char *getTime(int format)
 float getSpiRateDisplayMHz()
 {
 	uint rate = spi_get_baudrate(getDisplaySpi());
-	if (rate == UINT_MAX)
-		rate = SPI_FREQUENCY;
 	return rate / 1000000.0f;
 }
 
@@ -171,14 +169,14 @@ void setupPlatform(void)
 		delay(10); // Allow vreg time to stabilize
 		set_sys_clock_khz(266000, true); // Overclock to 266MHz
 
-		// Sync peripheral clock to CPU clock to get a boost to performance
+		// Sync peripheral clock to CPU clock to get a boost to SPI performance
 		uint32_t freq = clock_get_hz(clk_sys);
 		clock_configure(clk_peri, 0, CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS, freq, freq);
-
-		// Need to reapply SPI baudrate since the multiplier changed
-		spi_set_baudrate(getSdSpi(), SPI_FULL_SPEED);
-		spi_set_baudrate(getDisplaySpi(), SPI_FREQUENCY);
 	}
+
+	// Manually apply SPI frequencies so they're picked up and reported correctly, even if not overclocking
+	spi_set_baudrate(getSdSpi(), SPI_FULL_SPEED);
+	spi_set_baudrate(getDisplaySpi(), SPI_FREQUENCY);
 }
 
 void setupQueue(void)
@@ -196,8 +194,20 @@ bool removeFromQueue(CommandData &data)
 	return queue_try_remove(&cmdQ, &data);
 }
 
+inline void pauseBackground(void)
+{
+	noInterrupts();
+	rp2040.idleOtherCore();
+}
+
+inline void resumeBackground(void)
+{
+	rp2040.resumeOtherCore();
+	interrupts();
+}
+
 /*******************************************************************************
- * Custom SPI driver implementation
+ * Custom SD SPI driver implementation - TODO: Add DMA support?
  *******************************************************************************/
 
 static spi_inst_t *sdSpi;
@@ -271,6 +281,130 @@ void SdSpiDriverT2P::send(const uint8_t *buf, size_t count)
 void SdSpiDriverT2P::setSckSpeed(uint32_t maxSck)
 {
 	spiSettings = SPISettings(maxSck, MSBFIRST, SPI_MODE0);
+}
+
+/*******************************************************************************
+ * Custom file access implementation
+ *******************************************************************************/
+
+bool FsVolumeTS::exists(const char *path)
+{
+	pauseBackground();
+	bool exists = vol && vol->exists(path);
+	resumeBackground();
+	return exists;
+}
+
+FsFileTS FsVolumeTS::open(const char *path, oflag_t oflag)
+{
+	pauseBackground();
+	FsFile tmpFile;
+	bool opened = vol && tmpFile.open(vol, path, oflag);
+	resumeBackground();
+	return opened ? FsFileTS(tmpFile) : FsFileTS();
+}
+
+bool FsFileTS::available(void)
+{
+	pauseBackground();
+	int available = file ? file.available() : 0;
+	resumeBackground();
+	return available;
+}
+
+bool FsFileTS::close(void)
+{
+	pauseBackground();
+	bool closed = file ? file.close() : true;
+	resumeBackground();
+	return closed;
+}
+
+uint8_t FsFileTS::getError() const
+{
+	pauseBackground();
+	uint8_t error = file ? file.getError() : 0;
+	resumeBackground();
+	return error;
+}
+
+size_t FsFileTS::getName(char* name, size_t len)
+{
+	pauseBackground();
+	size_t size = file ? file.getName(name, len) : 0;
+	resumeBackground();
+	return size;
+}
+
+bool FsFileTS::isDir(void)
+{
+	pauseBackground();
+	bool isDir = file && file.isDir();
+	resumeBackground();
+	return isDir;
+}
+
+FsFileTS FsFileTS::openNextFile(void)
+{
+	pauseBackground();
+	FsFileTS nextFile = file ? FsFileTS(file.openNextFile()) : FsFileTS();
+	resumeBackground();
+	return nextFile;
+}
+
+bool FsFileTS::openNext(FsBaseFile* dir, oflag_t oflag)
+{
+	pauseBackground();
+	bool opened = file && file.openNext(dir, oflag);
+	resumeBackground();
+	return opened;
+}
+
+uint64_t FsFileTS::position(void)
+{
+	pauseBackground();
+	uint64_t pos = file ? file.position() : 0;
+	resumeBackground();
+	return pos;
+}
+
+int FsFileTS::read(void* buf, size_t count)
+{
+	pauseBackground();
+	int byteCount = file ? file.read(buf, count) : 0;
+	resumeBackground();
+	return byteCount;
+}
+
+void FsFileTS::rewindDirectory(void)
+{
+	pauseBackground();
+	if (file) file.rewindDirectory();
+	resumeBackground();
+}
+
+bool FsFileTS::seek(uint64_t position)
+{
+	pauseBackground();
+	bool success = file && file.seek(position);
+	resumeBackground();
+	return success;
+}
+
+uint64_t FsFileTS::size(void)
+{
+	pauseBackground();
+	uint64_t fileSize = file ? file.size() : 0;
+	resumeBackground();
+	return fileSize;
+}
+
+size_t FsFileTS::write(const void* buf, size_t count)
+{
+	pauseBackground();
+	size_t byteCount = file ? file.write(buf, count) : 0;
+	resumeBackground();
+	return byteCount;
 }
 
 #endif

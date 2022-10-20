@@ -680,7 +680,6 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 #if SHOW_FPS == 1 || VERBOSE_OUTPUT == 1
 		frames++;
 #endif
-		// delay(0);
 		yield();
 #if SHOW_FPS == 1
 		frameStart = micros();
@@ -703,8 +702,6 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 #if VERBOSE_OUTPUT == 1
 	Serial.print("Ran GIF at "); Serial.print(frames / ((runStop - runStart) / 1000000.0f)); Serial.println(" fps");
 #endif
-
-	gif->close();
 }
 #endif
 
@@ -719,6 +716,7 @@ static void showGIF(uint8_t *data, int size, bool loop = false)
 	Serial.print("Opened streamed GIF with resolution "); Serial.print(gif.getCanvasWidth()); Serial.print(" x "); Serial.println(gif.getCanvasHeight());
 #endif
 		displayGIF(&gif, loop);
+		gif.close();
 	}
 	else
 	{
@@ -737,6 +735,7 @@ static void showGIF(const char *path, bool loop = false)
 	Serial.print("Opened GIF "); Serial.print(path); Serial.print(" with resolution "); Serial.print(gif.getCanvasWidth()); Serial.print(" x "); Serial.println(gif.getCanvasHeight());
 #endif
 		displayGIF(&gif, loop);
+		gif.close();
 	}
 	else
 	{
@@ -772,7 +771,7 @@ static inline void displayPNG(PNG &png)
 	yoffset = (displayHeight - height) / 2;
 	displayState = DISPLAY_STATIC_IMAGE;
 
-	displayBuffer.createSprite(width, height);
+	uint16_t *displayData = (uint16_t *)displayBuffer.createSprite(width, height);
 	displayBuffer.fillSprite(TFT_TRANSPARENT);
 
 	png.decode(NULL, 0); // Fill displayBuffer sprite with image data
@@ -788,7 +787,13 @@ static inline void displayPNG(PNG &png)
 	}
 	else clearDisplay();
 
+#if USE_DMA == 1
+	tft.startWrite();
+	tft.pushImageDMA(xoffset, yoffset, width, height, displayData);
+	tft.endWrite();
+#else
 	displayBuffer.pushSprite(xoffset, yoffset, TFT_TRANSPARENT);
+#endif
 	displayBuffer.deleteSprite();
 }
 

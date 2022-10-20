@@ -2,6 +2,7 @@
 #define USBMSC_H
 
 #include "Adafruit_TinyUSB.h"
+#include "platform.h"
 #include "storage.h"
 #include "display.h"
 
@@ -14,14 +15,14 @@ static bool mscReady;
 
 static int32_t mscFlashReadCallback(uint32_t lba, void* buffer, uint32_t bufsize)
 {
-	int32_t result = flash.readBlocks(lba, (uint8_t*) buffer, bufsize / FS_BLOCK_SIZE) ? bufsize : -1;
+	int32_t result = flash.readSectors(lba, (uint8_t*) buffer, bufsize / FS_BLOCK_SIZE) ? bufsize : -1;
 	return result;
 }
 
 static int32_t mscFlashWriteCallback(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
 {
 	digitalWrite(LED_BUILTIN, HIGH);
-	int32_t result = flash.writeBlocks(lba, buffer, bufsize / FS_BLOCK_SIZE) ? bufsize : -1;
+	int32_t result = flash.writeSectors(lba, buffer, bufsize / FS_BLOCK_SIZE) ? bufsize : -1;
 	return result;
 }
 
@@ -38,20 +39,26 @@ static void mscFlashFlushCallback(void)
 
 static int32_t mscSDReadCallback(uint32_t lba, void* buffer, uint32_t bufsize)
 {
+	pauseBackground();
 	int32_t result = sdfs.card()->readSectors(lba, (uint8_t *)buffer, bufsize / FS_BLOCK_SIZE) ? bufsize : -1;
+	resumeBackground();
 	return result;
 }
 
 static int32_t mscSDWriteCallback(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
 {
 	digitalWrite(LED_BUILTIN, HIGH);
+	pauseBackground();
 	int32_t result = sdfs.card()->writeSectors(lba, buffer, bufsize / FS_BLOCK_SIZE) ? bufsize : -1;
+	resumeBackground();
 	return result;
 }
 
 static void mscSDFlushCallback(void)
 {
+	pauseBackground();
 	sdfs.card()->syncDevice();
+	resumeBackground();
 	sdfsChanged = true;
 	digitalWrite(LED_BUILTIN, LOW);
 }
@@ -74,6 +81,7 @@ void beginUsbMsc()
 		msc.setID("tty2pico", "Flash Storage", "1.0");
 
 	msc.begin();
+	msc.setUnitReady(false);
 
 	Serial.println("USB MSC started");
 }

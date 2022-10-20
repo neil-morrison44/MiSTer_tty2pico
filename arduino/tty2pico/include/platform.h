@@ -9,6 +9,8 @@
 #endif
 #include "SpiDriver/SdSpiDriver.h"
 
+inline void pauseBackground(void);
+inline void resumeBackground(void);
 float getCpuSpeedMHz(void);
 float getCpuTemperature(void);
 SdSpiConfig getSdSpiConfig(void);

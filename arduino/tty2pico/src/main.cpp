@@ -30,17 +30,9 @@ void setup()
 	setupStorage();                 // Configure storage
 	setupPlatform();                // Apply platform-specific code for the MCU (tune bus speed, overclock, etc.)
 	setupDisplay();                 // Configure and enable the display
-	// readyUsbMsc();                  // Set USB MSC ready after storage is available
+	readyUsbMsc();                  // Set USB MSC ready after storage is available
 	setupQueue();                   // Set up multicore queue
 	setDirectory(config.imagePath); // Set the working image path
-
-	runLoop1 = true;
-}
-
-void setup1()
-{
-	// Pause core 1 until setup() is done
-	while (!runLoop1) delay(1);
 	showStartup();
 }
 
@@ -54,21 +46,12 @@ void loop()
 	if (nextDiff >= 0)
 	{
 		command = readTTY();
-		if (command != "")
-		{
-			data = CommandData::parseCommand(command);
-			addToQueue(data);
-		}
 		nextRead = millis() + POLLING_LOOP_DELAY; // Delay the next read for better performance
+
+		if (command != "")
+			runCommand(CommandData::parseCommand(command));
 	}
 
-	delay(POLLING_LOOP_DELAY); // Delay here seems to increase FPS in testing, 500ms seems optimal right now
-}
-
-void loop1()
-{
-	loopQueue();
 	loopDisplay(millis());
-
 	delay(0); // 0ms delay here gives a very small (and I mean SMALL) performance boost, marginally more than yield()
 }

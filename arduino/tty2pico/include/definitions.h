@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 #include "SPI.h"
+#include "FsLib/FsVolume.h"
+#include "FsLib/FsFile.h"
 #include "SpiDriver/SdSpiDriver.h"
 
 // When adding a new command do the following:
@@ -144,6 +146,49 @@ public:
 
 private:
 	SPISettings spiSettings;
+};
+
+class FsFileTS
+{
+public:
+	FsFileTS() { }
+	FsFileTS(FsFile file) : file(file) { }
+	~FsFileTS() { if (file) file.close(); }
+
+	explicit operator bool() const { return file; }
+
+	bool available(void);
+	bool close(void);
+	uint8_t getError() const;
+	size_t getName(char* name, size_t len);
+	bool isDir(void);
+	FsFileTS openNextFile(void);
+	bool openNext(FsBaseFile* dir, oflag_t oflag);
+	uint64_t position(void);
+	int read(void* buf, size_t count);
+	void rewindDirectory(void);
+	bool seek(uint64_t position);
+	uint64_t size(void);
+	size_t write(const void* buf, size_t count);
+
+private:
+	FsFile file;
+};
+
+class FsVolumeTS
+{
+public:
+	FsVolumeTS() { }
+	FsVolumeTS(FsVolume *vol) : vol(vol) { }
+	~FsVolumeTS() { vol = nullptr; }
+
+	bool exists(const char *path);
+	FsFileTS open(const char *path, oflag_t oflag);
+
+	FsVolume *getFsVol(void) { return vol; }
+
+private:
+	FsVolume *vol;
 };
 
 #endif

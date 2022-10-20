@@ -49,7 +49,7 @@ SdFs sdfs;
 static bool hasSD = false;
 bool sdfsChanged;
 
-FsVolume *volume = nullptr; // Pointer to the active volume
+FsVolumeTS volume; // Pointer to the active volume
 
 uint8_t workbuf[4096];
 FATFS fatfs;
@@ -106,19 +106,19 @@ void formatFlash(void)
 	}
 }
 
-FsFile getFile(const char *path, oflag_t oflag = O_RDONLY)
+FsFileTS getFile(const char *path, oflag_t oflag = O_RDONLY)
 {
-	FsFile file;
+	FsFileTS file;
 
 #if VERBOSE_OUTPUT == 1
 	Serial.print("Looking for file: "); Serial.println(path);
 #endif
-	if (volume->exists(path))
+	if (volume.exists(path))
 	{
 #if VERBOSE_OUTPUT == 1
 	Serial.print("Attempting to open file: "); Serial.println(path);
 #endif
-		file = volume->open(path, oflag);
+		file = volume.open(path, oflag);
 #if VERBOSE_OUTPUT == 1
 		if (file)
 		{
@@ -140,7 +140,7 @@ FsFile getFile(const char *path, oflag_t oflag = O_RDONLY)
 	return file;
 }
 
-FsFile getFile(String path, oflag_t oflag = O_RDONLY)
+FsFileTS getFile(String path, oflag_t oflag = O_RDONLY)
 {
 	return getFile(path.c_str(), oflag);
 }
@@ -152,7 +152,7 @@ bool getHasSD(void)
 
 void saveFile(String path, const char *data, int size, oflag_t oflag = (O_WRITE | O_CREAT | O_TRUNC))
 {
-	FsFile file = getFile(path, oflag);
+	FsFileTS file = getFile(path, oflag);
 	if (!file)
 	{
 		Serial.print("Unable to save file: "); Serial.println(path);
@@ -180,7 +180,7 @@ void saveFile(String path, const char *data, int size, oflag_t oflag = (O_WRITE 
 static void loadConfig(void)
 {
 	Serial.println("Trying to load config...");
-	FsFile configFile = getFile(CONFIG_FILE_PATH);
+	FsFileTS configFile = getFile(CONFIG_FILE_PATH);
 	if (configFile)
 	{
 		// Read entire file into memory, should only be a few KB max
@@ -225,15 +225,12 @@ static void setupFlash(void)
 	Serial.print("JEDEC ID: 0x"); Serial.println(flash.getJEDECID(), HEX);
 	Serial.print("Flash size: "); Serial.print(flash.size() / 1024); Serial.println(" KB");
 
-	// Init filesystem on the flash
-	flashfsFormatted = flashfs.begin(&flash);
+	flashfsFormatted = flashfs.begin(&flash); // Init filesystem on the flash
 	if (!flashfsFormatted)
 	{
-		// Couldn't init filesystem, automatically format to ensure it's working
-		formatFlash();
+		formatFlash(); // Couldn't init filesystem, automatically format to ensure it's working
 
-		// Try to mount one more time
-		flashfsFormatted = flashfs.begin(&flash);
+		flashfsFormatted = flashfs.begin(&flash); // Try to mount one more time
 		if (!flashfsFormatted)
 		{
 			// Couldn't set up filesystem fallback, can't really do anything except message the user
@@ -254,7 +251,7 @@ static void setupSD(void)
 		return;
 	}
 
-	FsFile root = sdfs.open("/", O_RDONLY);
+	FsFileTS root = sdfs.open("/", O_RDONLY);
 	if (root)
 	{
 		if (root.isDir())
@@ -284,7 +281,7 @@ void setupStorage(void)
 
 	if (flashfsFormatted || hasSD)
 	{
-		volume = hasSD ? sdfs.vol() : &flashfs;
+		volume = FsVolumeTS(hasSD ? sdfs.vol() : &flashfs);
 		loadConfig();
 	}
 }
@@ -294,21 +291,21 @@ void setupStorage(void)
  *************************/
 
 static String dirText;
-static FsFile dir;
+static FsFileTS dir;
 
 bool fileExists(String path)
 {
-	return volume->exists(path.c_str());
+	return volume.exists(path.c_str());
 }
 
-String getName(FsFile *file)
+String getName(FsFileTS *file)
 {
 	char filename[250];
 	file->getName(filename, 250);
 	return String(filename);
 }
 
-String getFullName(FsFile *file, const char *directory = nullptr)
+String getFullName(FsFileTS *file, const char *directory = nullptr)
 {
 	if (directory == nullptr)
 		return dirText + getName(file);
@@ -342,43 +339,11 @@ int getFileCount(void)
 
 String getNextFile(void)
 {
-	FsFile entry = dir.openNextFile();
+	FsFileTS entry = dir.openNextFile();
 	return (entry) ? getFullName(&entry) : "";
 }
 
-void printDirectory(const char *path, int numTabs)
-{
-	FsFile dir = getFile(path);
-	FsFile entry;
-
-	while (entry.openNext(&dir, O_RDONLY))
-	{
-		for (uint8_t i = 0; i < numTabs; i++)
-			Serial.print('\t');
-
-		String fileName = getFullName(&entry, path);
-		Serial.print(fileName);
-		if (entry.isDir())
-		{
-			Serial.println("/");
-			printDirectory(fileName.c_str(), numTabs + 1);
-		}
-		else
-		{
-			Serial.print("\t\t");
-			entry.printFileSize(&Serial);
-			Serial.print("\tCREATION: ");
-			entry.printCreateDateTime(&Serial);
-			Serial.print("\tLAST WRITE: ");
-			entry.printModifyDateTime(&Serial);
-			Serial.println();
-		}
-
-		entry.close();
-	}
-}
-
-inline int readFile(FsFile *file, uint8_t *buffer, int32_t length, const char *errorMessage = nullptr)
+inline int readFile(FsFileTS *file, uint8_t *buffer, int32_t length, const char *errorMessage = nullptr)
 {
 	if (file->available())
 		return file->read(buffer, length);
@@ -422,7 +387,7 @@ void setDirectory(String path)
 
 void *gifOpen(const char *filename, int32_t *size)
 {
-	static FsFile giffile;
+	static FsFileTS giffile;
 
 	giffile = getFile(filename);
 
@@ -449,12 +414,12 @@ void gifClose(void *handle)
 #if VERBOSE_OUTPUT == 1
 	Serial.println("Closing file");
 #endif
-	static_cast<FsFile *>(handle)->close();
+	static_cast<FsFileTS *>(handle)->close();
 }
 
 int32_t gifRead(GIFFILE *page, uint8_t *buffer, int32_t length)
 {
-	FsFile *file = static_cast<FsFile *>(page->fHandle);
+	FsFileTS *file = static_cast<FsFileTS *>(page->fHandle);
 	int byteCount = readFile(file, buffer, length, "Couldn't read GIF file");
 	page->iPos = file->position();
 	return byteCount;
@@ -462,7 +427,7 @@ int32_t gifRead(GIFFILE *page, uint8_t *buffer, int32_t length)
 
 int32_t gifSeek(GIFFILE *page, int32_t position)
 {
-	FsFile *file = static_cast<FsFile *>(page->fHandle);
+	FsFileTS *file = static_cast<FsFileTS *>(page->fHandle);
 	file->seek(position);
 	page->iPos = file->position();
 	return page->iPos;
@@ -474,7 +439,7 @@ int32_t gifSeek(GIFFILE *page, int32_t position)
 
 void *pngOpen(const char *filename, int32_t *size)
 {
-	static FsFile pngfile;
+	static FsFileTS pngfile;
 
 	pngfile = getFile(filename);
 
@@ -503,18 +468,18 @@ void pngClose(void *handle)
 #if VERBOSE_OUTPUT == 1
 	Serial.println("Closing file");
 #endif
-	static_cast<FsFile *>(handle)->close();
+	static_cast<FsFileTS *>(handle)->close();
 }
 
 int32_t pngRead(PNGFILE *page, uint8_t *buffer, int32_t length)
 {
-	int byteCount = readFile(static_cast<FsFile *>(page->fHandle), buffer, length, "Couldn't read PNG file");
+	int byteCount = readFile(static_cast<FsFileTS *>(page->fHandle), buffer, length, "Couldn't read PNG file");
 	return byteCount;
 }
 
 int32_t pngSeek(PNGFILE *page, int32_t position)
 {
-	FsFile *file = static_cast<FsFile *>(page->fHandle);
+	FsFileTS *file = static_cast<FsFileTS *>(page->fHandle);
 	file->seek(position);
 	page->iPos = file->position();
 	return page->iPos;
