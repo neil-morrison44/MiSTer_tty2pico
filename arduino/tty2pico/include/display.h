@@ -528,8 +528,6 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 	displayBuffer.deleteSprite();
 }
 #else
-
-
 // From the examples in the https://github.com/bitbank2/AnimatedGIF repo
 // Draw a line of image directly on the LCD
 static void gifDrawLine(GIFDRAW *pDraw)
@@ -596,11 +594,10 @@ static void gifDrawLine(GIFDRAW *pDraw)
 			} // while looking for opaque pixels
 			if (iCount) // any opaque pixels?
 			{
-#if USE_DMA == 1
 				tft.setAddrWindow(pDraw->iX + x + xoffset, y + yoffset, iCount, 1);
+#if USE_DMA == 1
 				tft.pushPixelsDMA(&usTemp[dmaBuf][0], iCount);
 #else
-				tft.setAddrWindow(pDraw->iX + x + xoffset, y + yoffset, iCount, 1);
 				tft.pushPixels(usTemp, iCount);
 #endif
 				x += iCount;
@@ -622,6 +619,7 @@ static void gifDrawLine(GIFDRAW *pDraw)
 	{
 		s = pDraw->pPixels;
 
+		tft.setAddrWindow(pDraw->iX + xoffset, y + yoffset, iWidth, 1);
 #if USE_DMA == 1
 		// Unroll the first pass to boost DMA performance
 		// Translate the 8-bit pixels through the RGB565 palette (already byte reversed)
@@ -632,11 +630,9 @@ static void gifDrawLine(GIFDRAW *pDraw)
 			for (iCount = 0; iCount < TFT_DISPLAY_MAX; iCount++)
 				usTemp[dmaBuf][iCount] = usPalette[*s++];
 
-		tft.setAddrWindow(pDraw->iX + xoffset, y + yoffset, iWidth, 1);
 		tft.pushPixelsDMA(&usTemp[dmaBuf][0], iCount);
 		dmaBuf = !dmaBuf;
 #else
-		tft.setAddrWindow(pDraw->iX + xoffset, y + yoffset, iWidth, 1);
 		tft.pushPixels(usTemp, iCount);
 #endif
 
