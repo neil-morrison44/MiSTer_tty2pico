@@ -212,7 +212,7 @@ const char *parseConfig(char *buffer)
 	if (imagePathOK) config.imagePath = imagePath.c_str();
 
 	auto [startupCommandOK, startupCommand] = tty2pico->getString("startupCommand");
-	if (startupCommandOK && startupCommand.c_str() != "") config.startupCommand = startupCommand.c_str();
+	if (startupCommandOK && startupCommand.length() > 0) config.startupCommand = startupCommand.c_str();
 
 	auto [startupDelayOK, startupDelay] = tty2pico->getInt("startupDelay");
 	if (startupDelayOK) config.startupDelay = startupDelay;

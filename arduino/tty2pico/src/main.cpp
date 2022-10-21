@@ -19,8 +19,6 @@
 
 #define POLLING_LOOP_DELAY 500
 
-static bool runLoop1 = false;
-
 void setup()
 {
 	/* NOTE: Most of these setup functions need to run in a particular order */
@@ -42,9 +40,11 @@ void loop()
 	static String command;
 	static CommandData data;
 	static uint32_t nextRead;
+	static uint32_t now;
 
-	uint32_t nextDiff = millis() - nextRead;
-	if (nextDiff >= 0)
+	now = millis();
+
+	if (millis() - nextRead > 0)
 	{
 		command = readTTY();
 		nextRead = millis() + POLLING_LOOP_DELAY; // Delay the next read for better performance
@@ -53,9 +53,9 @@ void loop()
 		{
 			data = CommandData::parseCommand(command);
 			addToQueue(data);
+			loopQueue();
 		}
 	}
 
-	loopQueue();
-	loopDisplay(millis());
+	loopDisplay(now);
 }
