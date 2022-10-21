@@ -855,6 +855,11 @@ static void runSlideshow(uint32_t time)
 #if VERBOSE_OUTPUT == 1
 		Serial.print("Found slideshow file: "); Serial.println(nextFile.c_str());
 #endif
+		String loweredFile = nextFile;
+		loweredFile.toLowerCase();
+		if (loweredFile.endsWith(".gif"))
+			clearDisplay();
+
 		showImage(nextFile);
 		displayState = DISPLAY_SLIDESHOW; // Need to explicitly set state here since showImage methods will update it
 		nextChange = time + config.slideshowDelay;
