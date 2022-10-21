@@ -6,6 +6,7 @@ A full colour version of [tty2oled](https://github.com/venice1200/MiSTer_tty2ole
 * Supports PNG, static GIF, and animated GIF files at up to 50fps!
 * Can display files from built-in flash or microSD card if available
 * Support for SPI displays up to 320x240 resolution (may require manual build)
+* Appears as USB Mass Storage device so you can easily load new files
 
 ## Hardware
 
@@ -17,43 +18,40 @@ Each RP2040 board and display combination requires its own build since a lot of 
 
 The [RoundyPi](https://github.com/sbcshop/RoundyPi) module combines all three pieces of hardware on a single board, and is the recommended hardware to get started.
 
-## Command List
+### MicroSD Cards
 
-tty2pico aims to be as compatible as needed/possible with the [tty2oled v2 Command List](https://github.com/venice1200/MiSTer_tty2oled/wiki/Command_v2), along with adding some custom commands.
+tty2pico supports loading files from a SPI-based microSD card reader. Cards up to 128GB have been tested to work, though larger likely will as well. The recommended and supported file system format for SD is exFAT. This will allow near instant loading of the tty2pico device as USB Mass Storage, which then allows the rest of the tty2pico application to run smoothly.
 
-### tty2oled Commands
+Using FAT32 from microSD does work, however it's not a supported format. The cluster size must be very large when formatting the card to ensure as little delay as possible when processing the 10's of thousands of SD reads it takes to mount a FAT volume, which our powerful but still limited MCU will struggle with. An 8GB card was test by formatting as FAT32 with 32k cluster size and it worked "OK", as in took several seconds to show as a drive on the computer but overall worked fine. While this may work, there honestly is no reason not to use exFAT for this application.
 
-These commands are adapted from `tty2oled` and should be (mostly) compatible:
+### Boards
 
-| Command | Function | Example |
-| ------- | -------- | ------- |
-| CMDBYE | Show Sorgelig's Cat Icon | `CMDBYE` |
-| CMDCLS | Clear and Update the Display | `CMDCLS` |
-| CMDCOR | Command to announce core change, will try to display in the following order:<br>`[corename].loop.gif`<br>`[corename].gif`<br>`[corename].png` | `CMDCOR,[corename]`<br>`[corename]`<br>e.g.<br>`SNES`<br>`CMDCOR,SNES`<br>`CMDCOR,19XX` |
-| CMDDOFF | Switch Display off | `CMDDOFF` |
-| CMDDON | Power Display on | `CMDDON` |
-| CMDENOTA | Reboots tty2pico device into bootloader mode to receive a firmware update | `CMDENOTA` |
-| CMDROT | Rotate screen relative to starting position (0=none, 1=180°, 2=90°, 3=270°) | `CMDROT,0` for no rotation<br>`CMDROT,1` to flip screen |
-| CMDSAVER | Disable or Enable the ScreenSaver (currently only toggle) | `CMDSAVER` |
-| CMDSETTIME | Set the time on the MCU RTC using a unix timestamp<br><br>Shell example: <br>`timeoffset=$(date +%:::z)`<br>`localtime=$(date '-d now '${timeoffset}' hour' +%s)`<br>`echo "CMDSETTIME,${localtime}" > /dev/ttyACM0` | `CMDSETTIME,[timestamp]`<br>`CMDSETTIME,1665971593` |
-| CMDSHTEMP | Alias to `CMDSHSYSHW` since that screen displays the CPU temp | `CMDSHTEMP` |
-| CMDSHSYSHW | Show tty2pico system information | `CMDSHSYSHW` |
-| CMDSNAM | Show actual loaded Corename | `CMDSNAM` |
-| CMDSORG | Show Startup screen, also an alias to `CMDSHSYSHW` | `CMDSORG` |
-| CMDSWSAVER | Switch screensaver on or off | `CMDSWSAVER,0` to disable<br>`CMDSWSAVER,1` to enable |
-| CMDTEST | Show system info and some test graphics | `CMDTEST` |
-| CMDTXT | Send text to the display | `CMDTXT,Can you see this?`<br>Not currently compatible with `tty2oled` command |
+Manual build configurations are available for the following RP2040 boards:
 
-### tty2pico Commands
+| Board | Flash Size | SD Reader? | Display? | Remarks |
+| ----- | ---------- | ---------- | -------- | ------- |
+| Raspberry Pi Pico | 2 MB | No | No | The original |
+| Pico clones | 16 MB | No | No | e.g. Pimoroni Pico LiPo |
+| [RoundyPi](https://github.com/sbcshop/RoundyPi) | 2 MB | Yes | Round 1.28" 240x240 GC9A01 | Just add an (optional) SD card! |
+| Sparkfun Pro Micro RP2040 | 16 MB | No | No | Easily available and relatively cheap |
+| Sparkfun Thing Plus RP2040 | 16 MB | Yes | No | A bit expensive but allows a lot of flexibility |
 
-These commands are specific to `tty2pico`:
+Each build is also preconfigured to use an external SPI-based SD reader if one isn't built-in. See the relevant `env/[BoardName].ini` file for pin mapping via the `SDCARD_` defines.
 
-| Command | Function | Example |
-| ------- | -------- | ------- |
-| CMDGETSYS | Retrieve a pipe-separated system identifier string composed from the build flags with the `TTY2PICO_` prefix that can be used to remotely manage tty2pico options and updates, example output:<br><br>`version=1.0.0\|board=Raspberry Pi Pico\|display=GC9A01` | `CMDGETSYS` |
-| CMDGETTIME | Get the current real-time clock value in the specified format | `CMDGETTIME`<br>`CMDGETTIME,[format]`<br><br>Formats are:<br>0 = Unix timestamp (default if missing)<br>1 = Human readable |
-| CMDSHOW | Show an image from the active storage device | `CMDSHOW,/logos/pattern.loop.gif` |
-| CMDUSBMSC | Enable USB Mass Storage mode for the active filesystem, which makes tty2pico appear as a flash drive to MiSTer. | `CMDUSBMSC` |
+### Displays
+
+In theory tty2pico can support any SPI display controller the TFT_eSPI library supports, though each display requires some custom setup via `build_flags` and its own build in the PlatformIO environment. See the [Development](#development) section for more information.
+
+The development focus is on the round GC9A01 based display, though manual build configurations are available for the following displays:
+
+| Resolution | Tech | Module | Driver |
+| - | - | - | - |
+| 240x240 Round | IPS | [1.28inch LCD Module](https://www.waveshare.com/wiki/1.28inch_LCD_Module) | GC9A01 |
+| 320x172 | IPS | [1.47inch LCD Module](https://www.waveshare.com/wiki/1.47inch_LCD_Module) | ST7789V |
+| 160x128 | TFT | [1.8inch LCD Module](https://www.waveshare.com/wiki/1.8inch_LCD_Module) | ST7735 |
+| 128x128 | OLED | [1.5inch RGB OLED Module](https://www.waveshare.com/wiki/1.5inch_RGB_OLED_Module) | SSD1351 |
+
+All testing has been done against Waveshare branded displays, aside from the RoundyPi. These are common display modules and you can find the same display modules from other brands.
 
 ## Configuration
 
@@ -94,6 +92,43 @@ And a description of each available option (struckthrough items are not yet impl
 | ttyBaudRate | 9600, 14400, 19200, 38400, 57600, 115200, 128000, 256000, etc. | 115200 | The speed for serial communication. |
 | waitForSerial | true/false | false | Wait for serial connection before running the tty2pico program code. |
 
+## Command List
+
+tty2pico aims to be as compatible as needed/possible with the [tty2oled v2 Command List](https://github.com/venice1200/MiSTer_tty2oled/wiki/Command_v2), along with adding some custom commands.
+
+### tty2oled Commands
+
+These commands are adapted from `tty2oled` and should be (mostly) compatible:
+
+| Command | Function | Example |
+| ------- | -------- | ------- |
+| CMDBYE | Show Sorgelig's Cat Icon | `CMDBYE` |
+| CMDCLS | Clear and Update the Display | `CMDCLS` |
+| CMDCOR | Command to announce core change, will try to display in the following order:<br>`[corename].loop.gif`<br>`[corename].gif`<br>`[corename].png` | `CMDCOR,[corename]`<br>`[corename]`<br>e.g.<br>`SNES`<br>`CMDCOR,SNES`<br>`CMDCOR,19XX` |
+| CMDDOFF | Switch Display off | `CMDDOFF` |
+| CMDDON | Power Display on | `CMDDON` |
+| CMDENOTA | Reboots tty2pico device into bootloader mode to receive a firmware update | `CMDENOTA` |
+| CMDROT | Rotate screen relative to starting position (0=none, 1=180°, 2=90°, 3=270°) | `CMDROT,0` for no rotation<br>`CMDROT,1` to flip screen |
+| CMDSAVER | Disable or Enable the ScreenSaver (currently only toggle) | `CMDSAVER` |
+| CMDSETTIME | Set the time on the MCU RTC using a unix timestamp<br><br>Shell example: <br>`timeoffset=$(date +%:::z)`<br>`localtime=$(date '-d now '${timeoffset}' hour' +%s)`<br>`echo "CMDSETTIME,${localtime}" > /dev/ttyACM0` | `CMDSETTIME,[timestamp]`<br>`CMDSETTIME,1665971593` |
+| CMDSHTEMP | Alias to `CMDSHSYSHW` since that screen displays the CPU temp | `CMDSHTEMP` |
+| CMDSHSYSHW | Show tty2pico system information | `CMDSHSYSHW` |
+| CMDSNAM | Show actual loaded Corename | `CMDSNAM` |
+| CMDSORG | Show Startup screen, also an alias to `CMDSHSYSHW` | `CMDSORG` |
+| CMDSWSAVER | Switch screensaver on or off | `CMDSWSAVER,0` to disable<br>`CMDSWSAVER,1` to enable |
+| CMDTEST | Show system info and some test graphics | `CMDTEST` |
+| CMDTXT | Send text to the display | `CMDTXT,Can you see this?`<br>Not currently compatible with `tty2oled` command |
+
+### tty2pico Commands
+
+These commands are specific to `tty2pico`:
+
+| Command | Function | Example |
+| ------- | -------- | ------- |
+| CMDGETSYS | Retrieve a pipe-separated system identifier string composed from the build flags with the `TTY2PICO_` prefix that can be used to remotely manage tty2pico options and updates, example output:<br><br>`version=1.0.0\|board=Raspberry Pi Pico\|display=GC9A01` | `CMDGETSYS` |
+| CMDGETTIME | Get the current real-time clock value in the specified format | `CMDGETTIME`<br>`CMDGETTIME,[format]`<br><br>Formats are:<br>0 = Unix timestamp (default if missing)<br>1 = Human readable |
+| CMDSHOW | Show an image from the active storage device | `CMDSHOW,/logos/pattern.loop.gif` |
+
 ## Development
 
 The project is configured to use PlatformIO for development targeting the [Arduino-Pico](https://github.com/earlephilhower/arduino-pico) core.
@@ -115,35 +150,6 @@ All platform, framework and external library dependencies required to build will
 * bitbank2/PNGdec@1.0.1
 * bodmer/TFT_eSPI@2.4.78
 * gyverlibs/UnixTime@1.1
-
-### Boards
-
-Manual build configurations are available for the following RP2040 boards:
-
-| Board | Flash Size | SD Reader? | Display? | Remarks |
-| ----- | ---------- | ---------- | -------- | ------- |
-| Raspberry Pi Pico | 2 MB | No | No | The original |
-| Pico clones | 16 MB | No | No | e.g. Pimoroni Pico LiPo |
-| [RoundyPi](https://github.com/sbcshop/RoundyPi) | 2 MB | Yes | Round 1.28" 240x240 GC9A01 | Just add an (optional) SD card! |
-| Sparkfun Pro Micro RP2040 | 16 MB | No | No | Easily available and relatively cheap |
-| Sparkfun Thing Plus RP2040 | 16 MB | Yes | No | A bit expensive but allows a lot of flexibility |
-
-Each build is also preconfigured to use an external SPI-based SD reader if one isn't built-in. See the relevant `env/[BoardName].ini` file for pin mapping via the `SDCARD_` defines.
-
-### Displays
-
-In theory tty2pico can support any SPI display controller the TFT_eSPI library supports, though each display requires some custom setup via `build_flags` and its own build in the PlatformIO environment. See the [Development](#development) section for more information.
-
-The development focus is on the round GC9A01 based display, though manual build configurations are available for the following displays:
-
-| Resolution | Tech | Module | Driver |
-| - | - | - | - |
-| 240x240 Round | IPS | [1.28inch LCD Module](https://www.waveshare.com/wiki/1.28inch_LCD_Module) | GC9A01 |
-| 320x172 | IPS | [1.47inch LCD Module](https://www.waveshare.com/wiki/1.47inch_LCD_Module) | ST7789V |
-| 160x128 | TFT | [1.8inch LCD Module](https://www.waveshare.com/wiki/1.8inch_LCD_Module) | ST7735 |
-| 128x128 | OLED | [1.5inch RGB OLED Module](https://www.waveshare.com/wiki/1.5inch_RGB_OLED_Module) | SSD1351 |
-
-All testing has been done against Waveshare branded displays, aside from the RoundyPi. These are common display modules and you can find the same display modules from other brands.
 
 ## Roadmap
 
