@@ -90,6 +90,10 @@
 #define USE_DMA 0 // If defined will use the DMA mode with TFT_eSPI library for better performance on supported hardware
 #endif
 
+#ifndef USE_DMA_SD
+#define USE_DMA_SD 0 // If defined will use the DMA mode with SD card for better performance on supported hardware
+#endif
+
 /**************************
  * Computed configuration
  **************************/
