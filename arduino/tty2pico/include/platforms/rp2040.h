@@ -6,6 +6,7 @@
 #include "SPI.h"
 #include "api/HardwareSPI.h"
 #include "SpiDriver/SdSpiDriver.h"
+#include "hardware/dma.h"
 #include "hardware/rtc.h"
 #include "hardware/spi.h"
 #include "hardware/vreg.h"
@@ -237,13 +238,20 @@ inline void resumeBackground(void)
 }
 
 /*******************************************************************************
- * Custom SD SPI driver implementation - TODO: Add DMA support?
+ * Custom SD SPI driver implementation
  *******************************************************************************/
 
 static spi_inst_t *sdSpi;
 static spi_cpol_t sdCpol;
 static spi_cpha_t sdCpha;
 static spi_order_t sdBitOrder;
+
+#define SD_DMA_BUFFER_SIZE 16 // 16 seems optimal for the 8 bit bus in testing
+
+static int sdRxChannel;
+static int sdTxChannel;
+static uint8_t sdRxBuf[SD_DMA_BUFFER_SIZE];
+static uint8_t sdTxBuf[SD_DMA_BUFFER_SIZE];
 
 SdSpiDriverT2P::SdSpiDriverT2P()
 {
@@ -257,6 +265,7 @@ void SdSpiDriverT2P::activate()
 
 void SdSpiDriverT2P::begin(SdSpiConfig config)
 {
+	// SPI configuration
 	spi_deinit(sdSpi);
 
 	setSckSpeed(config.maxSck);
@@ -278,11 +287,48 @@ void SdSpiDriverT2P::begin(SdSpiConfig config)
 		gpio_set_function(SDCARD_CS_PIN, GPIO_FUNC_SPI);
 		gpio_pull_up(SDCARD_CS_PIN);
 	}
+
+#if USE_DMA_SD == 1
+	// DMA configuration - 2 channels (TX/RX)
+	sdRxChannel = dma_claim_unused_channel(true);
+	dma_channel_config rxConfig = dma_channel_get_default_config(sdRxChannel);
+	channel_config_set_transfer_data_size(&rxConfig, DMA_SIZE_8);
+	channel_config_set_dreq(&rxConfig, spi_get_dreq(sdSpi, false));
+	channel_config_set_read_increment(&rxConfig, false);
+	dma_channel_configure(
+		sdRxChannel,            // Channel to be configured
+		&rxConfig,              // The configuration we just created
+		sdRxBuf,                // The initial write address
+		&spi_get_hw(sdSpi)->dr, // The initial read address
+		SD_DMA_BUFFER_SIZE,     // Element count (each element is of size transfer_data_size)
+		false                   // Don't start immediately.
+	);
+
+	sdTxChannel = dma_claim_unused_channel(true);
+	dma_channel_config txConfig = dma_channel_get_default_config(sdTxChannel);
+	channel_config_set_transfer_data_size(&txConfig, DMA_SIZE_8);
+	channel_config_set_dreq(&txConfig, spi_get_dreq(sdSpi, true));
+	channel_config_set_write_increment(&txConfig, false);
+	dma_channel_configure(
+		sdTxChannel,            // Channel to be configured
+		&txConfig,              // The configuration we just created
+		&spi_get_hw(sdSpi)->dr, // The initial write address
+		sdTxBuf,                // The initial read address
+		SD_DMA_BUFFER_SIZE,     // Element count (each element is of size transfer_data_size)
+		false                   // Don't start immediately.
+	);
+
+	dma_start_channel_mask((1u << sdTxChannel) | (1u << sdRxChannel));
+	Serial.println("SD DMAs started");
+#endif
 }
 
 void SdSpiDriverT2P::deactivate()
 {
-	// SDCARD_SPI.endTransaction();
+#if USE_DMA_SD == 1
+	dma_channel_unclaim(sdRxChannel);
+	dma_channel_unclaim(sdTxChannel);
+#endif
 }
 
 uint8_t SdSpiDriverT2P::receive()
