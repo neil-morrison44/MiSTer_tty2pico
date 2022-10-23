@@ -34,7 +34,11 @@ def main():
 
 					boardOptions = list(set(boardSection.options) - set(displaySection.options))
 					displayOptions = list(set(displaySection.options) - set(boardSection.options))
-					commonOptions = set(boardSection.options).intersection(set(displaySection.options))
+					commonOptions = list(set(boardSection.options).intersection(set(displaySection.options)))
+
+					boardOptions.sort()
+					displayOptions.sort()
+					commonOptions.sort()
 
 					with open(path.join(envsDir, envName + fileExt), 'x') as envFile:
 						envFile.write('[env:' + envName + ']\n')
