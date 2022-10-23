@@ -59,21 +59,21 @@ All testing has been done against Waveshare branded displays, aside from the Rou
 tty2pico uses a config file in [TOML](https://toml.io/en/) format named `tty2pico.toml` at the root of your storage device for some options that can be adjusted at runtime. A sample `tty2pico.toml` file with all available options:
 
 ```toml
-title = "tty2pico Example Configuration"
+title = "tty2pico RoundyPi Configuration"
 
 [tty2pico]
 backgroundColor = 0
 tftWidth = 240
 tftHeight = 240
-tftRotation = 0
+tftRotation = 2
 overclockMode = 1
-overclockSD = false
+overclockSD = true
 waitForSerial = false
 imagePath = "/logos/"
-startupCommand = "CMDBYE"
+startupCommand = ""
 startupDelay = 5000
-startupImage = "/logos/pattern.loop.gif"
-slideshowDelay = 5000
+startupImage = ""
+slideshowDelay = 2000
 ttyBaudRate = 115200
 ```
 

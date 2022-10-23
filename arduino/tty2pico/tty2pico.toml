@@ -1,15 +1,16 @@
-title = "tty2pico Example Configuration"
+title = "tty2pico RoundyPi Configuration"
 
 [tty2pico]
 backgroundColor = 0
 tftWidth = 240
 tftHeight = 240
-tftRotation = 0
+tftRotation = 2
 overclockMode = 1
+overclockSD = true
 waitForSerial = false
 imagePath = "/logos/"
-startupCommand = "CMDBYE"
+startupCommand = ""
 startupDelay = 5000
-startupImage = "/logos/pattern.loop.gif"
-slideshowDelay = 5000
+startupImage = ""
+slideshowDelay = 2000
 ttyBaudRate = 115200
