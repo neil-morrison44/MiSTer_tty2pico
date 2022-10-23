@@ -240,12 +240,13 @@ static spi_cpol_t sdCpol;
 static spi_cpha_t sdCpha;
 static spi_order_t sdBitOrder;
 
-#define SD_DMA_BUFFER_SIZE 2048
-
+#if USE_DMA_SD == 1
+#define SD_DMA_BUFFER_SIZE 2048 // Each direction gets a 2k buffer
 static int sdRxChannel;
 static int sdTxChannel;
 static uint8_t sdRxBuf[SD_DMA_BUFFER_SIZE];
 static uint8_t sdTxBuf[SD_DMA_BUFFER_SIZE];
+#endif
 
 SdSpiDriverT2P::SdSpiDriverT2P()
 {

@@ -422,8 +422,8 @@ static void gifDrawLine(GIFDRAW *pDraw)
 	static uint16_t usTemp[1][TFT_DISPLAY_MAX];
 #endif
 
-	static int displayWidth = config.getDisplayWidth();
-	static int displayHeight = config.getDisplayHeight();
+	int displayWidth = config.getDisplayWidth();
+	int displayHeight = config.getDisplayHeight();
 
 	bool dmaBuf = 0;
 
@@ -679,9 +679,8 @@ static void showGIF(String path, bool loop = false)
 
 static void pngDrawLine(PNGDRAW *pDraw)
 {
-	uint16_t lineBuffer[config.getLineBufferSize()];
+	uint16_t lineBuffer[TFT_DISPLAY_MAX];
 	PNG *png = ((PNG *)pDraw->pUser);
-	bool hasAlpha = png->hasAlpha();
 	png->getLineAsRGB565(pDraw, lineBuffer, PNG_RGB565_BIG_ENDIAN, tft.color16to24(config.backgroundColor));
 	displayBuffer.pushImage(0, pDraw->y, pDraw->iWidth, 1, lineBuffer);
 }
