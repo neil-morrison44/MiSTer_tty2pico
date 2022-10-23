@@ -168,18 +168,15 @@ void setupPlatform(void)
 	rp2040.enableDoubleResetBootloader();
 
 	int cpuMHz = 0;
-	bool syncPClk = false;
 
 	switch (config.overclockMode)
 	{
 		case TTY2PICO_OverclockMode::OVERCLOCKED:
 			cpuMHz = 250;
-			syncPClk = true;
 			break;
 
 		case TTY2PICO_OverclockMode::LUDICROUS_SPEED:
 			cpuMHz = 266;
-			syncPClk = true;
 			break;
 	}
 
@@ -191,19 +188,16 @@ void setupPlatform(void)
 		vreg_set_voltage(VREG_VOLTAGE_1_20); // Set voltage to 1.2v
 		delay(10); // Allow vreg time to stabilize
 		set_sys_clock_khz(cpuMHz * 1000, true);
-		Serial.println("CPU overclocked to "); Serial.print(cpuMHz); Serial.println("MHz");
+		Serial.print("CPU overclocked to "); Serial.print(cpuMHz); Serial.println("MHz");
 	}
 
-	if (syncPClk)
-	{
-		// Sync peripheral clock to CPU clock to get a huge boost to SPI performance, mostly for SD transfers
-		uint32_t freq = clock_get_hz(clk_sys);
-		clock_configure(clk_peri, 0, CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS, freq, freq);
-		Serial.println("Peripheral bus overclock applied");
-	}
+	// Sync peripheral clock to CPU clock to get a huge boost to SPI performance
+	uint32_t freq = clock_get_hz(clk_sys);
+	clock_configure(clk_peri, 0, CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS, freq, freq);
+	Serial.println("Peripheral bus frequencies applied");
 
 	// Manually apply SPI frequencies so they're picked up and reported correctly, even if not overclocking
-	spi_set_baudrate(getSdSpi(), SPI_FULL_SPEED);
+	spi_set_baudrate(getSdSpi(), config.overclockSD ? SPI_FULL_SPEED : SD_SCK_MHZ(24));
 	spi_set_baudrate(getDisplaySpi(), SPI_FREQUENCY);
 	Serial.println("SPI baud rates set");
 
@@ -246,7 +240,7 @@ static spi_cpol_t sdCpol;
 static spi_cpha_t sdCpha;
 static spi_order_t sdBitOrder;
 
-#define SD_DMA_BUFFER_SIZE 16 // 16 seems optimal for the 8 bit bus in testing
+#define SD_DMA_BUFFER_SIZE 2048
 
 static int sdRxChannel;
 static int sdTxChannel;
