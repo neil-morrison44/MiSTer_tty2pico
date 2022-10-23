@@ -11,7 +11,7 @@ void setupTTY()
 {
 	TTY_SERIAL.begin(config.ttyBaudRate);
 	while (config.waitForSerial && !TTY_SERIAL)
-		delay(0);
+		delay(1);
 
 	TTY_SERIAL.println("Serial setup complete");
 }
@@ -22,7 +22,7 @@ String readTTY()
 
 	if (TTY_SERIAL.available())
 	{
-		yield();
+		delay(0);
 		command = TTY_SERIAL.readStringUntil('\n');
 		if (command.length() > 0)
 		{

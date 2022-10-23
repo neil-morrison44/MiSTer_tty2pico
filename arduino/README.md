@@ -93,6 +93,7 @@ And a description of each available option (struckthrough items are not yet impl
 | tftHeight | 0-320 | Display specific | Override the native height of the display in pixels. If your screen is natively portrait (like the ST7789V) this value should be larger than `tftWidth`. |
 | tftWidth | 0-320 | Display specific | Override the native width of the display in pixels. If your screen is natively portrait (like the ST7789V) this value should be smaller than `tftHeight`. |
 | ttyBaudRate | 9600, 14400, 19200, 38400, 57600, 115200, 128000, 256000, etc. | 115200 | The speed for serial communication. |
+| uncapFramerate | true/false | false | Allow animated GIFs to play without a framerate limit. |
 | waitForSerial | true/false | false | Wait for serial connection before running the tty2pico program code. |
 
 ## Command List

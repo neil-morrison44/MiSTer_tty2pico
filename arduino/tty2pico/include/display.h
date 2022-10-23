@@ -581,7 +581,7 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 	unsigned long frameStart = micros();
 #endif
 
-	while (gif->playFrame(true, NULL))
+	while (gif->playFrame(!config.uncapFramerate, NULL))
 	{
 #if defined(USE_GIF_BUFFERING)
 	#if USE_DMA == 1

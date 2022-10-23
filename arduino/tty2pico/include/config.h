@@ -157,6 +157,7 @@ struct TTY2PICO_Config
 	String slideshowFolder = LOGO_PATH;
 	int slideshowDelay = SLIDESHOW_DELAY;
 	uint32_t ttyBaudRate = TTY_BAUDRATE;
+	bool uncapFramerate = false;
 
 	int getDisplayHeight() const { return (tftRotation % 2) ? tftWidth : tftHeight; }
 	int getDisplayWidth() const { return (tftRotation % 2) ? tftHeight : tftWidth; }
@@ -237,6 +238,9 @@ const char *parseConfig(char *buffer)
 	auto [ttyBaudRateOK, ttyBaudRate] = tty2pico->getInt("ttyBaudRate");
 	if (ttyBaudRateOK) config.ttyBaudRate = (uint32_t)ttyBaudRate;
 
+	auto [uncapFramerateOK, uncapFramerate] = tty2pico->getBool("uncapFramerate");
+	if (uncapFramerateOK) config.uncapFramerate = uncapFramerate;
+
 	return nullptr;
 }
 
@@ -259,7 +263,8 @@ int exportConfig(char *buffer, int bufferSize)
 		"\nstartupImage = \"" + config.startupImage + "\"" +
 		"\nslideshowFolder = \"" + config.slideshowFolder + "\"" +
 		"\nslideshowDelay = " + String(config.slideshowDelay) +
-		"\nttyBaudRate = " + String(config.ttyBaudRate);
+		"\nttyBaudRate = " + String(config.ttyBaudRate) +
+		"\nuncapFramerate = " + String(config.uncapFramerate ? "true" : "false");
 
 	int size = (commandText.length() > bufferSize) ? bufferSize : commandText.length();
 	memcpy(buffer, commandText.c_str(), size);

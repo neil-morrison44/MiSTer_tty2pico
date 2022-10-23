@@ -43,6 +43,7 @@ void loop()
 	static uint32_t now;
 
 	now = millis();
+	loopDisplay(now);
 
 	if (millis() - nextRead > 0)
 	{
@@ -57,5 +58,5 @@ void loop()
 		}
 	}
 
-	loopDisplay(now);
+	delay(0);
 }
