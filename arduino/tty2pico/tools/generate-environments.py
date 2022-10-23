@@ -2,7 +2,7 @@
 
 from io import TextIOWrapper
 from operator import contains
-from os import path, remove, makedirs
+from os import path, remove, makedirs, rename
 from glob import glob
 from typing import List
 
@@ -29,6 +29,9 @@ def main():
 					displaySection = parsePIOSection(displayFile)
 
 					envName = boardName + '-' + displayName
+					if (envName == 'RoundyPi-GC9A01'):
+						envName = 'RoundyPi'
+
 					boardOptions = list(set(boardSection.options) - set(displaySection.options))
 					displayOptions = list(set(displaySection.options) - set(boardSection.options))
 					commonOptions = set(boardSection.options).intersection(set(displaySection.options))
@@ -49,6 +52,10 @@ def main():
 							envFile.write('\t${' + displaySection.name + '.' + commonOption + '}\n')
 							envFile.write('\t${' + boardSection.name + '.' + commonOption + '}\n')
 						envFile.write('upload_port = .pio/build/' + envName + '/\n')
+
+	# Remove any unneeded envs that were generated
+	for file in glob(path.join(envsDir, 'RoundyPi-*.ini')):
+		remove(file)
 
 
 def parsePIOSection(file: TextIOWrapper):
