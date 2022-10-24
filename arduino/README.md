@@ -91,6 +91,10 @@ PNG files should be saved in a non-interlaced RGB or RGBA pixel format, as they 
 
 Both static and animated GIF files are currently supported, minus transparency at the moment. The performance of GIF files found in the wild can vary greatly. You can try something like [Ezgif.com](https://ezgif.com/optimize) to resize and try optimization steps like using a single color table for all frames, reducing color depth or adjust frame counts and timings. Compression can work but doesn't always produce great results. The optimize transparency option can greatly reduce file size, but usually in a very destructive manner to the output. If running from an SD then file size shouldn't be too much of a concern, as the images are streamed from the SD card as they're animated.
 
+By default an animated GIF will only play once through the animation cycle targeting the intetended frame delay from the file. To force a GIF file to play on a continuous loop, add a `.loop` to the filename, like `sega.loop.gif`. To force a GIF file to play without a frame delay (no FPS limit), add a `.fast` to the filename, like `gba.fast.gif`.
+
+Both of these can be added to a file to make it playback at top speed on repeat: `sonic.loop.fast.gif`
+
 ### Configuration
 
 tty2pico uses an optional config file in [TOML](https://toml.io/en/) format named `tty2pico.toml` at the root of your storage device for some runtime options that can be adjusted. Using a config file is the only way to enable an overclock for maximum performance at this time. A sample `tty2pico.toml` file with all available options:

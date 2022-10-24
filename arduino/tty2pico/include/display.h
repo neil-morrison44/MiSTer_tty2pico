@@ -19,7 +19,9 @@ using namespace std;
 #define DISPLAY_TEXT_MARGIN 4
 
 const char *imageExtensions[] = {
+	".loop.fast.gif",
 	".loop.gif",
+	".fast.gif",
 	".gif",
 	".png",
 };
@@ -420,6 +422,18 @@ void showSystemInfo(uint32_t frameTime)
 /*******************************************************************************
  * GIF
  *******************************************************************************/
+
+struct GIFDisplayOptions
+{
+	bool loop;
+	bool uncap;
+};
+const GIFDisplayOptions GIF_ONCE      = { .loop = false, .uncap = false };
+const GIFDisplayOptions GIF_FAST      = { .loop = false, .uncap = true };
+const GIFDisplayOptions GIF_LOOP      = { .loop = true,  .uncap = false };
+const GIFDisplayOptions GIF_LOOP_FAST = { .loop = true,  .uncap = true };
+static GIFDisplayOptions currentGifOption;
+
 // From the examples in the https://github.com/bitbank2/AnimatedGIF repo
 // Draw a line of image directly on the LCD
 static void gifDrawLine(GIFDRAW *pDraw)
@@ -570,13 +584,13 @@ static void gifDrawLine(GIFDRAW *pDraw)
 	}
 }
 
-static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
+static inline void displayGIF(AnimatedGIF *gif, GIFDisplayOptions options)
 {
 	int displayWidth = config.getDisplayWidth();
 	int displayHeight = config.getDisplayHeight();
 	xoffset = (displayWidth - gif->getCanvasWidth()) / 2;
 	yoffset = (displayHeight - gif->getCanvasHeight()) / 2;
-	displayState = loop ? DISPLAY_ANIMATED_GIF_LOOPING : DISPLAY_ANIMATED_GIF;
+	displayState = options.loop ? DISPLAY_ANIMATED_GIF_LOOPING : DISPLAY_ANIMATED_GIF;
 
 #if defined(USE_GIF_BUFFERING)
 	uint16_t *pixelBuf = (uint16_t *)displayBuffer.createSprite(displayWidth, displayHeight);
@@ -592,7 +606,7 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 	unsigned long frameStart = micros();
 #endif
 
-	while (gif->playFrame(!config.uncapFramerate, NULL))
+	while (gif->playFrame(!(options.uncap || config.uncapFramerate), NULL))
 	{
 #if defined(USE_GIF_BUFFERING)
 	#if USE_DMA == 1
@@ -646,7 +660,7 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 #endif
 }
 
-static void showGIF(uint8_t *data, int size, bool loop = false)
+static void showGIF(uint8_t *data, int size, GIFDisplayOptions options)
 {
 	AnimatedGIF gif;
 	gif.begin(BIG_ENDIAN_PIXELS);
@@ -656,7 +670,7 @@ static void showGIF(uint8_t *data, int size, bool loop = false)
 #if VERBOSE_OUTPUT == 1
 	Serial.print("Opened streamed GIF with resolution "); Serial.print(gif.getCanvasWidth()); Serial.print(" x "); Serial.println(gif.getCanvasHeight());
 #endif
-		displayGIF(&gif, loop);
+		displayGIF(&gif, options);
 		gif.close();
 	}
 	else
@@ -665,7 +679,7 @@ static void showGIF(uint8_t *data, int size, bool loop = false)
 	}
 }
 
-static void showGIF(const char *path, bool loop = false)
+static void showGIF(const char *path, GIFDisplayOptions options)
 {
 	AnimatedGIF gif;
 	gif.begin(BIG_ENDIAN_PIXELS);
@@ -675,7 +689,7 @@ static void showGIF(const char *path, bool loop = false)
 #if VERBOSE_OUTPUT == 1
 	Serial.print("Opened GIF "); Serial.print(path); Serial.print(" with resolution "); Serial.print(gif.getCanvasWidth()); Serial.print(" x "); Serial.println(gif.getCanvasHeight());
 #endif
-		displayGIF(&gif, loop);
+		displayGIF(&gif, options);
 		gif.close();
 	}
 	else
@@ -684,9 +698,9 @@ static void showGIF(const char *path, bool loop = false)
 	}
 }
 
-static void showGIF(String path, bool loop = false)
+static void showGIF(String path, GIFDisplayOptions options)
 {
-	showGIF(path.c_str(), loop);
+	showGIF(path.c_str(), options);
 }
 
 /*******************************************************************************
@@ -801,12 +815,28 @@ void showImage(const char *path)
 		currentImage.trim();
 		currentImage.toLowerCase();
 
-		if (currentImage.endsWith(".loop.gif"))
-			showGIF(path, true);
-		else if (currentImage.endsWith(".gif"))
-			showGIF(path);
-		else if (currentImage.endsWith(".png"))
-			showPNG(path);
+		bool found = false;
+		for (int i = 0; i < imageExtensionCount; i++)
+		{
+			if (currentImage.endsWith(imageExtensions[i]))
+			{
+				currentGifOption.loop  = currentImage.indexOf(".loop") > -1;
+				currentGifOption.uncap = currentImage.indexOf(".fast") > -1;
+
+				Serial.println(currentImage.indexOf(".loop") > -1);
+				Serial.println(currentImage.indexOf(".fast") > -1);
+				found = true;
+				break;
+			}
+		}
+
+		if (found)
+		{
+			if (currentImage.endsWith(".gif"))
+				showGIF(path, currentGifOption);
+			else if (currentImage.endsWith(".png"))
+				showPNG(path);
+		}
 		else
 		{
 			currentImage = "";
@@ -823,7 +853,7 @@ void showImage(String path)
 
 void showMister(void)
 {
-	showGIF((uint8_t *)mister_kun_blink, sizeof(mister_kun_blink));
+	showGIF((uint8_t *)mister_kun_blink, sizeof(mister_kun_blink), GIF_LOOP);
 	displayState = DISPLAY_MISTER; // Explicitly set display state since the displayGIF() method set it
 }
 
@@ -890,11 +920,11 @@ void loopDisplay(uint32_t time)
 {
 	switch (displayState)
 	{
-		case DISPLAY_ANIMATED_GIF_LOOPING: showGIF(currentImage, true); break;
-		case DISPLAY_SLIDESHOW:            runSlideshow(time);          break;
-		case DISPLAY_SYSTEM_INFORMATION:   showSystemInfo(time);        break;
-		case DISPLAY_MISTER:               showMister();                break;
-		default:                                                        break;
+		case DISPLAY_ANIMATED_GIF_LOOPING: showGIF(currentImage, currentGifOption); break;
+		case DISPLAY_SLIDESHOW:            runSlideshow(time);                      break;
+		case DISPLAY_SYSTEM_INFORMATION:   showSystemInfo(time);                    break;
+		case DISPLAY_MISTER:               showMister();                            break;
+		default:                                                                    break;
 	}
 }
 
