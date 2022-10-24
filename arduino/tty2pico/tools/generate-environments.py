@@ -1,5 +1,31 @@
 #/usr/bin/env python3
 
+###############################################################################
+# generate-environments.py
+#   - Generates PlatformIO environment files from shared hardware defintions
+#
+# This script will look for hardware defintions (boards and displays), then
+# combine them to create environments for each combination of those defintions.
+# The results are output to the environment folder PlatformIO will use to
+# populate the environment list. All 3 of the base folders (boards, displays,
+# and env) should be configured as extra configs in the platformio.ini file,
+# e.g.:
+#
+# [platformio]
+# extra_configs =
+#   boards/*.ini
+#   displays/*.ini
+#   env/*.ini
+#
+# For hardware files:
+# * Only one section (part wrapped in []) can be defined per file
+# * The following lines will be ignored:
+#   * Comments
+#   * Lines beginning with spaces or tabs
+#   * Lines beginning with '-' (typically build flag details)
+#   * Lines without an equal sign
+###############################################################################
+
 from io import TextIOWrapper
 from operator import contains
 from os import path, remove, makedirs, rename

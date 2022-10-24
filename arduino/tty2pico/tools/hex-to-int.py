@@ -1,5 +1,14 @@
 #!/usr/bin/python
 
+###############################################################################
+# hex-to-int.py
+#   - Converts a hexadecimal value into an integer value
+#
+# Hex values can be with or without the '0x' prefix, e.g.:
+#   py hext-to-int.py 0xF37B
+#   py hext-to-int.py F37B
+###############################################################################
+
 import sys
 
 def main(argv):
