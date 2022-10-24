@@ -64,11 +64,6 @@ static void mscSDFlushCallback(void)
  * Lifecycle functions
  *******************************************************************************/
 
-bool getMscReady()
-{
-	return mscReady;
-}
-
 void beginUsbMsc()
 {
 	// Set disk vendor id, product id and revision with string up to 8, 16, 4 characters respectively
