@@ -51,7 +51,7 @@ To install:
 1. Hold the `BOOLSEL` (sometimes just labeled `BOOT`) button while plugging in your device. A new drive will appear on your computer with the name `RPI-RP2`.
 1. Copy the `.uf2` file to the `RPI-RP2` drive. This will upload the new firmware to the device.
 
-That's it! tty2pico should display a startup screen. If running from flash, tty2pico will try to mount an existing flash partition first. This will preservce your data between firmware updates. If no FAT partition is present on the flash parition, it will be automatically formatted and labeled `TTY2PICO` when mounted as a drive on a PC. If running from SD card then you should already be set.
+That's it! tty2pico should display a startup screen. If running from flash, tty2pico will try to mount an existing flash partition first. This will preserve your data between firmware updates. If no FAT partition is present on the flash parition, it will be automatically formatted and labeled `TTY2PICO` when mounted as a drive on a PC. If running from SD card then you should already be set.
 
 ### Hardware
 
@@ -122,7 +122,7 @@ uncapFramerate = false
 | ------ | --------- | ------------- | ----------- |
 | backgroundColor | 16-bit RGB565 color value in integer form | 0 (Black) | The default background color when using transparent images. You will need to find an RGB565 color value usually in hex format like [the TFT_eSPI color definitions](https://github.com/Bodmer/TFT_eSPI/blob/13e62a88d07ed6e29d15fe76b132a927ec29e307/TFT_eSPI.h#L282), then convert the hex value to an integer value using an online tool or the `tools/hex-to-int.py` Python script like `python hex-to-int.py FFFF` |
 | overclockMode | 0 = Stock speed<br>1 = Overclocked<br>2 = Overclocked+<br>255 = [Ludicrous Speed](https://youtu.be/oApAdwuqtn8) (max tested overclock for the platform) | 0 | Set to `1` to double the clock speed of the RP2040 from 125MHz to 250MHz. This will provide almost a 2x performance increase for display refreshes and will allow well optimized GIFs to display at 50fps. Without an overclock 30fps is likely max, and there's no guarantee there.<br><br>A setting of `2` will boost the overclock a bit more to 266MHz! Not a huge boost, but enough to be noticable for this application. Not every RP2040 will run at this setting, as the CPU voltage is still a bit conservative. This setting may not work or be stable on all boards like the RoundyPi 😢. If that's the case check out the next option.<br><br>For those that want to squeeze out every last drop of performance, the Ludicrious Speed setting of `255` will overclock the RP2040 to 266MHz and max out the CPU voltage for the best chance at maximum speed! This setting *does* work on a RoundyPi for max performance, however keep in mind it may degrade the life of the CPU. If you're worried about shortening the lifespan but still want maximum performance, then a passive heatsink or an indirect fan would do fine. |
-| overclockSD | true/false | false | Some SD readers will not work with an overclocked SPI rate, so the default value for this option is `false`. For SD readers that do work those on the RoundyPi and SparkFun Thing Plus RP2040, setting this option to `true` will allow for maximum supported speed.
+| overclockSD | true/false | false | Some SD readers will not work with an overclocked SPI rate, so the default value for this option is `false`. For SD readers that do with the higher SPI rate, like those on the RoundyPi and SparkFun Thing Plus RP2040, setting this option to `true` will allow for maximum supported speed.
 | slideshowDelay | 0+ | 2000 | The delay in milliseconds between switching images during the slideshow/screensaver. |
 | startupCommand | string | "" | The [tty2pico command](#command-list) to run at startup. |
 | startupDelay | 0+ | 5000 | The delay in milliseconds to show the startup screen |
@@ -130,7 +130,7 @@ uncapFramerate = false
 | tftHeight | 0-320 | Display specific | Override the predefined height of the display in pixels. If your screen is natively portrait (like the ST7789V) this value should be equal or larger than `tftWidth`. |
 | tftWidth | 0-320 | Display specific | Override the predefined width of the display in pixels. If your screen is natively portrait (like the ST7789V) this value should be equal or smaller than `tftHeight`. |
 | tftRotation | 0 = none<br>1 = 90°<br>2 = 180°<br>3 = 270° | Display specific | Override the default startup rotation of the display. NOT the same values as `CMDROT`. |
-| uncapFramerate | true/false | false | Allow animated GIFs to play without a framerate limit. |
+| uncapFramerate | true/false | false | Force animated GIFs to play without a framerate limit. |
 
 ## Development
 
@@ -170,7 +170,7 @@ Each build is also preconfigured to use an external SPI-based SD reader if one i
 
 #### Displays
 
-In theory tty2pico can support any SPI display controller the TFT_eSPI library supports, though each display requires some custom setup via `build_flags` and its own build in the PlatformIO environment. See the [Development](#development) section for more information.
+In theory tty2pico can support any SPI display controller the TFT_eSPI library supports, though each display requires some custom setup via `build_flags` and its own build in the PlatformIO environment. See the [PlatformIO Configuration](#platformio-configuration) section for more information.
 
 The development focus is on the round GC9A01 based display, though manual build configurations are available for the following displays:
 
@@ -182,7 +182,7 @@ The development focus is on the round GC9A01 based display, though manual build 
 | 160x128 | TFT | [1.8inch LCD Module](https://www.waveshare.com/wiki/1.8inch_LCD_Module) | ST7735 |
 | 128x128 | OLED | [1.5inch RGB OLED Module](https://www.waveshare.com/wiki/1.5inch_RGB_OLED_Module) | SSD1351 |
 
-All testing has been done against Waveshare branded displays, aside from the RoundyPi. These are common display modules and you can find the same display modules from other brands.
+All testing has been done against Waveshare branded displays, aside from the RoundyPi. These are common display modules and you can be found from other manufacturers quite easily.
 
 ## Command List
 
@@ -196,7 +196,7 @@ These commands are adapted from `tty2oled` and should be (mostly) compatible:
 | ------- | -------- | ------- |
 | CMDBYE | Show Sorgelig's Cat Icon | `CMDBYE` |
 | CMDCLS | Clear and Update the Display | `CMDCLS` |
-| CMDCOR | Command to announce core change, will try to display in the following order:<br>`[corename].loop.gif`<br>`[corename].gif`<br>`[corename].png` | `CMDCOR,[corename]`<br>`[corename]`<br>e.g.<br>`SNES`<br>`CMDCOR,SNES`<br>`CMDCOR,19XX` |
+| CMDCOR | Command to announce core change, will try to display in the following order:<br>`[corename].loop.fast.gif`<br>`[corename].loop.gif`<br>`[corename].fast.gif`<br>`[corename].gif`<br>`[corename].png` | `CMDCOR,[corename]`<br>`[corename]`<br>e.g.<br>`SNES`<br>`CMDCOR,SNES`<br>`CMDCOR,19XX` |
 | CMDDOFF | Switch Display off | `CMDDOFF` |
 | CMDDON | Power Display on | `CMDDON` |
 | CMDENOTA | Reboots tty2pico device into bootloader mode to receive a firmware update | `CMDENOTA` |
@@ -228,7 +228,7 @@ These commands are specific to `tty2pico`:
 * [ ] Implement support for whatever commands make sense from:
   * [tty2oled](https://github.com/venice1200/MiSTer_tty2oled/wiki/Command_v2)
     * [ ] CMDGEO - Show Geometric Figures (maybe?)
-* [ ] Add JPEG support
+* ~~[ ] Add JPEG support~~
 * [ ] Multicore support (one for logic, the other for draw calls)
 * [ ] Add support for other fast chips like ESP32 and ESP32-S3
 * [ ] Create variant of existing GC9A01 holder for the RoundyPi
