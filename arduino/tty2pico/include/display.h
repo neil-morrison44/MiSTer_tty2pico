@@ -822,9 +822,6 @@ void showImage(const char *path)
 			{
 				currentGifOption.loop  = currentImage.indexOf(".loop") > -1;
 				currentGifOption.uncap = currentImage.indexOf(".fast") > -1;
-
-				Serial.println(currentImage.indexOf(".loop") > -1);
-				Serial.println(currentImage.indexOf(".fast") > -1);
 				found = true;
 				break;
 			}
