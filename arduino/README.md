@@ -3,7 +3,7 @@
 A full colour version of [tty2oled](https://github.com/venice1200/MiSTer_tty2oled) display addon for the [MiSTer FPGA](https://github.com/MiSTer-devel) and features:
 
 * Targets compatiblity with the [tty2oled Command List](https://github.com/venice1200/MiSTer_tty2oled/wiki/Command_v2)
-* Supports PNG, static GIF, and animated GIF files at up to 50fps!
+* Displays PNG, static GIF, and animated GIF files at up to 50fps!
 * Can display files from built-in flash or microSD card if available
 * Support for SPI displays up to 320x240 resolution (may require manual build)
 * Appears as USB Mass Storage device so you can easily load new files
@@ -17,12 +17,6 @@ Each RP2040 board and display combination requires its own build since a lot of 
 * Optional SPI microSD reader
 
 The [RoundyPi](https://github.com/sbcshop/RoundyPi) module combines all three pieces of hardware on a single board, and is the recommended hardware to get started.
-
-### MicroSD Cards
-
-tty2pico supports loading files from a SPI-based microSD card reader. Cards up to 128GB have been tested to work, though larger likely will as well. The recommended and supported file system format for SD is exFAT. This will allow near instant loading of the tty2pico device as USB Mass Storage, which then allows the rest of the tty2pico application to run smoothly.
-
-Using FAT32 from microSD does work, however it's not a supported format. The cluster size must be very large when formatting the card to ensure as little delay as possible when processing the 10's of thousands of SD reads it takes to mount a FAT volume, which our powerful but still limited MCU will struggle with. An 8GB card was test by formatting as FAT32 with 32k cluster size and it worked "OK", as in took several seconds to show as a drive on the computer but overall worked fine. While this may work, there honestly is no reason not to use exFAT for this application.
 
 ### Boards
 
@@ -54,6 +48,18 @@ The development focus is on the round GC9A01 based display, though manual build 
 
 All testing has been done against Waveshare branded displays, aside from the RoundyPi. These are common display modules and you can find the same display modules from other brands.
 
+### MicroSD Readers
+
+tty2pico supported level-shifting SD readers via a SPI interface. The integrated SD readers of the RoundyPi and the SparkFun Thing Plus RP2040 have been tested to work with the `overclockSD` option which runs the SD SPI bus a little over 40MHz. These will give you optimal performance, even faster than running from the flash partition!
+
+There are also external SD readers that can be connected, however the SPI rate for these will vary. The boards from Adafruit and SparkFun usually support the higher 40MHz speed, however some cheap SD readers on Amazon and AliExpress will only support a lower rate of 24MHz and will require the `overclockSD` option to be set to `false`. While not optimal for speed, they still work great for displaying galleries of larger images that couldn't be stored on the flash file system.
+
+### MicroSD Cards
+
+microSD cards up to 128GB have been tested to work, though larger likely will as well. The recommended and supported file system format for SD is exFAT. This will allow near instant loading of the tty2pico device as USB Mass Storage, which then allows the rest of the tty2pico application to run smoothly.
+
+Using FAT32 from microSD does work, however it's not a supported format. The cluster size must be very large when formatting the card to ensure as little delay as possible when processing the 10's of thousands of SD reads it takes to mount a FAT volume, which our powerful but still limited MCU will struggle with. An 8GB card was test by formatting as FAT32 with 32k cluster size and it worked "OK", as in took several seconds to show as a drive on the computer but overall worked fine.
+
 ## Configuration
 
 tty2pico uses a config file in [TOML](https://toml.io/en/) format named `tty2pico.toml` at the root of your storage device for some options that can be adjusted at runtime. A sample `tty2pico.toml` file with all available options:
@@ -68,13 +74,10 @@ tftHeight = 240
 tftRotation = 2
 overclockMode = 1
 overclockSD = true
-waitForSerial = false
-imagePath = "/logos/"
 startupCommand = ""
 startupDelay = 5000
 startupImage = ""
 slideshowDelay = 2000
-ttyBaudRate = 115200
 ```
 
 And a description of each available option (struckthrough items are not yet implemented):
@@ -136,7 +139,7 @@ The project is configured to use PlatformIO for development targeting the [Ardui
 
 ### PlatformIO Configuration
 
-A PlatformIO build environment is defined for each supported board. The main `platformio.ini` file defines the shared build parameters for each enviroment and imports the environment config for each board from the `env/` folder. The `displays/` folder contains configurations for each supported display, and are also imported through the `platformio.ini` file. The shared configurations are then composed into build environments that are defined in each board's `env/[BoardName].ini` file.
+A PlatformIO build environment is defined for each supported board. The main `platformio.ini` file defines the base build parameters and imports shared configurations for each board from the `boards/` folder. The `displays/` folder contains configurations for each supported display, and are also imported through the `platformio.ini` file. The shared configurations are then composed into build environments that are defined in each board's `env/[Board]-[Display].ini` file, which are automatically generated when running the `tools/generate-environments.py` script.
 
 If you would like to add a build for a board/display that isn't supported, copy one of the existing display or env files, rename, then update accordingly.
 
