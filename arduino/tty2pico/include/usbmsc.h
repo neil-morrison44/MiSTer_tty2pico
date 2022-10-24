@@ -7,7 +7,6 @@
 #include "display.h"
 
 static Adafruit_USBD_MSC msc;
-static bool mscReady;
 
 /*******************************************************************************
  * Flash MSC Callbacks
@@ -15,15 +14,13 @@ static bool mscReady;
 
 static int32_t mscFlashReadCallback(uint32_t lba, void* buffer, uint32_t bufsize)
 {
-	int32_t result = flash.readSectors(lba, (uint8_t*) buffer, bufsize / FS_BLOCK_SIZE) ? bufsize : -1;
-	return result;
+	return flash.readSectors(lba, (uint8_t*) buffer, bufsize / FS_BLOCK_SIZE) ? bufsize : -1;
 }
 
 static int32_t mscFlashWriteCallback(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
 {
 	digitalWrite(LED_BUILTIN, HIGH);
-	int32_t result = flash.writeSectors(lba, buffer, bufsize / FS_BLOCK_SIZE) ? bufsize : -1;
-	return result;
+	return flash.writeSectors(lba, buffer, bufsize / FS_BLOCK_SIZE) ? bufsize : -1;
 }
 
 static void mscFlashFlushCallback(void)
@@ -88,6 +85,8 @@ void beginUsbMsc()
 
 void readyUsbMsc()
 {
+	static bool mscReady;
+
 	if (mscReady)
 		return;
 

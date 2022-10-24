@@ -116,12 +116,18 @@ const char *getTime(int format)
 float getSpiRateDisplayMHz()
 {
 	uint rate = spi_get_baudrate(getDisplaySpi());
+	if (rate == UINT_MAX)
+		rate = 0;
+
 	return rate / 1000000.0f;
 }
 
 float getSpiRateSdMHz()
 {
 	uint rate = spi_get_baudrate(getSdSpi());
+	if (rate == UINT_MAX)
+		rate = 0;
+
 	return rate / 1000000.0f;
 }
 
@@ -185,9 +191,14 @@ void setupPlatform(void)
 		// Apply an overclock for about 2x performance and a voltage tweak to stablize most RP2040 boards.
 		// If it's good enough for pixel-pushing in MicroPython, it's good enough for us :P
 		// https://github.com/micropython/micropython/issues/8208
-		vreg_set_voltage(VREG_VOLTAGE_1_20); // Set voltage to 1.2v
-		delay(10); // Allow vreg time to stabilize
-		set_sys_clock_khz(cpuMHz * 1000, true);
+		vreg_set_voltage(VREG_VOLTAGE_1_20);
+		delay(250); // Allow vreg time to stabilize
+		if (!set_sys_clock_khz(cpuMHz * 1000, false))
+		{
+			Serial.println("Couldn't overclock CPU, halting...");
+			while (1) delay(1);
+		}
+
 		Serial.print("CPU overclocked to "); Serial.print(cpuMHz); Serial.println("MHz");
 	}
 
@@ -196,9 +207,8 @@ void setupPlatform(void)
 	clock_configure(clk_peri, 0, CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS, freq, freq);
 	Serial.println("Peripheral bus frequencies applied");
 
-	// Manually apply SPI frequencies so they're picked up and reported correctly, even if not overclocking
-	spi_set_baudrate(getSdSpi(), config.overclockSD ? SPI_FULL_SPEED : SD_SCK_MHZ(24));
-	spi_set_baudrate(getDisplaySpi(), SPI_FREQUENCY);
+	// SD can be sensitive to overclock so try to
+	spi_set_baudrate(getSdSpi(), config.overclockSD ? SPI_FULL_SPEED : SD_SCK_MHZ(27));
 	Serial.println("SPI baud rates set");
 
 	Serial.println("Platform setup complete");

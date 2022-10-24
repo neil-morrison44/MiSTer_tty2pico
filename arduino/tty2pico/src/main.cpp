@@ -43,12 +43,11 @@ void loop()
 	static uint32_t now;
 
 	now = millis();
-	loopDisplay(now);
 
-	if (millis() - nextRead > 0)
+	if (now - nextRead > 0)
 	{
 		command = readTTY();
-		nextRead = millis() + POLLING_LOOP_DELAY; // Delay the next read for better performance
+		nextRead = now + POLLING_LOOP_DELAY; // Delay the next read for better performance
 
 		if (command != "")
 		{
@@ -58,5 +57,6 @@ void loop()
 		}
 	}
 
-	delay(0);
+	loopDisplay(now);
+	delay(0); // Delay of 0 here give slightly smoother/better performance
 }

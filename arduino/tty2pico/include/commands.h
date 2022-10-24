@@ -210,15 +210,6 @@ static void cmdUnknown(String command)
 	showText(command);
 }
 
-static void cmdUsbMsc()
-{
-	if (!getMscReady())
-	{
-		showText("USB MSC mode enabled");
-		readyUsbMsc();
-	}
-}
-
 void runCommand(CommandData data)
 {
 	switch (data.command)
@@ -243,7 +234,6 @@ void runCommand(CommandData data)
 		case TTY2CMD_TEST:    return cmdTest();
 		case TTY2CMD_TXT:     return cmdText(data.commandText);
 		case TTY2CMD_UNKNOWN: return cmdUnknown(data.commandText);
-		case TTY2CMD_USBMSC:  return cmdUsbMsc();
 		case TTY2CMD_NONE:    return;
 
 		// If you get here you're missing an enum definition ^^^

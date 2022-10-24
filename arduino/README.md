@@ -82,7 +82,6 @@ And a description of each available option (struckthrough items are not yet impl
 | Option | Valid Values | Default Value | Description |
 | ------ | --------- | ------------- | ----------- |
 | backgroundColor | 16-bit RGB565 color value in integer form | 0 (Black) | The default background color when using transparent images. You will need to find an RGB565 color value usually in hex format like [the TFT_eSPI color definitions](https://github.com/Bodmer/TFT_eSPI/blob/13e62a88d07ed6e29d15fe76b132a927ec29e307/TFT_eSPI.h#L282), then convert the hex value to an integer value using an online tool or the `tools/hex-to-int.py` Python script like `python hex-to-int.py FFFF` |
-| imagePath | string | "/logos/" | The default directory to search for images when a core is requested. |
 | overclockMode | 0 = Stock speed<br>1 = Basic Overclock<br>255 = [Ludicrous Speed](https://youtu.be/oApAdwuqtn8) (max tested overclock for the platform) | 0 | Set to `1` to double the clock speed of the RP2040 from 125MHz to 250MHz. This will provide almost a 2x performance increase for display refreshes and will allow well optimized GIFs to display at 50fps. Without an overclock 30fps is likely max, and there's no guarantee there.<br><br>For those that want to squeeze out every last drop of performance, the Ludicrious Speed setting will overclock the RP2040 to 266MHz! This works on a lot of boards, but sadly not the RoundyPi 😢<br><br>Just about every RP2040 board should be able to handle the basic overclock, and the RP2040 should not need any additional cooling, though keep it in mind if mounting your device inside an enclosure. |
 | overclockSD | true/false | false | Some SD readers will not work with an overclocked SPI rate. Setting this option to false will throttle the SD SPI rate for better compatiblity.
 | slideshowDelay | 0+ | 2000 | The delay in milliseconds between switching images during the slideshow/screensaver. |
@@ -92,9 +91,7 @@ And a description of each available option (struckthrough items are not yet impl
 | tftRotation | 0 = none<br>1 = 90°<br>2 = 180°<br>3 = 270° | Display specific | Override the default startup rotation of the display. NOT the same values as `CMDROT`. |
 | tftHeight | 0-320 | Display specific | Override the native height of the display in pixels. If your screen is natively portrait (like the ST7789V) this value should be larger than `tftWidth`. |
 | tftWidth | 0-320 | Display specific | Override the native width of the display in pixels. If your screen is natively portrait (like the ST7789V) this value should be smaller than `tftHeight`. |
-| ttyBaudRate | 9600, 14400, 19200, 38400, 57600, 115200, 128000, 256000, etc. | 115200 | The speed for serial communication. |
 | uncapFramerate | true/false | false | Allow animated GIFs to play without a framerate limit. |
-| waitForSerial | true/false | false | Wait for serial connection before running the tty2pico program code. |
 
 ## Command List
 

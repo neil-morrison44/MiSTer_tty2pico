@@ -36,7 +36,6 @@ const String CMDTXT     = "CMDTXT";
 const String CMDGETSYS  = "CMDGETSYS";
 const String CMDGETTIME = "CMDGETTIME";
 const String CMDSHOW    = "CMDSHOW";
-const String CMDUSBMSC  = "CMDUSBMSC";
 
 typedef enum TTY2CMD {
 	TTY2CMD_NONE = 0,
@@ -94,7 +93,6 @@ struct CommandData
 			else if (bigcmd.startsWith(CMDSWSAVER))                              return CommandData(TTY2CMD_SWSAVER, command);
 			else if (bigcmd.startsWith(CMDTEST))                                 return CommandData(TTY2CMD_TEST, command);
 			else if (bigcmd.startsWith(CMDTXT))                                  return CommandData(TTY2CMD_TXT, command);
-			else if (bigcmd.startsWith(CMDUSBMSC))                               return CommandData(TTY2CMD_USBMSC, command);
 			else if (bigcmd.startsWith("CMD") && !bigcmd.startsWith(CMDCORE))    return CommandData(TTY2CMD_UNKNOWN, command);
 			else    /* Assume core name if no command was matched */             return CommandData(TTY2CMD_COR, command);
 		}

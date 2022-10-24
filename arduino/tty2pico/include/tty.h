@@ -9,8 +9,8 @@
 
 void setupTTY()
 {
-	TTY_SERIAL.begin(config.ttyBaudRate);
-	while (config.waitForSerial && !TTY_SERIAL)
+	TTY_SERIAL.begin(115200);
+	while (WAIT_FOR_SERIAL && !TTY_SERIAL)
 		delay(1);
 
 	TTY_SERIAL.println("Serial setup complete");

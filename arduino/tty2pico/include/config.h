@@ -21,13 +21,13 @@
 #define VERBOSE_OUTPUT 0 // Log a lot of stuff to the serial output, only useful for debugging
 #endif
 
+#ifndef WAIT_FOR_SERIAL
+#define WAIT_FOR_SERIAL 0 // Wait for serial connection before running program code
+#endif
+
 /**************************
  * Software configuration
  **************************/
-
-#ifndef TTY_BAUDRATE
-#define TTY_BAUDRATE 115200 // Set the baud rate of the serial connection
-#endif
 
 #ifndef LOGO_PATH
 #define LOGO_PATH "/logos/" // Path to logo folder
@@ -67,15 +67,11 @@
 // SILVER      0xC618      /* 192, 192, 192 */
 // SKYBLUE     0x867D      /* 135, 206, 235 */
 // VIOLET      0x915C      /* 180,  46, 226 */
-#define BACKGROUND_COLOR 0x7BEF // The default background color
+#define BACKGROUND_COLOR 0x0000 // The default background color
 #endif
 
 #ifndef SLIDESHOW_DELAY
 #define SLIDESHOW_DELAY 2000 // The time between slideshow changes
-#endif
-
-#ifndef WAIT_FOR_SERIAL
-#define WAIT_FOR_SERIAL 0 // Wait for serial connection before running program code
 #endif
 
 #ifndef TFT_ROTATION
@@ -149,14 +145,12 @@ struct TTY2PICO_Config
 	bool disableSD = false;
 	uint8_t overclockMode = 0;
 	bool overclockSD = false;
-	bool waitForSerial = WAIT_FOR_SERIAL;
 	String imagePath = LOGO_PATH;
 	String startupCommand = "";
 	uint16_t startupDelay = STARTUP_DELAY;
 	String startupImage = STARTUP_LOGO;
 	String slideshowFolder = LOGO_PATH;
 	int slideshowDelay = SLIDESHOW_DELAY;
-	uint32_t ttyBaudRate = TTY_BAUDRATE;
 	bool uncapFramerate = false;
 
 	int getDisplayHeight() const { return (tftRotation % 2) ? tftWidth : tftHeight; }
@@ -214,9 +208,6 @@ const char *parseConfig(char *buffer)
 	auto [overclockSDOK, overclockSD] = tty2pico->getBool("overclockSD");
 	if (overclockSDOK) config.overclockSD = overclockSD;
 
-	auto [waitForSerialOK, waitForSerial] = tty2pico->getBool("waitForSerial");
-	if (waitForSerialOK) config.waitForSerial = waitForSerial;
-
 	auto [imagePathOK, imagePath] = tty2pico->getString("imagePath");
 	if (imagePathOK) config.imagePath = imagePath.c_str();
 
@@ -234,9 +225,6 @@ const char *parseConfig(char *buffer)
 
 	auto [slideshowDelayOK, slideshowDelay] = tty2pico->getInt("slideshowDelay");
 	if (slideshowDelayOK) config.slideshowDelay = (uint32_t)slideshowDelay;
-
-	auto [ttyBaudRateOK, ttyBaudRate] = tty2pico->getInt("ttyBaudRate");
-	if (ttyBaudRateOK) config.ttyBaudRate = (uint32_t)ttyBaudRate;
 
 	auto [uncapFramerateOK, uncapFramerate] = tty2pico->getBool("uncapFramerate");
 	if (uncapFramerateOK) config.uncapFramerate = uncapFramerate;
@@ -256,14 +244,12 @@ int exportConfig(char *buffer, int bufferSize)
 		"\ndisableSD = " + String(config.disableSD ? "true" : "false") +
 		"\noverclockMode = " + String(config.overclockMode) +
 		"\noverclockSD = " + String(config.overclockSD ? "true" : "false") +
-		"\nwaitForSerial = " + String(config.waitForSerial ? "true" : "false") +
 		"\nimagePath = \"" + config.imagePath + "\"" +
 		"\nstartupCommand = \"" + config.startupCommand + "\"" +
 		"\nstartupDelay = \"" + config.startupDelay + "\"" +
 		"\nstartupImage = \"" + config.startupImage + "\"" +
 		"\nslideshowFolder = \"" + config.slideshowFolder + "\"" +
 		"\nslideshowDelay = " + String(config.slideshowDelay) +
-		"\nttyBaudRate = " + String(config.ttyBaudRate) +
 		"\nuncapFramerate = " + String(config.uncapFramerate ? "true" : "false");
 
 	int size = (commandText.length() > bufferSize) ? bufferSize : commandText.length();
