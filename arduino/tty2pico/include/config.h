@@ -170,6 +170,7 @@ typedef enum TTY2PICO_OverclockMode
 {
 	STOCK = 0,
 	OVERCLOCKED = 1,
+	OVERCLOCKED_PLUS = 2,
 	LUDICROUS_SPEED = 255,
 } TTY2PICO_OverclockMode;
 

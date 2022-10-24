@@ -174,15 +174,23 @@ void setupPlatform(void)
 	rp2040.enableDoubleResetBootloader();
 
 	int cpuMHz = 0;
+	vreg_voltage voltage = VREG_VOLTAGE_DEFAULT;
 
 	switch (config.overclockMode)
 	{
 		case TTY2PICO_OverclockMode::OVERCLOCKED:
 			cpuMHz = 250;
+			voltage = VREG_VOLTAGE_1_20;
+			break;
+
+		case TTY2PICO_OverclockMode::OVERCLOCKED_PLUS:
+			cpuMHz = 266;
+			voltage = VREG_VOLTAGE_1_20;
 			break;
 
 		case TTY2PICO_OverclockMode::LUDICROUS_SPEED:
 			cpuMHz = 266;
+			voltage = VREG_VOLTAGE_MAX;
 			break;
 	}
 
@@ -191,7 +199,7 @@ void setupPlatform(void)
 		// Apply an overclock for about 2x performance and a voltage tweak to stablize most RP2040 boards.
 		// If it's good enough for pixel-pushing in MicroPython, it's good enough for us :P
 		// https://github.com/micropython/micropython/issues/8208
-		vreg_set_voltage(VREG_VOLTAGE_1_20);
+		vreg_set_voltage(voltage);
 		delay(250); // Allow vreg time to stabilize
 		if (!set_sys_clock_khz(cpuMHz * 1000, false))
 		{
