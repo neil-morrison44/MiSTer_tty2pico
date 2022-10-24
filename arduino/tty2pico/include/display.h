@@ -116,6 +116,7 @@ void drawDemoShapes(int durationMS)
 		displayBuffer.fillTriangle(frame, frame - triangleSize, frame - triangleSize, frame + triangleSize, frame + triangleSize, frame + triangleSize, TFT_BLUE);
 		displayBuffer.fillEllipse(displayWidth - frame, displayWidth - frame, ellipseRadiusX, ellipseRadiusY, TFT_YELLOW);
 #if USE_DMA == 1
+		tft.dmaWait();
 		tft.pushImageDMA(0, 0, displayWidth, displayHeight, pixelBuf);
 #else
 		displayBuffer.pushSprite(0, 0);
@@ -155,6 +156,7 @@ void overlayText(String text, TFT_eSPI *parent)
 	overlay.setTextFont(font);
 	overlay.drawString(text, DISPLAY_TEXT_MARGIN, DISPLAY_TEXT_MARGIN, font);
 #if USE_DMA == 1
+	tft.dmaWait();
 	tft.pushImageDMA((config.getDisplayWidth() - width) / 2, (config.getDisplayHeight() - height) / 2, width, height, pixelBuf);
 #else
 	overlay.pushSprite((config.getDisplayWidth() - width) / 2, (config.getDisplayHeight() - height) / 2);
@@ -223,6 +225,7 @@ void showText(String lines[], int lineCount, uint8_t font, uint16_t textColor = 
 		displayBuffer.drawCentreString(lines[i], midpointX, yStart + (i * lineHeight), font);
 
 #if USE_DMA == 1
+	tft.dmaWait();
 	tft.pushImageDMA(0, 0, config.getDisplayWidth(), config.getDisplayHeight(), pixelBuf);
 #else
 	displayBuffer.pushSprite(0, 0);
@@ -362,6 +365,7 @@ void showHeaderedText(String lines[], int lineCount)
 	}
 
 #if USE_DMA == 1
+	tft.dmaWait();
 	tft.pushImageDMA(0, 0, config.getDisplayWidth(), config.getDisplayHeight(), pixelBuf);
 #else
 	displayBuffer.pushSprite(0, 0);
@@ -486,6 +490,7 @@ static void gifDrawLine(GIFDRAW *pDraw)
 				displayBuffer.pushImage(pDraw->iX + x + xoffset, y + yoffset, iCount, 1, &usTemp[dmaBuf][0]);
 #elif USE_DMA == 1
 				tft.setAddrWindow(pDraw->iX + x + xoffset, y + yoffset, iCount, 1);
+				tft.dmaWait();
 				tft.pushPixelsDMA(&usTemp[dmaBuf][0], iCount);
 #else
 				tft.setAddrWindow(pDraw->iX + x + xoffset, y + yoffset, iCount, 1);
@@ -528,6 +533,7 @@ static void gifDrawLine(GIFDRAW *pDraw)
 #if defined(USE_GIF_BUFFERING)
 		displayBuffer.pushImage(pDraw->iX + xoffset, y + yoffset, iWidth, 1, &usTemp[dmaBuf][0]);
 #elif USE_DMA == 1
+		tft.dmaWait();
 		tft.pushPixelsDMA(&usTemp[dmaBuf][0], iCount);
 #else
 		tft.pushPixels(&usTemp[dmaBuf][0], iCount);
@@ -550,6 +556,7 @@ static void gifDrawLine(GIFDRAW *pDraw)
 #if defined(USE_GIF_BUFFERING)
 			displayBuffer.pushImage(pDraw->iX + xoffset, y + yoffset, iWidth, 1, &usTemp[dmaBuf][0]);
 #elif USE_DMA == 1
+			tft.dmaWait();
 			tft.pushPixelsDMA(&usTemp[dmaBuf][0], iCount);
 #else
 			tft.pushPixels(&usTemp[dmaBuf][0], iCount);
@@ -589,6 +596,7 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 	{
 #if defined(USE_GIF_BUFFERING)
 	#if USE_DMA == 1
+		tft.dmaWait();
 		tft.pushPixelsDMA(pixelBuf, pixelBufCount);
 	#else
 		displayBuffer.pushSprite(0, 0);
@@ -613,6 +621,7 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 	{
 #if defined(USE_GIF_BUFFERING)
 	#if USE_DMA == 1
+		tft.dmaWait();
 		tft.pushPixelsDMA(pixelBuf, pixelBufCount);
 	#else
 		displayBuffer.pushSprite(0, 0);
@@ -627,6 +636,9 @@ static inline void displayGIF(AnimatedGIF *gif, bool loop = false)
 	}
 
 #if defined(USE_GIF_BUFFERING)
+	#if USE_DMA == 1
+	tft.dmaWait(); // Need to let DMA buffer clear before the sprite is deleted
+	#endif
 	displayBuffer.deleteSprite();
 #endif
 #if VERBOSE_OUTPUT == 1
@@ -717,6 +729,7 @@ static inline void displayPNG(PNG &png)
 	else clearDisplay();
 
 #if USE_DMA == 1
+	tft.dmaWait();
 	tft.pushImageDMA(xoffset, yoffset, width, height, displayData);
 #else
 	displayBuffer.pushSprite(xoffset, yoffset, TFT_TRANSPARENT);
