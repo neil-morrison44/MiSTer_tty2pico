@@ -37,8 +37,9 @@ static float fps;
  * Display setup
  *******************************************************************************/
 
-TFT_eSPI tft = TFT_eSPI(config.tftWidth, config.tftHeight);
+TFT_eSPI tft = TFT_eSPI(config.getDisplayWidth(), config.getDisplayHeight());
 TFT_eSprite displayBuffer(&tft);
+const int displayBufferCount = config.getDisplayWidth() * config.getDisplayHeight();
 
 void setupDisplay()
 {
@@ -73,14 +74,22 @@ void setupDisplay()
 	Serial.println("Display setup complete");
 }
 
+/*******************************************************************************
+ * Text and Graphics functions
+ *******************************************************************************/
+
+inline void __attribute__((always_inline)) clearBuffer(TFT_eSprite *buffer = &displayBuffer)
+{
+#if USE_DMA == 1
+	tft.dmaWait();
+#endif
+	buffer->deleteSprite();
+}
+
 inline void clearDisplay(void)
 {
 	tft.fillScreen(config.backgroundColor);
 }
-
-/*******************************************************************************
- * Text and Graphics functions
- *******************************************************************************/
 
 // Draw various shapes on the screen and animate them for the specified duration
 void drawDemoShapes(int durationMS)
@@ -109,7 +118,9 @@ void drawDemoShapes(int durationMS)
 	int frame = -squareSize;
 	bool reverse = false;
 
-	uint16_t *pixelBuf = (uint16_t *)displayBuffer.createSprite(displayWidth, displayHeight);
+	clearBuffer();
+	uint16_t *pixelBuf = (uint16_t *)displayBuffer.createSprite(config.getDisplayWidth(), config.getDisplayHeight());
+
 	while (millis() < endTime)
 	{
 		displayBuffer.fillScreen(TFT_BLACK);
@@ -118,6 +129,7 @@ void drawDemoShapes(int durationMS)
 		displayBuffer.fillTriangle(frame, frame - triangleSize, frame - triangleSize, frame + triangleSize, frame + triangleSize, frame + triangleSize, TFT_BLUE);
 		displayBuffer.fillEllipse(displayWidth - frame, displayWidth - frame, ellipseRadiusX, ellipseRadiusY, TFT_YELLOW);
 #if USE_DMA == 1
+		tft.dmaWait();
 		tft.pushImageDMA(0, 0, displayWidth, displayHeight, pixelBuf);
 #else
 		displayBuffer.pushSprite(0, 0);
@@ -141,10 +153,7 @@ void drawDemoShapes(int durationMS)
 	runtime = micros() - runtime;
 	Serial.print("Demo random shapes at "); Serial.print(frames / (runtime / 1000000.0f)); Serial.println(" fps");
 #endif
-#if USE_DMA == 1
-	tft.dmaWait(); // Need to let DMA buffer clear before the sprite is deleted
-#endif
-	displayBuffer.deleteSprite();
+	clearBuffer();
 }
 
 // Draws a transparent overlay on top of whatever is in the display buffer
@@ -160,12 +169,12 @@ void overlayText(String text, TFT_eSPI *parent)
 	overlay.setTextFont(font);
 	overlay.drawString(text, DISPLAY_TEXT_MARGIN, DISPLAY_TEXT_MARGIN, font);
 #if USE_DMA == 1
-	tft.pushImageDMA((config.getDisplayWidth() - width) / 2, (config.getDisplayHeight() - height) / 2, width, height, pixelBuf);
 	tft.dmaWait();
+	tft.pushImageDMA((config.getDisplayWidth() - width) / 2, (config.getDisplayHeight() - height) / 2, width, height, pixelBuf);
 #else
 	overlay.pushSprite((config.getDisplayWidth() - width) / 2, (config.getDisplayHeight() - height) / 2);
 #endif
-	overlay.deleteSprite();
+	clearBuffer(&overlay);
 }
 
 void overlayText(String text)
@@ -214,6 +223,10 @@ void showFPS(unsigned long micros)
 // Draw lines of text on the screen with center alignment horizontally and veritcally
 void showText(String lines[], int lineCount, uint8_t font, uint16_t textColor = TFT_WHITE, uint16_t backgroundColor = TFT_BLACK)
 {
+	displayState = DISPLAY_STATIC_TEXT;
+
+	clearBuffer();
+
 	uint16_t *pixelBuf = (uint16_t *)displayBuffer.createSprite(config.getDisplayWidth(), config.getDisplayHeight());
 	displayBuffer.fillSprite(backgroundColor);
 	displayBuffer.setTextColor(textColor);
@@ -229,14 +242,12 @@ void showText(String lines[], int lineCount, uint8_t font, uint16_t textColor = 
 		displayBuffer.drawCentreString(lines[i], midpointX, yStart + (i * lineHeight), font);
 
 #if USE_DMA == 1
-	tft.pushImageDMA(0, 0, config.getDisplayWidth(), config.getDisplayHeight(), pixelBuf);
 	tft.dmaWait();
+	tft.pushImageDMA(0, 0, config.getDisplayWidth(), config.getDisplayHeight(), pixelBuf);
 #else
 	displayBuffer.pushSprite(0, 0);
 #endif
-	displayBuffer.deleteSprite();
-
-	displayState = DISPLAY_STATIC_TEXT;
+	clearBuffer();
 }
 
 // Draw lines of text on the screen with center alignment horizontally and veritcally
@@ -353,6 +364,10 @@ void showText(String line, uint16_t textColor = TFT_WHITE, uint16_t backgroundCo
 // Draw "message box" style text with the first line being the header, and center alignment horizontally and veritcally for all text
 void showHeaderedText(String lines[], int lineCount)
 {
+	displayState = DISPLAY_STATIC_TEXT;
+
+	clearBuffer();
+
 	uint16_t *pixelBuf = (uint16_t *)displayBuffer.createSprite(config.getDisplayWidth(), config.getDisplayHeight());
 	displayBuffer.fillSprite(TFT_BLACK);
 	displayBuffer.setTextColor(TFT_WHITE);
@@ -369,14 +384,12 @@ void showHeaderedText(String lines[], int lineCount)
 	}
 
 #if USE_DMA == 1
-	tft.pushImageDMA(0, 0, config.getDisplayWidth(), config.getDisplayHeight(), pixelBuf);
 	tft.dmaWait();
+	tft.pushImageDMA(0, 0, config.getDisplayWidth(), config.getDisplayHeight(), pixelBuf);
 #else
 	displayBuffer.pushSprite(0, 0);
 #endif
-	displayBuffer.deleteSprite();
-
-	displayState = DISPLAY_STATIC_TEXT;
+	clearBuffer();
 }
 
 // Display a frame of the system information screen
@@ -387,6 +400,8 @@ void showSystemInfo(uint32_t frameTime)
 	int32_t frameTimeDiff = frameTime - nextFrameTime;
 	if (frameTimeDiff < 0)
 		return;
+
+	displayState = DISPLAY_SYSTEM_INFORMATION;
 
 	vector<String> lines;
 	char lineBuffer[50];
@@ -417,7 +432,6 @@ void showSystemInfo(uint32_t frameTime)
 
 	showHeaderedText(lines.data(), lines.size());
 
-	displayState = DISPLAY_SYSTEM_INFORMATION;
 	nextFrameTime = frameTime + 1000; // Only update display once every second
 }
 
@@ -502,16 +516,8 @@ static void gifDrawLine(GIFDRAW *pDraw)
 			} // while looking for opaque pixels
 			if (iCount) // any opaque pixels?
 			{
-#if defined(USE_GIF_BUFFERING)
-				displayBuffer.pushImage(pDraw->iX + x + xoffset, y + yoffset, iCount, 1, &usTemp[dmaBuf][0]);
-// #elif USE_DMA == 1
-// 				tft.dmaWait();
-// 				tft.setAddrWindow(pDraw->iX + x + xoffset, y + yoffset, iCount, 1);
-// 				tft.pushPixelsDMA(&usTemp[dmaBuf][0], iCount);
-#else
 				tft.setAddrWindow(pDraw->iX + x + xoffset, y + yoffset, iCount, 1);
 				tft.pushPixels(&usTemp[dmaBuf][0], iCount);
-#endif
 				x += iCount;
 				iCount = 0;
 			}
@@ -531,9 +537,7 @@ static void gifDrawLine(GIFDRAW *pDraw)
 	{
 		s = pDraw->pPixels;
 
-#if !defined(USE_GIF_BUFFERING)
 		tft.setAddrWindow(pDraw->iX + xoffset, y + yoffset, iWidth, 1);
-#endif
 
 #if USE_DMA == 1
 		// Unroll the first pass to boost DMA performance
@@ -546,17 +550,12 @@ static void gifDrawLine(GIFDRAW *pDraw)
 				usTemp[dmaBuf][iCount] = usPalette[*s++];
 #endif
 
-#if defined(USE_GIF_BUFFERING)
-		displayBuffer.pushImage(pDraw->iX + xoffset, y + yoffset, iWidth, 1, &usTemp[dmaBuf][0]);
-#elif USE_DMA == 1
+#if USE_DMA == 1
 		tft.dmaWait();
 		tft.pushPixelsDMA(&usTemp[dmaBuf][0], iCount);
+		dmaBuf = !dmaBuf;
 #else
 		tft.pushPixels(&usTemp[dmaBuf][0], iCount);
-#endif
-
-#if USE_DMA == 1 && !defined(USE_GIF_BUFFERING)
-		dmaBuf = !dmaBuf;
 #endif
 
 		iWidth -= iCount;
@@ -569,20 +568,134 @@ static void gifDrawLine(GIFDRAW *pDraw)
 			else
 				for (iCount = 0; iCount < TFT_DISPLAY_MAX; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
 
-#if defined(USE_GIF_BUFFERING)
-			displayBuffer.pushImage(pDraw->iX + xoffset, y + yoffset, iWidth, 1, &usTemp[dmaBuf][0]);
-#elif USE_DMA == 1
+#if USE_DMA == 1
 			tft.dmaWait();
 			tft.pushPixelsDMA(&usTemp[dmaBuf][0], iCount);
+			dmaBuf = !dmaBuf;
 #else
 			tft.pushPixels(&usTemp[dmaBuf][0], iCount);
 #endif
 
 			iWidth -= iCount;
-#if USE_DMA == 1 && !defined(USE_GIF_BUFFERING)
-			dmaBuf = !dmaBuf;
-#endif
 		}
+	}
+}
+
+static void gifDrawBufferedLine(GIFDRAW *pDraw)
+{
+	static uint16_t usTemp[TFT_DISPLAY_MAX];
+
+	int displayWidth = config.getDisplayWidth();
+	int displayHeight = config.getDisplayHeight();
+
+	uint8_t *s;
+	uint16_t *d, *usPalette;
+	int x, y, iWidth, iCount;
+
+	// Display bounds check and cropping
+	iWidth = pDraw->iWidth;
+	if (iWidth + pDraw->iX > displayWidth)
+		iWidth = displayWidth - pDraw->iX;
+	usPalette = pDraw->pPalette;
+	y = pDraw->iY + pDraw->y; // current line
+	if (y >= displayHeight || pDraw->iX >= displayWidth || iWidth < 1)
+		return;
+
+	// Old image disposal
+	s = pDraw->pPixels;
+	if (pDraw->ucDisposalMethod == 2) // restore to background color
+	{
+		for (x = 0; x < iWidth; x++)
+		{
+			if (s[x] == pDraw->ucTransparent)
+				s[x] = pDraw->ucBackground;
+		}
+		pDraw->ucHasTransparency = 0;
+	}
+
+	// Apply the new pixels to the main image
+	if (pDraw->ucHasTransparency) // if transparency used
+	{
+		uint8_t *pEnd, c, ucTransparent = pDraw->ucTransparent;
+		pEnd = s + iWidth;
+		x = 0;
+		iCount = 0; // count non-transparent pixels
+		while (x < iWidth)
+		{
+			c = ucTransparent - 1;
+			d = &usTemp[0];
+			while (c != ucTransparent && s < pEnd && iCount < TFT_DISPLAY_MAX)
+			{
+				c = *s++;
+				if (c == ucTransparent) // done, stop
+				{
+					s--; // back up to treat it like transparent
+				}
+				else // opaque
+				{
+					*d++ = usPalette[c];
+					iCount++;
+				}
+			} // while looking for opaque pixels
+			if (iCount) // any opaque pixels?
+			{
+				displayBuffer.pushImage(pDraw->iX + x + xoffset, y + yoffset, iCount, 1, &usTemp[0]);
+				x += iCount;
+				iCount = 0;
+			}
+			// no, look for a run of transparent pixels
+			c = ucTransparent;
+			while (c == ucTransparent && s < pEnd)
+			{
+				c = *s++;
+				if (c == ucTransparent)
+					x++;
+				else
+					s--;
+			}
+		}
+	}
+	else
+	{
+		s = pDraw->pPixels;
+
+#if USE_DMA == 1
+		// Unroll the first pass to boost DMA performance
+		// Translate the 8-bit pixels through the RGB565 palette (already byte reversed)
+		if (iWidth <= TFT_DISPLAY_MAX)
+			for (iCount = 0; iCount < iWidth; iCount++)
+				usTemp[iCount] = usPalette[*s++];
+		else
+			for (iCount = 0; iCount < TFT_DISPLAY_MAX; iCount++)
+				usTemp[iCount] = usPalette[*s++];
+#endif
+
+		displayBuffer.pushImage(pDraw->iX + xoffset, y + yoffset, iWidth, 1, &usTemp[0]);
+
+		iWidth -= iCount;
+		// Loop if pixel buffer smaller than width
+		while (iWidth > 0)
+		{
+			// Translate the 8-bit pixels through the RGB565 palette (already byte reversed)
+			if (iWidth <= TFT_DISPLAY_MAX)
+				for (iCount = 0; iCount < iWidth; iCount++) usTemp[iCount] = usPalette[*s++];
+			else
+				for (iCount = 0; iCount < TFT_DISPLAY_MAX; iCount++) usTemp[iCount] = usPalette[*s++];
+
+			displayBuffer.pushImage(pDraw->iX + xoffset, y + yoffset, iWidth, 1, &usTemp[0]);
+
+			iWidth -= iCount;
+		}
+	}
+
+	if (y == pDraw->iHeight - 1)
+	{
+#if USE_DMA == 1
+		tft.dmaWait();
+		tft.pushPixelsDMA((uint16_t *)pDraw->pUser, displayBufferCount);
+#else
+		displayBuffer.pushSprite(0, 0);
+#endif
 	}
 }
 
@@ -594,11 +707,9 @@ static inline void displayGIF(AnimatedGIF *gif, GIFDisplayOptions options)
 	yoffset = (displayHeight - gif->getCanvasHeight()) / 2;
 	displayState = options.loop ? DISPLAY_ANIMATED_GIF_LOOPING : DISPLAY_ANIMATED_GIF;
 
-#if defined(USE_GIF_BUFFERING)
-	uint16_t *pixelBuf = (uint16_t *)displayBuffer.createSprite(displayWidth, displayHeight);
-	int pixelBufCount = displayWidth * displayHeight;
+	clearBuffer();
+	uint16_t *pixelBuf = (uint16_t *)displayBuffer.createSprite(config.getDisplayWidth(), config.getDisplayHeight());
 	displayBuffer.fillSprite(config.backgroundColor);
-#endif
 
 #if SHOW_FPS == 1 || VERBOSE_OUTPUT == 1
 	int frames = 0;
@@ -608,15 +719,8 @@ static inline void displayGIF(AnimatedGIF *gif, GIFDisplayOptions options)
 	unsigned long frameStart = micros();
 #endif
 
-	while (gif->playFrame(!(options.uncap || config.uncapFramerate), NULL))
+	while (gif->playFrame(!(options.uncap || config.uncapFramerate), NULL, pixelBuf))
 	{
-#if defined(USE_GIF_BUFFERING)
-	#if USE_DMA == 1
-		tft.pushPixelsDMA(pixelBuf, pixelBufCount);
-	#else
-		displayBuffer.pushSprite(0, 0);
-	#endif
-#endif
 #if SHOW_FPS == 1
 		showFPS(micros() - frameStart);
 #endif
@@ -634,30 +738,18 @@ static inline void displayGIF(AnimatedGIF *gif, GIFDisplayOptions options)
 #endif
 	if (gif->getLastError() == GIF_SUCCESS)
 	{
-#if defined(USE_GIF_BUFFERING)
-	#if USE_DMA == 1
-		tft.pushPixelsDMA(pixelBuf, pixelBufCount);
-	#else
-		displayBuffer.pushSprite(0, 0);
-	#endif
-#endif
-	#if SHOW_FPS == 1
+#if SHOW_FPS == 1
 		showFPS(runStop - frameStart);
-	#endif
-	#if VERBOSE_OUTPUT == 1
+#endif
+#if VERBOSE_OUTPUT == 1
 		frames++;
-	#endif
+#endif
 	}
 
-#if defined(USE_GIF_BUFFERING)
-	#if USE_DMA == 1
-	tft.dmaWait(); // Need to let DMA buffer clear before the sprite is deleted
-	#endif
-	displayBuffer.deleteSprite();
-#endif
 #if VERBOSE_OUTPUT == 1
 	Serial.print("Ran GIF at "); Serial.print(frames / ((runStop - runStart) / 1000000.0f)); Serial.println(" fps");
 #endif
+	clearBuffer();
 }
 
 static void showGIF(uint8_t *data, int size, GIFDisplayOptions options)
@@ -665,7 +757,7 @@ static void showGIF(uint8_t *data, int size, GIFDisplayOptions options)
 	AnimatedGIF gif;
 	gif.begin(BIG_ENDIAN_PIXELS);
 
-	if (gif.open(data, size, gifDrawLine))
+	if (gif.open(data, size, config.overclockMode > 0 ? gifDrawBufferedLine : gifDrawLine))
 	{
 #if VERBOSE_OUTPUT == 1
 	Serial.print("Opened streamed GIF with resolution "); Serial.print(gif.getCanvasWidth()); Serial.print(" x "); Serial.println(gif.getCanvasHeight());
@@ -684,7 +776,7 @@ static void showGIF(const char *path, GIFDisplayOptions options)
 	AnimatedGIF gif;
 	gif.begin(BIG_ENDIAN_PIXELS);
 
-	if (gif.open(path, gifOpen, gifClose, gifRead, gifSeek, gifDrawLine))
+	if (gif.open(path, gifOpen, gifClose, gifRead, gifSeek, config.overclockMode > 0 ? gifDrawBufferedLine : gifDrawLine))
 	{
 #if VERBOSE_OUTPUT == 1
 	Serial.print("Opened GIF "); Serial.print(path); Serial.print(" with resolution "); Serial.print(gif.getCanvasWidth()); Serial.print(" x "); Serial.println(gif.getCanvasHeight());
@@ -707,48 +799,53 @@ static void showGIF(String path, GIFDisplayOptions options)
  * PNG
  *******************************************************************************/
 
+#define TFT_TRANSPARENT_8BPP ((uint8_t)((TFT_TRANSPARENT & 0xE000)>>8 | (TFT_TRANSPARENT & 0x0700)>>6 | (TFT_TRANSPARENT & 0x0018)>>3))
+
 static void pngDrawLine(PNGDRAW *pDraw)
 {
 	uint16_t lineBuffer[TFT_DISPLAY_MAX];
 	PNG *png = ((PNG *)pDraw->pUser);
 	png->getLineAsRGB565(pDraw, lineBuffer, PNG_RGB565_BIG_ENDIAN, tft.color16to24(config.backgroundColor));
-	displayBuffer.pushImage(0, pDraw->y, pDraw->iWidth, 1, lineBuffer);
+	displayBuffer.pushImage(xoffset, pDraw->y + yoffset, pDraw->iWidth, 1, lineBuffer, TFT_TRANSPARENT_8BPP);
 }
 
 static inline void displayPNG(PNG &png)
 {
+	displayState = DISPLAY_STATIC_IMAGE;
+
 	int width = png.getWidth();
 	int height = png.getHeight();
 	int displayWidth = config.getDisplayWidth();
 	int displayHeight = config.getDisplayHeight();
 	xoffset = (displayWidth - width) / 2;
 	yoffset = (displayHeight - height) / 2;
-	displayState = DISPLAY_STATIC_IMAGE;
 
-	displayBuffer.deleteSprite();
-	uint16_t *displayData = (uint16_t *)displayBuffer.createSprite(width, height);
+	clearBuffer();
+	uint16_t *pixelBuf = (uint16_t *)displayBuffer.createSprite(displayWidth, displayHeight);
 	displayBuffer.fillSprite(TFT_TRANSPARENT);
 
 	png.decode(NULL, 0); // Fill displayBuffer sprite with image data
 
-	if (width < displayWidth || height < displayHeight || !png.hasAlpha())
+	if ((width < displayWidth || height < displayHeight) && !png.hasAlpha())
 	{
 		// When PNG is smaller than display and not transparent use the top-left pixel of the image for background
-		uint32_t topLeftColor = displayBuffer.readPixel(0, 0);;
+		uint32_t topLeftColor = displayBuffer.readPixel(xoffset, yoffset);
 #if VERBOSE_OUTPUT == 1
 		Serial.print("Filling screen with "); Serial.println(topLeftColor, HEX);
 #endif
-		tft.fillScreen(topLeftColor);
+		displayBuffer.fillRect(0, 0, displayWidth, yoffset, topLeftColor); // Top space
+		displayBuffer.fillRect(0, (displayHeight - height) / 2, (displayWidth - width) / 2, displayHeight - ((displayHeight - height) / 2), topLeftColor); // Left space
+		displayBuffer.fillRect(xoffset + width, (displayHeight - height) / 2, displayWidth - (displayWidth - width / 2), displayHeight - ((displayHeight - height) / 2), topLeftColor); // Right space
+		displayBuffer.fillRect(0, height + yoffset, displayWidth, displayHeight, topLeftColor); // Bottom space
 	}
-	else clearDisplay();
 
 #if USE_DMA == 1
-	tft.pushImageDMA(xoffset, yoffset, width, height, displayData);
 	tft.dmaWait();
+	tft.pushPixelsDMA(pixelBuf, displayBufferCount);
 #else
 	displayBuffer.pushSprite(xoffset, yoffset, TFT_TRANSPARENT);
 #endif
-	displayBuffer.deleteSprite();
+	clearBuffer();
 }
 
 static void showPNG(uint8_t *data, int size)
