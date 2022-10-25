@@ -246,12 +246,7 @@ void loopQueue(void)
 	static CommandData data;
 
 	while (removeFromQueue(data))
-	{
-		if (data.command == TTY2CMD_COR || data.command == TTY2CMD_SHOW)
-			clearDisplay();
-
 		runCommand(data);
-	}
 }
 
 #endif
