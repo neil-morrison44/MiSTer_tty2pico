@@ -6,6 +6,7 @@
 // #define WAIT_FOR_SERIAL 1
 // #define VERBOSE_OUTPUT 1
 // #define SHOW_FPS 1
+// #define USE_GIF_BUFFERING
 
 #include "config.h"
 #include <Arduino.h>
