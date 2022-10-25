@@ -454,6 +454,135 @@ static GIFDisplayOptions currentGifOption;
 // Draw a line of image directly on the LCD
 static void gifDrawLine(GIFDRAW *pDraw)
 {
+#if USE_DMA == 1
+	static uint16_t usTemp[2][TFT_DISPLAY_MAX];
+#else
+	static uint16_t usTemp[1][TFT_DISPLAY_MAX];
+#endif
+
+	int displayWidth = config.getDisplayWidth();
+	int displayHeight = config.getDisplayHeight();
+
+	bool dmaBuf = 0;
+
+	uint8_t *s;
+	uint16_t *d, *usPalette;
+	int x, y, iWidth, iCount;
+
+	// Display bounds check and cropping
+	iWidth = pDraw->iWidth;
+	if (iWidth + pDraw->iX > displayWidth)
+		iWidth = displayWidth - pDraw->iX;
+	usPalette = pDraw->pPalette;
+	y = pDraw->iY + pDraw->y; // current line
+	if (y >= displayHeight || pDraw->iX >= displayWidth || iWidth < 1)
+		return;
+
+	// Old image disposal
+	s = pDraw->pPixels;
+	if (pDraw->ucDisposalMethod == 2) // restore to background color
+	{
+		for (x = 0; x < iWidth; x++)
+		{
+			if (s[x] == pDraw->ucTransparent)
+				s[x] = pDraw->ucBackground;
+		}
+		pDraw->ucHasTransparency = 0;
+	}
+
+	// Apply the new pixels to the main image
+	if (pDraw->ucHasTransparency) // if transparency used
+	{
+		uint8_t *pEnd, c, ucTransparent = pDraw->ucTransparent;
+		pEnd = s + iWidth;
+		x = 0;
+		iCount = 0; // count non-transparent pixels
+		while (x < iWidth)
+		{
+			c = ucTransparent - 1;
+			d = &usTemp[dmaBuf][0];
+			while (c != ucTransparent && s < pEnd && iCount < TFT_DISPLAY_MAX)
+			{
+				c = *s++;
+				if (c == ucTransparent) // done, stop
+				{
+					s--; // back up to treat it like transparent
+				}
+				else // opaque
+				{
+					*d++ = usPalette[c];
+					iCount++;
+				}
+			} // while looking for opaque pixels
+			if (iCount) // any opaque pixels?
+			{
+				tft.setAddrWindow(pDraw->iX + x + xoffset, y + yoffset, iCount, 1);
+				tft.pushPixels(&usTemp[dmaBuf][0], iCount);
+				x += iCount;
+				iCount = 0;
+			}
+			// no, look for a run of transparent pixels
+			c = ucTransparent;
+			while (c == ucTransparent && s < pEnd)
+			{
+				c = *s++;
+				if (c == ucTransparent)
+					x++;
+				else
+					s--;
+			}
+		}
+	}
+	else
+	{
+		s = pDraw->pPixels;
+
+		tft.setAddrWindow(pDraw->iX + xoffset, y + yoffset, iWidth, 1);
+
+#if USE_DMA == 1
+		// Unroll the first pass to boost DMA performance
+		// Translate the 8-bit pixels through the RGB565 palette (already byte reversed)
+		if (iWidth <= TFT_DISPLAY_MAX)
+			for (iCount = 0; iCount < iWidth; iCount++)
+				usTemp[dmaBuf][iCount] = usPalette[*s++];
+		else
+			for (iCount = 0; iCount < TFT_DISPLAY_MAX; iCount++)
+				usTemp[dmaBuf][iCount] = usPalette[*s++];
+#endif
+
+#if USE_DMA == 1
+		tft.dmaWait();
+		tft.pushPixelsDMA(&usTemp[dmaBuf][0], iCount);
+		dmaBuf = !dmaBuf;
+#else
+		tft.pushPixels(&usTemp[dmaBuf][0], iCount);
+#endif
+
+		iWidth -= iCount;
+		// Loop if pixel buffer smaller than width
+		while (iWidth > 0)
+		{
+			// Translate the 8-bit pixels through the RGB565 palette (already byte reversed)
+			if (iWidth <= TFT_DISPLAY_MAX)
+				for (iCount = 0; iCount < iWidth; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
+			else
+				for (iCount = 0; iCount < TFT_DISPLAY_MAX; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
+
+#if USE_DMA == 1
+			tft.dmaWait();
+			tft.pushPixelsDMA(&usTemp[dmaBuf][0], iCount);
+			dmaBuf = !dmaBuf;
+#else
+			tft.pushPixels(&usTemp[dmaBuf][0], iCount);
+#endif
+
+			iWidth -= iCount;
+		}
+	}
+}
+
+static void gifDrawBufferedLine(GIFDRAW *pDraw)
+{
 	static uint16_t usTemp[TFT_DISPLAY_MAX];
 
 	int displayWidth = config.getDisplayWidth();
@@ -628,7 +757,7 @@ static void showGIF(uint8_t *data, int size, GIFDisplayOptions options)
 	AnimatedGIF gif;
 	gif.begin(BIG_ENDIAN_PIXELS);
 
-	if (gif.open(data, size, gifDrawLine))
+	if (gif.open(data, size, config.overclockMode > 0 ? gifDrawBufferedLine : gifDrawLine))
 	{
 #if VERBOSE_OUTPUT == 1
 	Serial.print("Opened streamed GIF with resolution "); Serial.print(gif.getCanvasWidth()); Serial.print(" x "); Serial.println(gif.getCanvasHeight());
@@ -647,7 +776,7 @@ static void showGIF(const char *path, GIFDisplayOptions options)
 	AnimatedGIF gif;
 	gif.begin(BIG_ENDIAN_PIXELS);
 
-	if (gif.open(path, gifOpen, gifClose, gifRead, gifSeek, gifDrawLine))
+	if (gif.open(path, gifOpen, gifClose, gifRead, gifSeek, config.overclockMode > 0 ? gifDrawBufferedLine : gifDrawLine))
 	{
 #if VERBOSE_OUTPUT == 1
 	Serial.print("Opened GIF "); Serial.print(path); Serial.print(" with resolution "); Serial.print(gif.getCanvasWidth()); Serial.print(" x "); Serial.println(gif.getCanvasHeight());
