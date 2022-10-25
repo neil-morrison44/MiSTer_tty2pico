@@ -1,16 +1,14 @@
-title = "tty2pico RoundyPi Configuration"
+title = "tty2pico RoundyPi MaxOC Configuration"
 
 [tty2pico]
 backgroundColor = 0
-tftWidth = 240
-tftHeight = 240
-tftRotation = 2
-overclockMode = 1
+# tftWidth = 240
+# tftHeight = 240
+# tftRotation = 2
+overclockMode = 255
 overclockSD = true
-waitForSerial = false
-imagePath = "/logos/"
 startupCommand = ""
 startupDelay = 5000
 startupImage = ""
 slideshowDelay = 2000
-ttyBaudRate = 115200
+uncapFramerate = false

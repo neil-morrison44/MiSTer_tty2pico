@@ -22,14 +22,12 @@
 void setup()
 {
 	/* NOTE: Most of these setup functions need to run in a particular order */
-
-	beginUsbMsc();   // Start up USB MSC interface, must be BEFORE the serial interface so CDC doesn't take over
-	setupTTY();      // Bring up the serial interface
-	setupStorage();  // Configure storage
-	readyUsbMsc();   // Set USB MSC ready after storage is available
-	setupPlatform(); // Apply platform-specific code for the MCU (tune bus speed, overclock, etc.)
-	setupDisplay();  // Configure and enable the display
-	setupQueue();    // Set up task queue
+	setupTTY();           // Bring up the serial interface
+	setupStorage();       // Configure storage
+	setupUsbMsc();        // Set up as USB Mass Storage Device
+	setupPlatform(hasSD); // Apply platform-specific code for the MCU (tune bus speed, overclock, etc.)
+	setupDisplay();       // Configure and enable the display
+	setupQueue();         // Set up task queue
 
 	setDirectory(config.imagePath); // Set the working image path
 	showStartup();
@@ -58,5 +56,4 @@ void loop()
 	}
 
 	loopDisplay(now);
-	delay(0); // Delay of 0 here give slightly smoother/better performance
 }

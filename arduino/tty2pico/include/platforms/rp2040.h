@@ -169,7 +169,7 @@ void resetForUpdate(void)
 	reset_usb_boot(0, 0);
 }
 
-void setupPlatform(void)
+void setupPlatform(bool hasSD)
 {
 	rp2040.enableDoubleResetBootloader();
 
@@ -206,18 +206,18 @@ void setupPlatform(void)
 			Serial.println("Couldn't overclock CPU, halting...");
 			while (1) delay(1);
 		}
-
 		Serial.print("CPU overclocked to "); Serial.print(cpuMHz); Serial.println("MHz");
 	}
 
-	// Sync peripheral clock to CPU clock to get a huge boost to SPI performance
 	uint32_t freq = clock_get_hz(clk_sys);
 	clock_configure(clk_peri, 0, CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS, freq, freq);
 	Serial.println("Peripheral bus frequencies applied");
 
-	// SD can be sensitive to overclock so try to
-	spi_set_baudrate(getSdSpi(), config.overclockSD ? SPI_FULL_SPEED : SD_SCK_MHZ(27));
-	Serial.println("SPI baud rates set");
+	if (hasSD)
+		spi_set_baudrate(getSdSpi(), config.overclockSD ? SPI_FULL_SPEED : SD_SCK_MHZ(27)); // SD can be sensitive to overclocking
+
+	// if (SPI_FREQUENCY)
+	// 	spi_set_baudrate(getDisplaySpi(), SPI_FREQUENCY);
 
 	Serial.println("Platform setup complete");
 }

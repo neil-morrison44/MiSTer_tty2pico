@@ -186,7 +186,6 @@ static void cmdTest(void)
 	drawDemoShapes(5000);
 	if (fileExists(config.startupImage)) showImage(config.startupImage);
 	showText("Test complete!");
-	delay(3000);
 }
 
 static void cmdText(String command)

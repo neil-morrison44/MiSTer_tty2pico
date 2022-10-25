@@ -147,7 +147,7 @@ struct TTY2PICO_Config
 	bool overclockSD = false;
 	String imagePath = LOGO_PATH;
 	String startupCommand = "";
-	uint16_t startupDelay = STARTUP_DELAY;
+	unsigned long startupDelay = STARTUP_DELAY;
 	String startupImage = STARTUP_LOGO;
 	String slideshowFolder = LOGO_PATH;
 	int slideshowDelay = SLIDESHOW_DELAY;
@@ -216,7 +216,7 @@ const char *parseConfig(char *buffer)
 	if (startupCommandOK && startupCommand.length() > 0) config.startupCommand = startupCommand.c_str();
 
 	auto [startupDelayOK, startupDelay] = tty2pico->getInt("startupDelay");
-	if (startupDelayOK) config.startupDelay = startupDelay;
+	if (startupDelayOK) config.startupDelay = (unsigned long)startupDelay;
 
 	auto [startupImageOK, startupImage] = tty2pico->getString("startupImage");
 	if (startupImageOK) config.startupImage = startupImage.c_str();
@@ -247,7 +247,7 @@ int exportConfig(char *buffer, int bufferSize)
 		"\noverclockSD = " + String(config.overclockSD ? "true" : "false") +
 		"\nimagePath = \"" + config.imagePath + "\"" +
 		"\nstartupCommand = \"" + config.startupCommand + "\"" +
-		"\nstartupDelay = \"" + config.startupDelay + "\"" +
+		"\nstartupDelay = \"" + String(config.startupDelay) + "\"" +
 		"\nstartupImage = \"" + config.startupImage + "\"" +
 		"\nslideshowFolder = \"" + config.slideshowFolder + "\"" +
 		"\nslideshowDelay = " + String(config.slideshowDelay) +

@@ -64,6 +64,31 @@ static void mscSDFlushCallback(void)
  * Lifecycle functions
  *******************************************************************************/
 
+void setupUsbMsc()
+{
+	// Set disk vendor id, product id and revision with string up to 8, 16, 4 characters respectively
+	if (getHasSD())
+		msc.setID("tty2pico", "SD Storage", "1.0");
+	else
+		msc.setID("tty2pico", "Flash Storage", "1.0");
+
+	if (getHasSD())
+	{
+		msc.setReadWriteCallback(mscSDReadCallback, mscSDWriteCallback, mscSDFlushCallback);
+		msc.setCapacity(sdfs.card()->sectorCount(), FS_BLOCK_SIZE);
+	}
+	else
+	{
+		msc.setReadWriteCallback(mscFlashReadCallback, mscFlashWriteCallback, mscFlashFlushCallback);
+		msc.setCapacity(flash.size() / FS_BLOCK_SIZE, FS_BLOCK_SIZE);
+	}
+
+	// MSC is ready for read/write
+	msc.begin();
+	msc.setUnitReady(true);
+	Serial.println("USB MSC ready");
+}
+
 void beginUsbMsc()
 {
 	// Set disk vendor id, product id and revision with string up to 8, 16, 4 characters respectively
