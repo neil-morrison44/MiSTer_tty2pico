@@ -31,13 +31,15 @@ static int32_t xoffset = 0;
 static int32_t yoffset = 0;
 static String currentImage;
 static DisplayState displayState = DISPLAY_STATIC_IMAGE;
+#if SHOW_FPS == 1
 static float fps;
+#endif
 
 /*******************************************************************************
  * Display setup
  *******************************************************************************/
 
-TFT_eSPI tft = TFT_eSPI(config.getDisplayWidth(), config.getDisplayHeight());
+TFT_eSPI tft = TFT_eSPI(config.tftWidth, config.tftHeight);
 TFT_eSprite displayBuffer(&tft);
 const int displayBufferCount = config.getDisplayWidth() * config.getDisplayHeight();
 
@@ -86,7 +88,7 @@ inline void __attribute__((always_inline)) clearBuffer(TFT_eSprite *buffer = &di
 	buffer->deleteSprite();
 }
 
-inline void clearDisplay(void)
+inline void __attribute__((always_inline)) clearDisplay(void)
 {
 	tft.fillScreen(config.backgroundColor);
 }
@@ -182,6 +184,7 @@ void overlayText(String text)
 	overlayText(text, &tft);
 }
 
+#if SHOW_FPS == 1
 // Show the last captured FPS value
 void showFPS(TFT_eSPI *parent)
 {
@@ -219,6 +222,7 @@ void showFPS(unsigned long micros)
 {
 	overlayText(String(1000000.0f / micros), &tft);
 }
+#endif
 
 // Draw lines of text on the screen with center alignment horizontally and veritcally
 void showText(String lines[], int lineCount, uint8_t font, uint16_t textColor = TFT_WHITE, uint16_t backgroundColor = TFT_BLACK)
@@ -452,6 +456,7 @@ static GIFDisplayOptions currentGifOption;
 
 // From the examples in the https://github.com/bitbank2/AnimatedGIF repo
 // Draw a line of image directly on the LCD
+[[deprecated("Replaced with gifDrawBufferedLine")]]
 static void gifDrawLine(GIFDRAW *pDraw)
 {
 #if USE_DMA == 1
@@ -757,7 +762,7 @@ static void showGIF(uint8_t *data, int size, GIFDisplayOptions options)
 	AnimatedGIF gif;
 	gif.begin(BIG_ENDIAN_PIXELS);
 
-	if (gif.open(data, size, config.overclockMode > 0 ? gifDrawBufferedLine : gifDrawLine))
+	if (gif.open(data, size, gifDrawBufferedLine))
 	{
 #if VERBOSE_OUTPUT == 1
 	Serial.print("Opened streamed GIF with resolution "); Serial.print(gif.getCanvasWidth()); Serial.print(" x "); Serial.println(gif.getCanvasHeight());
@@ -776,7 +781,7 @@ static void showGIF(const char *path, GIFDisplayOptions options)
 	AnimatedGIF gif;
 	gif.begin(BIG_ENDIAN_PIXELS);
 
-	if (gif.open(path, gifOpen, gifClose, gifRead, gifSeek, config.overclockMode > 0 ? gifDrawBufferedLine : gifDrawLine))
+	if (gif.open(path, gifOpen, gifClose, gifRead, gifSeek, gifDrawBufferedLine))
 	{
 #if VERBOSE_OUTPUT == 1
 	Serial.print("Opened GIF "); Serial.print(path); Serial.print(" with resolution "); Serial.print(gif.getCanvasWidth()); Serial.print(" x "); Serial.println(gif.getCanvasHeight());
@@ -822,7 +827,7 @@ static inline void displayPNG(PNG &png)
 
 	clearBuffer();
 	uint16_t *pixelBuf = (uint16_t *)displayBuffer.createSprite(displayWidth, displayHeight);
-	displayBuffer.fillSprite(TFT_TRANSPARENT);
+	displayBuffer.fillSprite(config.backgroundColor);
 
 	png.decode(NULL, 0); // Fill displayBuffer sprite with image data
 
@@ -843,7 +848,7 @@ static inline void displayPNG(PNG &png)
 	tft.dmaWait();
 	tft.pushPixelsDMA(pixelBuf, displayBufferCount);
 #else
-	displayBuffer.pushSprite(xoffset, yoffset, TFT_TRANSPARENT);
+	displayBuffer.pushSprite(0, 0);
 #endif
 	clearBuffer();
 }

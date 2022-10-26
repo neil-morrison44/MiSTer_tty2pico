@@ -6,7 +6,6 @@
 // #define WAIT_FOR_SERIAL 1
 // #define VERBOSE_OUTPUT 1
 // #define SHOW_FPS 1
-// #define USE_GIF_BUFFERING
 
 #include "config.h"
 #include <Arduino.h>
@@ -22,12 +21,19 @@
 void setup()
 {
 	/* NOTE: Most of these setup functions need to run in a particular order */
-	setupTTY();           // Bring up the serial interface
-	setupStorage();       // Configure storage
-	setupUsbMsc();        // Set up as USB Mass Storage Device
-	setupPlatform(hasSD); // Apply platform-specific code for the MCU (tune bus speed, overclock, etc.)
-	setupDisplay();       // Configure and enable the display
-	setupQueue();         // Set up task queue
+#if WAIT_FOR_SERIAL == 1
+	beginUsbMsc();          // Start up USB MSC BEFORE serial when waiting, otherwise CDC will take over within ~300ms
+	setupTTY();             // Bring up the serial interface
+	setupStorage();         // Configure storage
+	readyUsbMsc();          // Ready USB Mass Storage once storage is set up
+#else
+	setupTTY();             // Bring up the serial interface
+	setupStorage();         // Configure storage
+	setupUsbMsc();          // Set up USB Mass Storage
+#endif
+	setupPlatform(checkSD); // Apply platform-specific code for the MCU (tune bus speed, overclock, etc.)
+	setupDisplay();         // Configure and enable the display
+	setupQueue();           // Set up task queue
 
 	setDirectory(config.imagePath); // Set the working image path
 	showStartup();

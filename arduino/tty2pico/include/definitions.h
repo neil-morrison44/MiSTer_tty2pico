@@ -175,6 +175,7 @@ public:
 	FsFileTS openNextFile(void);
 	bool openNext(FsBaseFile* dir, oflag_t oflag);
 	uint64_t position(void);
+	size_t print(const char *str);
 	int read(void* buf, size_t count);
 	void rewindDirectory(void);
 	bool seek(uint64_t position);

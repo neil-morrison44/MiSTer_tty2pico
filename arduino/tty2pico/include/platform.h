@@ -19,7 +19,7 @@ float getSpiRateDisplayMHz();
 float getSpiRateSdMHz();
 void setTime(uint32_t timestamp);
 void resetForUpdate(void);
-void setupPlatform(void);
+void setupPlatform(bool (*checkSDCallback)());
 void setupQueue(void);
 void addToQueue(CommandData &data);
 bool removeFromQueue(CommandData &data);

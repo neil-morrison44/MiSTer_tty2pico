@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <stdint.h>
 #include "tomlcpp.hpp"
+#include "utils.h"
 
 #ifndef CONFIG_FILE_PATH
 #define CONFIG_FILE_PATH "/tty2pico.toml" // Path to tty2pico config file
@@ -139,22 +140,19 @@ typedef enum TTY2PICO_Font {
 struct TTY2PICO_Config
 {
 	uint16_t backgroundColor = BACKGROUND_COLOR;
-	uint8_t tftRotation = TFT_ROTATION;
-	int tftWidth = TFT_WIDTH;
-	int tftHeight = TFT_HEIGHT;
-	bool disableSD = false;
-	uint8_t overclockMode = 0;
-	bool overclockSD = false;
 	String imagePath = LOGO_PATH;
 	String startupCommand = "";
 	unsigned long startupDelay = STARTUP_DELAY;
 	String startupImage = STARTUP_LOGO;
-	String slideshowFolder = LOGO_PATH;
 	int slideshowDelay = SLIDESHOW_DELAY;
+	String slideshowFolder = LOGO_PATH;
+	uint8_t tftRotation = TFT_ROTATION;
+	int tftWidth = TFT_WIDTH;
+	int tftHeight = TFT_HEIGHT;
 	bool uncapFramerate = false;
 
-	int getDisplayHeight() const { return (tftRotation % 2) ? tftWidth : tftHeight; }
-	int getDisplayWidth() const { return (tftRotation % 2) ? tftHeight : tftWidth; }
+	int getDisplayHeight() const { return tftHeight < tftWidth ? tftHeight : tftWidth; }
+	int getDisplayWidth() const { return tftWidth > tftHeight ? tftWidth : tftHeight; }
 	int getMidpointX() const { return getDisplayWidth() / 2; }
 	int getMidpointY() const { return getDisplayHeight() / 2; }
 	int getLineBufferSize() const { return getDisplayWidth(); }
@@ -166,19 +164,15 @@ struct TTY2PICO_Config
 
 TTY2PICO_Config config;
 
-typedef enum TTY2PICO_OverclockMode
-{
-	STOCK = 0,
-	OVERCLOCKED = 1,
-	OVERCLOCKED_PLUS = 2,
-	LUDICROUS_SPEED = 255,
-} TTY2PICO_OverclockMode;
-
+// Parses a tty2pico config from memory. Will return an error message if failed.
 const char *parseConfig(char *buffer)
 {
 	// Do we have a config to parse?
 	if (buffer == nullptr || sizeof(buffer) == 0)
 		return "No config data present";
+
+	// Trim any trailing whitespace
+	trimTrailing(buffer);
 
 	auto res = toml::parse(buffer);
 	if (!res.table)
@@ -190,24 +184,6 @@ const char *parseConfig(char *buffer)
 
 	auto [backgroundColorOK, backgroundColor] = tty2pico->getInt("backgroundColor");
 	if (backgroundColorOK) config.backgroundColor = (uint16_t)backgroundColor;
-
-	auto [tftRotationOK, tftRotation] = tty2pico->getInt("tftRotation");
-	if (tftRotationOK) config.tftRotation = (uint8_t)tftRotation;
-
-	auto [tftWidthOK, tftWidth] = tty2pico->getInt("tftWidth");
-	if (tftWidthOK) config.tftWidth = (uint16_t)tftWidth;
-
-	auto [tftHeightOK, tftHeight] = tty2pico->getInt("tftHeight");
-	if (tftHeightOK) config.tftHeight = (uint16_t)tftHeight;
-
-	auto [disableSDOK, disableSD] = tty2pico->getBool("disableSD");
-	if (disableSDOK) config.disableSD = disableSD;
-
-	auto [overclockModeOK, overclockMode] = tty2pico->getInt("overclockMode");
-	if (overclockModeOK) config.overclockMode = overclockMode;
-
-	auto [overclockSDOK, overclockSD] = tty2pico->getBool("overclockSD");
-	if (overclockSDOK) config.overclockSD = overclockSD;
 
 	auto [imagePathOK, imagePath] = tty2pico->getString("imagePath");
 	if (imagePathOK) config.imagePath = imagePath.c_str();
@@ -221,11 +197,20 @@ const char *parseConfig(char *buffer)
 	auto [startupImageOK, startupImage] = tty2pico->getString("startupImage");
 	if (startupImageOK) config.startupImage = startupImage.c_str();
 
+	auto [slideshowDelayOK, slideshowDelay] = tty2pico->getInt("slideshowDelay");
+	if (slideshowDelayOK) config.slideshowDelay = (uint32_t)slideshowDelay;
+
 	auto [slideshowFolderOK, slideshowFolder] = tty2pico->getString("slideshowFolder");
 	if (slideshowFolderOK) config.slideshowFolder = slideshowFolder.c_str();
 
-	auto [slideshowDelayOK, slideshowDelay] = tty2pico->getInt("slideshowDelay");
-	if (slideshowDelayOK) config.slideshowDelay = (uint32_t)slideshowDelay;
+	auto [tftWidthOK, tftWidth] = tty2pico->getInt("tftWidth");
+	if (tftWidthOK) config.tftWidth = (uint16_t)tftWidth;
+
+	auto [tftHeightOK, tftHeight] = tty2pico->getInt("tftHeight");
+	if (tftHeightOK) config.tftHeight = (uint16_t)tftHeight;
+
+	auto [tftRotationOK, tftRotation] = tty2pico->getInt("tftRotation");
+	if (tftRotationOK) config.tftRotation = (uint8_t)tftRotation;
 
 	auto [uncapFramerateOK, uncapFramerate] = tty2pico->getBool("uncapFramerate");
 	if (uncapFramerateOK) config.uncapFramerate = uncapFramerate;
@@ -239,23 +224,19 @@ int exportConfig(char *buffer, int bufferSize)
 		String("title = \"tty2pico Configuration\"\n") +
 		"\n[tty2pico]" +
 		"\nbackgroundColor = " + String(config.backgroundColor) +
-		"\ntftWidth = " + String(config.tftWidth) +
-		"\ntftHeight = " + String(config.tftHeight) +
-		"\ntftRotation = " + String(config.tftRotation) +
-		"\ndisableSD = " + String(config.disableSD ? "true" : "false") +
-		"\noverclockMode = " + String(config.overclockMode) +
-		"\noverclockSD = " + String(config.overclockSD ? "true" : "false") +
 		"\nimagePath = \"" + config.imagePath + "\"" +
 		"\nstartupCommand = \"" + config.startupCommand + "\"" +
 		"\nstartupDelay = \"" + String(config.startupDelay) + "\"" +
 		"\nstartupImage = \"" + config.startupImage + "\"" +
-		"\nslideshowFolder = \"" + config.slideshowFolder + "\"" +
 		"\nslideshowDelay = " + String(config.slideshowDelay) +
+		"\nslideshowFolder = \"" + config.slideshowFolder + "\"" +
+		"\ntftWidth = " + String(config.tftWidth) +
+		"\ntftHeight = " + String(config.tftHeight) +
+		"\ntftRotation = " + String(config.tftRotation) +
 		"\nuncapFramerate = " + String(config.uncapFramerate ? "true" : "false");
 
-	int size = (commandText.length() > bufferSize) ? bufferSize : commandText.length();
-	memcpy(buffer, commandText.c_str(), size);
-	return size;
+	memcpy(buffer, commandText.c_str(), commandText.length());
+	return commandText.length();
 }
 
 #endif

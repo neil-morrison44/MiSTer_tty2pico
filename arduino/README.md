@@ -5,13 +5,14 @@
 A full colour version of [tty2oled](https://github.com/venice1200/MiSTer_tty2oled) display addon for the [MiSTer FPGA](https://github.com/MiSTer-devel) and features:
 
 * Targets compatiblity with the [tty2oled Command List](https://github.com/venice1200/MiSTer_tty2oled/wiki/Command_v2)
-* Displays transparent PNG, static GIF, and animated GIF files at up to 50fps!
+* Displays PNG, static GIF, and animated GIF files all with transparency at up to 50fps!
 * Can display files from built-in flash or microSD card if available
 * Support for SPI displays up to 320x240 resolution (may require manual build)
 * Appears as USB Mass Storage device so you can easily load new files
 
 Table of Contents:
 - [Installation](#installation)
+	- [General](#general)
 	- [Firmware](#firmware)
 	- [Hardware](#hardware)
 		- [Wiring](#wiring)
@@ -35,6 +36,10 @@ Table of Contents:
 
 ## Installation
 
+### General
+
+In order to achieve the maximum performance the RP2040 chip is overclocked to a rate of 266MHz, which is more than double the stock speed and the maximum safe speed to run without needing to adjust timings on critical system components like the flash memory. This effectively doubles the peformance of processing and pushing pixels to the display. The increased heat from the speed and voltage increases is minimal, so none or minimal passive cooling should suffice. We haven't come across any short-term issues or damage to the boards due to overclocking, however it's something to keep in mind for long-term installations and use.
+
 ### Firmware
 
 Each RP2040 board and display combination requires its own build since a lot of the pin and bus configuration must be passed in at compile time. The mainline release targets the following hardware:
@@ -51,7 +56,7 @@ To install:
 1. Hold the `BOOLSEL` (sometimes just labeled `BOOT`) button while plugging in your device. A new drive will appear on your computer with the name `RPI-RP2`.
 1. Copy the `.uf2` file to the `RPI-RP2` drive. This will upload the new firmware to the device.
 
-That's it! tty2pico should display a startup screen. If running from flash, tty2pico will try to mount an existing flash partition first. This will preserve your data between firmware updates. If no FAT partition is present on the flash parition, it will be automatically formatted and labeled `TTY2PICO` when mounted as a drive on a PC. If running from SD card then you should already be set.
+That's it! tty2pico should display a startup screen. If running from flash, tty2pico will try to mount an existing flash partition first. This will preserve your data between firmware updates. If no FAT partition is present on the flash parition, it will be automatically formatted and labeled `TTY2PICO` when mounted as a drive on a PC. If running from SD card make sure it's already formatted as exFAT and you'll be set.
 
 ### Hardware
 
@@ -73,9 +78,11 @@ Using FAT32 from microSD does work, however it's not a supported format. The clu
 
 #### MicroSD Readers
 
-tty2pico supports level-shifting SD readers via a SPI interface. The integrated SD readers of the RoundyPi and the SparkFun Thing Plus RP2040 have been tested to work with the `overclockSD` option which runs the SD SPI bus a little over 40MHz. These will give you optimal performance, even faster than running from the flash partition!
+tty2pico supports SD readers via a SPI interface. At startup tty2pico will try to automatically detect the SPI rate for the SD reader. The integrated SD readers of the RoundyPi and the SparkFun Thing Plus RP2040 have been tested to work at a "full speed" setting around the 40MHz mark. The external SD reader from Adafruit is also known to run at this higher speed.
 
-There are also external SD readers that can be connected, however the SPI rate for these will vary. The board from Adafruit is known to support the higher 40MHz speed, however some cheap SD readers on Amazon and AliExpress will only support a lower rate of 24MHz and will require the `overclockSD` option to be set to `false`. While not optimal for speed, they still work great for displaying galleries of larger images that couldn't be stored on the flash file system.
+Some of the less expensive SD readers on Amazon and AliExpress will only support a lower rate of 24MHz. While not optimal for speed, they still work great for displaying galleries of larger images that couldn't be stored on the flash file system.
+
+The speed the SD filesystem is running is display on the tty2pico startup screen and when then `CMDSHSYSHW` command is executed.
 
 ### Images
 
@@ -89,7 +96,7 @@ PNG files should be saved in a non-interlaced RGB or RGBA pixel format, as they 
 
 #### GIF Files
 
-Both static and animated GIF files are currently supported, minus transparency at the moment. The performance of GIF files found in the wild can vary greatly. You can try something like [Ezgif.com](https://ezgif.com/optimize) to resize and try optimization steps like using a single color table for all frames, reducing color depth or adjust frame counts and timings. Compression can work but doesn't always produce great results. The optimize transparency option can greatly reduce file size, but usually in a very destructive manner to the output. If running from an SD then file size shouldn't be too much of a concern, as the images are streamed from the SD card as they're animated.
+Both static and animated GIF files are currently supported, minus transparency at the moment. The performance of GIF files found in the wild can vary greatly. You can try something like [Ezgif.com](https://ezgif.com/optimize) to resize and try optimization steps like using a single color table for all frames, reducing color depth or adjust frame counts and timings. Compression can work but doesn't always produce great results. The optimize transparency option can greatly reduce file size, but usually in a very destructive manner to the output when using anything but the `0%` value. If running from an SD then file size shouldn't be too much of a concern, as the images are streamed from the SD card as they're animated.
 
 By default an animated GIF will only play once through the animation cycle targeting the intetended frame delay from the file. To force a GIF file to play on a continuous loop, add a `.loop` to the filename, like `sega.loop.gif`. To force a GIF file to play without a frame delay (no FPS limit), add a `.fast` to the filename, like `gba.fast.gif`.
 
@@ -97,15 +104,13 @@ Both of these can be added to a file to make it playback at top speed on repeat:
 
 ### Configuration
 
-tty2pico uses an optional config file in [TOML](https://toml.io/en/) format named `tty2pico.toml` at the root of your storage device for some runtime options that can be adjusted. Using a config file is the only way to enable an overclock for maximum performance at this time. A sample `tty2pico.toml` file with all available options:
+tty2pico uses a config file in [TOML](https://toml.io/en/) format named `tty2pico.toml` at the root of your storage device for some runtime options that can be adjusted. If the file does not exist on your storage device it will be automatically created. A sample `tty2pico.toml` file with all available options:
 
 ```toml
 title = "tty2pico RoundyPi Configuration"
 
 [tty2pico]
 backgroundColor = 0
-overclockMode = 1
-overclockSD = true
 slideshowDelay = 2000
 startupCommand = "CMDBYE"
 startupDelay = 5000
@@ -116,20 +121,16 @@ tftRotation = 2
 uncapFramerate = false
 ```
 
-> NOTE: The `.toml` file should NOT end with a new line, as this will break compability with the TOML parser. If your settings are not being applied on startup, please verify no new line is present at the end of the file.
-
 | Option | Valid Values | Default Value | Description |
 | ------ | --------- | ------------- | ----------- |
 | backgroundColor | 16-bit RGB565 color value in integer form | 0 (Black) | The default background color when using transparent images. You will need to find an RGB565 color value usually in hex format like [the TFT_eSPI color definitions](https://github.com/Bodmer/TFT_eSPI/blob/13e62a88d07ed6e29d15fe76b132a927ec29e307/TFT_eSPI.h#L282), then convert the hex value to an integer value using an online tool or the `tools/hex-to-int.py` Python script like `python hex-to-int.py FFFF` |
-| overclockMode | 0 = Stock speed<br>1 = Overclocked<br>2 = Overclocked+<br>255 = [Ludicrous Speed](https://youtu.be/oApAdwuqtn8) (max tested overclock for the platform) | 0 | Set to `1` to double the clock speed of the RP2040 from 125MHz to 250MHz. This will provide almost a 2x performance increase for display refreshes and will allow well optimized GIFs to display at 50fps. Without an overclock 30fps is likely max, and there's no guarantee there.<br><br>A setting of `2` will boost the overclock a bit more to 266MHz! Not a huge boost, but enough to be noticable for this application. Not every RP2040 will run at this setting, as the CPU voltage is still a bit conservative. This setting may not work or be stable on all boards like the RoundyPi 😢. If that's the case check out the next option.<br><br>For those that want to squeeze out every last drop of performance, the Ludicrious Speed setting of `255` will overclock the RP2040 to 266MHz and max out the CPU voltage for the best chance at maximum speed! This setting *does* work on a RoundyPi for max performance, however keep in mind it may degrade the life of the CPU. If you're worried about shortening the lifespan but still want maximum performance, then a passive heatsink or an indirect fan would do fine. |
-| overclockSD | true/false | false | Some SD readers will not work with an overclocked SPI rate, so the default value for this option is `false`. For SD readers that do with the higher SPI rate, like those on the RoundyPi and SparkFun Thing Plus RP2040, setting this option to `true` will allow for maximum supported speed.
 | slideshowDelay | 0+ | 2000 | The delay in milliseconds between switching images during the slideshow/screensaver. |
 | startupCommand | string | "" | The [tty2pico command](#command-list) to run at startup. |
 | startupDelay | 0+ | 5000 | The delay in milliseconds to show the startup screen |
 | startupImage | string | "" | The image to display after the `startupCommand` runs. |
 | tftHeight | 0-320 | Display specific | Override the predefined height of the display in pixels. If your screen is natively portrait (like the ST7789V) this value should be equal or larger than `tftWidth`. |
 | tftWidth | 0-320 | Display specific | Override the predefined width of the display in pixels. If your screen is natively portrait (like the ST7789V) this value should be equal or smaller than `tftHeight`. |
-| tftRotation | 0 = none<br>1 = 90°<br>2 = 180°<br>3 = 270° | Display specific | Override the default startup rotation of the display. NOT the same values as `CMDROT`. |
+| tftRotation | 0 = none<br>1 = 90°<br>2 = 180°<br>3 = 270° | Display specific | Override the default startup rotation of the display. Uses rotation values from TFT_eSPI library, which are NOT the same rotation values as `CMDROT`. |
 | uncapFramerate | true/false | false | Force animated GIFs to play without a framerate limit. |
 
 ## Development

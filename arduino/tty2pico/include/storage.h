@@ -58,6 +58,15 @@ FATFS fatfs;
  * Helper functions
  *************************/
 
+bool checkSD()
+{
+	FsFile tmp = sdfs.open("/tty2pico.tmp", O_RDWR | O_CREAT | O_AT_END);
+	bool exists = tmp;
+	tmp.remove();
+	tmp.close();
+	return exists;
+}
+
 // Since SdFat won't format anything smaller than 6MB use Elm Cham's fatfs f_mkfs() to format
 void formatFlash(void)
 {
@@ -102,32 +111,15 @@ void formatFlash(void)
 
 FsFileTS getFile(const char *path, oflag_t oflag = O_RDONLY)
 {
-	FsFileTS file;
-
+	FsFileTS file = volume.open(path, oflag);
 #if VERBOSE_OUTPUT == 1
-	Serial.print("Looking for file: "); Serial.println(path);
-#endif
-	if (volume.exists(path))
+	if (file)
 	{
-#if VERBOSE_OUTPUT == 1
-	Serial.print("Attempting to open file: "); Serial.println(path);
-#endif
-		file = volume.open(path, oflag);
-#if VERBOSE_OUTPUT == 1
-		if (file)
-		{
-			Serial.print("Opened file: "); Serial.println(path);
-		}
-		else
-		{
-			Serial.print("Couldn't open file: "); Serial.print(path); Serial.print(", error code: "); Serial.println(file.getError());
-		}
+		Serial.print("Opened file: "); Serial.println(path);
 	}
 	else
 	{
-		Serial.print("File not found: "); Serial.print(path); Serial.print(", error code: "); Serial.println(file.getError());
-	}
-#else
+		Serial.print("Couldn't open file: "); Serial.print(path); Serial.print(", error code: "); Serial.println(file.getError());
 	}
 #endif
 
@@ -144,16 +136,18 @@ bool getHasSD(void)
 	return hasSD;
 }
 
-void saveFile(String path, const char *data, int size, oflag_t oflag = (O_WRITE | O_CREAT | O_TRUNC))
+bool saveFile(String path, const char *data, int size, oflag_t oflag = O_RDWR | O_CREAT | O_AT_END)
 {
 	FsFileTS file = getFile(path, oflag);
 	if (!file)
 	{
-		Serial.print("Unable to save file: "); Serial.println(path);
-		return;
+		Serial.print("Unable to open file during save "); Serial.println(path);
+		file.close();
+		return false;
 	}
 
-	if (file.write(data, size))
+	size_t bytes = file.write(data, size);
+	if (bytes)
 	{
 #if VERBOSE_OUTPUT == 1
 		Serial.print("Saved file "); Serial.println(path);
@@ -161,17 +155,29 @@ void saveFile(String path, const char *data, int size, oflag_t oflag = (O_WRITE 
 	}
 	else
 	{
-		String message = "Failed to save file " + path;
-		Serial.println(message.c_str());
+		Serial.print("Failed to save file "); Serial.println(path);
 	}
 	file.close();
+
+	return bytes;
 }
 
 /*************************
  * Setup functions
  *************************/
 
-static void loadConfig(void)
+void saveConfig(void)
+{
+	int bufferSize = 4096; // Allocate 4K buffer to handle config data
+	char buffer[bufferSize];
+	int size = exportConfig(buffer, bufferSize);
+	if (saveFile(CONFIG_FILE_PATH, buffer, size))
+		Serial.println("Config file saved to " + String(CONFIG_FILE_PATH));
+	else
+		Serial.println("Unable to save config file " + String(CONFIG_FILE_PATH));
+}
+
+void loadConfig(void)
 {
 	Serial.println("Trying to load config...");
 	FsFileTS configFile = getFile(CONFIG_FILE_PATH);
@@ -192,17 +198,12 @@ static void loadConfig(void)
 		else
 			Serial.println("Config file loaded");
 	}
-	else Serial.println("No config file found");
-}
-
-void saveConfig(void)
-{
-	Serial.println("Config file saving temporarily disabled");
-	// int bufferSize = 4096;
-	// char buffer[bufferSize]; // Allocate 4K buffer to handle config data
-	// int size = exportConfig(buffer, bufferSize);
-	// saveFile(CONFIG_FILE_PATH, buffer, size);
-	// Serial.println("Config file saved to " + String(CONFIG_FILE_PATH));
+	else
+	{
+		Serial.println("No config file found, creating a default /tty2pico.toml file...");
+		configFile.close();
+		saveConfig();
+	}
 }
 
 static void setupFlash(void)
@@ -220,26 +221,13 @@ static void setupFlash(void)
 	Serial.print("Flash size: "); Serial.print(flash.size() / 1024); Serial.println(" KB");
 
 	// Check we have a valid FAT partition
-	FatVolume fatfs;
-	hasFlash = fatfs.begin(&flash);
-  if (hasFlash)
-	{
-		// Valid FAT volume but FsVolume.begin() doesn't think so.
-		// Call it to init filesystem on the flash and ignore the result.
-		flashfs.begin(&flash);
-	}
-	else
+	hasFlash = flashfs.begin(&flash);
+	if (!hasFlash)
 	{
 		formatFlash();
-		hasFlash = fatfs.begin(&flash);
-		if (hasFlash)
-		{
-			flashfs.begin(&flash);
-		}
-		else
-		{
+		hasFlash = flashfs.begin(&flash);
+		if (!hasFlash)
 			Serial.println("Error, failed to mount filesystem! You may need to format it manually as a FAT32 partition.");
-		}
 	}
 }
 
@@ -247,32 +235,19 @@ static void setupSD(void)
 {
 	Serial.println("Setting up SD storage");
 
-	SdSpiConfig spiConfig = getSdSpiConfig();
-
-	if (!sdfs.begin(spiConfig))
+	hasSD = sdfs.begin(getSdSpiConfig());
+	if (!hasSD)
 	{
 		sdfs.errorPrint(&Serial);
 		return;
 	}
 
-	FsFileTS root = sdfs.open("/", O_RDONLY);
-	if (root)
-	{
-		if (root.isDir())
-		{
-			hasSD = root.isDir();
-			Serial.println("SD filesystem initialized");
-		}
-		else
-		{
-			Serial.println("SD filesystem intialization failed, unable to locate root filesystem");
-		}
-		root.close();
-	}
+	hasSD = checkSD();
+
+	if (hasSD)
+		Serial.println("SD filesystem initialized");
 	else
-	{
-		Serial.print("SD filesystem intialization failed, error code: "); Serial.println(root.getError());
-	}
+		Serial.println("SD filesystem intialization failed, unable to locate root filesystem");
 }
 
 void setupStorage(void)

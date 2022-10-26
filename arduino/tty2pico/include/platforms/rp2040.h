@@ -15,6 +15,8 @@
 #include "pico/util/datetime.h"
 #include <UnixTime.h>
 
+#define SYS_CHANGE_DELAY 200
+
 static SdSpiDriverT2P sdSpiDriver;
 
 static queue_t cmdQ;
@@ -86,7 +88,8 @@ float getCpuTemperature(void)
 
 SdSpiConfig getSdSpiConfig(void)
 {
-	return SdSpiConfig(SDCARD_CS_PIN, DEDICATED_SPI, SPI_FULL_SPEED, &sdSpiDriver);
+	// Initial config at half speed. When setupPlatform() is called the speed will be automatically set.
+	return SdSpiConfig(SDCARD_CS_PIN, ENABLE_DEDICATED_SPI == 1 ? DEDICATED_SPI : SHARED_SPI, SPI_HALF_SPEED, &sdSpiDriver);
 }
 
 const char *getTime(int format)
@@ -169,55 +172,37 @@ void resetForUpdate(void)
 	reset_usb_boot(0, 0);
 }
 
-void setupPlatform(bool hasSD)
+void setupPlatform(bool (*checkSDCallback)())
 {
 	rp2040.enableDoubleResetBootloader();
 
-	int cpuMHz = 0;
-	vreg_voltage voltage = VREG_VOLTAGE_DEFAULT;
-
-	switch (config.overclockMode)
+	// Apply an overclock for about 2x performance and a voltage tweak to stablize most RP2040 boards.
+	// If it's good enough for pixel-pushing in MicroPython, it's good enough for us :P
+	// https://github.com/micropython/micropython/issues/8208
+	vreg_set_voltage(VREG_VOLTAGE_MAX);
+	delay(SYS_CHANGE_DELAY); // Allow vreg time to stabilize
+	if (!set_sys_clock_khz(266000, false))
 	{
-		case TTY2PICO_OverclockMode::OVERCLOCKED:
-			cpuMHz = 250;
-			voltage = VREG_VOLTAGE_1_20;
-			break;
-
-		case TTY2PICO_OverclockMode::OVERCLOCKED_PLUS:
-			cpuMHz = 266;
-			voltage = VREG_VOLTAGE_1_20;
-			break;
-
-		case TTY2PICO_OverclockMode::LUDICROUS_SPEED:
-			cpuMHz = 266;
-			voltage = VREG_VOLTAGE_MAX;
-			break;
+		Serial.println("Couldn't overclock CPU, halting...");
+		while (1) delay(1);
 	}
+	Serial.println("CPU overclocked to 266MHz");
 
-	if (cpuMHz)
-	{
-		// Apply an overclock for about 2x performance and a voltage tweak to stablize most RP2040 boards.
-		// If it's good enough for pixel-pushing in MicroPython, it's good enough for us :P
-		// https://github.com/micropython/micropython/issues/8208
-		vreg_set_voltage(voltage);
-		delay(250); // Allow vreg time to stabilize
-		if (!set_sys_clock_khz(cpuMHz * 1000, false))
-		{
-			Serial.println("Couldn't overclock CPU, halting...");
-			while (1) delay(1);
-		}
-		Serial.print("CPU overclocked to "); Serial.print(cpuMHz); Serial.println("MHz");
-	}
-
+	// Sync peripheral bus to the CPU speed, gives boost to max SPI rate
 	uint32_t freq = clock_get_hz(clk_sys);
 	clock_configure(clk_peri, 0, CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS, freq, freq);
 	Serial.println("Peripheral bus frequencies applied");
 
-	if (hasSD)
-		spi_set_baudrate(getSdSpi(), config.overclockSD ? SPI_FULL_SPEED : SD_SCK_MHZ(27)); // SD can be sensitive to overclocking
-
-	// if (SPI_FREQUENCY)
-	// 	spi_set_baudrate(getDisplaySpi(), SPI_FREQUENCY);
+	// SD readers can be sensitive to overclocking.
+	// If we have an SD reader try setting various baud rates and use the highest working.
+	spi_set_baudrate(getSdSpi(), SPI_FULL_SPEED);
+	delay(SYS_CHANGE_DELAY);
+	if (!checkSDCallback())
+	{
+		// Didn't work at full speed, try something that should get around the 24MHz mark
+		spi_set_baudrate(getSdSpi(), SD_SCK_MHZ(27));
+		delay(SYS_CHANGE_DELAY);
+	}
 
 	Serial.println("Platform setup complete");
 }
@@ -439,7 +424,7 @@ uint8_t FsFileTS::getError() const
 	else return file32.getError();
 }
 
-size_t FsFileTS::getName(char* name, size_t len)
+size_t FsFileTS::getName(char *name, size_t len)
 {
 	if (fsFile)
 	{
@@ -475,7 +460,7 @@ FsFileTS FsFileTS::openNextFile(void)
 	else return FsFileTS(file32.openNextFile());
 }
 
-bool FsFileTS::openNext(FsBaseFile* dir, oflag_t oflag)
+bool FsFileTS::openNext(FsBaseFile *dir, oflag_t oflag)
 {
 	if (fsFile)
 	{
@@ -505,7 +490,19 @@ uint64_t FsFileTS::position(void)
 	else return file32.position();
 }
 
-int FsFileTS::read(void* buf, size_t count)
+size_t FsFileTS::print(const char *str)
+{
+	if (fsFile)
+	{
+		pauseBackground();
+		size_t byteCount = fsFile ? fsFile.print(str) : 0;
+		resumeBackground();
+		return byteCount;
+	}
+	else return file32.print(str);
+}
+
+int FsFileTS::read(void *buf, size_t count)
 {
 	if (fsFile)
 	{
