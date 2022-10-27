@@ -104,8 +104,6 @@ struct CommandData
 	String commandText;
 };
 
-
-
 typedef enum DateTimeFormat {
 	DTF_UNIX = 0,
 	DTF_HUMAN,
@@ -168,7 +166,7 @@ public:
 	static void setActiveVolume(FsVolumeTS *volume) { activeVolume = volume; }
 
 	bool available(void);
-	bool close(void);
+	bool close(bool sync = false);
 	uint8_t getError() const;
 	size_t getName(char* name, size_t len);
 	bool isDir(void);

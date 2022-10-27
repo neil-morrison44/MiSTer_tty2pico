@@ -418,10 +418,7 @@ void showSystemInfo(uint32_t frameTime)
 
 	memset(lineBuffer, 0, sizeof(lineBuffer));
 	float displaySpi = getSpiRateDisplayMHz();
-	if (displaySpi)
-		snprintf(lineBuffer, sizeof(lineBuffer), "%s @ %dx%d %.1fMHz", TTY2PICO_DISPLAY, config.getDisplayWidth(), config.getDisplayHeight(), displaySpi);
-	else
-		snprintf(lineBuffer, sizeof(lineBuffer), "%s @ %dx%d PIO Mode", TTY2PICO_DISPLAY, config.getDisplayWidth(), config.getDisplayHeight());
+	snprintf(lineBuffer, sizeof(lineBuffer), "%s @ %dx%d %.1fMHz", TTY2PICO_DISPLAY, config.getDisplayWidth(), config.getDisplayHeight(), displaySpi);
 	lines.push_back(lineBuffer);
 
 	lines.push_back(String(getTime(DTF_HUMAN)));

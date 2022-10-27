@@ -6,6 +6,7 @@
 #include "SPI.h"
 #include "api/HardwareSPI.h"
 #include "SpiDriver/SdSpiDriver.h"
+#include "TFT_eSPI.h"
 #include "hardware/dma.h"
 #include "hardware/rtc.h"
 #include "hardware/spi.h"
@@ -64,7 +65,11 @@ inline spi_cpha_t get_cpha(SPIMode mode)
 
 inline spi_inst_t *getDisplaySpi(void)
 {
+#ifdef TFT_SPI_PORT
 	return TFT_SPI_PORT == 0 ? spi0 : spi1;
+#else
+	return nullptr;
+#endif
 }
 
 inline spi_inst_t *getSdSpi(void)
@@ -88,8 +93,13 @@ float getCpuTemperature(void)
 
 SdSpiConfig getSdSpiConfig(void)
 {
-	// Initial config at half speed. When setupPlatform() is called the speed will be automatically set.
-	return SdSpiConfig(SDCARD_CS_PIN, ENABLE_DEDICATED_SPI == 1 ? DEDICATED_SPI : SHARED_SPI, SPI_HALF_SPEED, &sdSpiDriver);
+	// Initial config at compatibility speeds.
+	// When setupPlatform() is called the speed will be automatically set.
+#if ENABLE_DEDICATED_SPI == 1
+	return SdSpiConfig(SDCARD_CS_PIN, DEDICATED_SPI, SPI_HALF_SPEED, &sdSpiDriver);
+#else
+	return SdSpiConfig(SDCARD_CS_PIN, SHARED_SPI, SPI_HALF_SPEED, &sdSpiDriver);
+#endif
 }
 
 const char *getTime(int format)
@@ -116,13 +126,20 @@ const char *getTime(int format)
 	}
 }
 
+// Returns SPI rate, or PIO clock rate when RP2040_PIO_SPI is enabled
 float getSpiRateDisplayMHz()
 {
+#if RP2040_PIO_SPI == 1
+	// PIO write frequency from TFT_eSPI lib = (CPU clock/(4 * DIV_UNITS))
+	float pioClock = clock_get_hz(clk_sys) / (4.0f * DIV_UNITS);
+	return pioClock / 1000000.0f;
+#else
 	uint rate = spi_get_baudrate(getDisplaySpi());
 	if (rate == UINT_MAX)
 		rate = 0;
 
 	return rate / 1000000.0f;
+#endif
 }
 
 float getSpiRateSdMHz()
@@ -179,29 +196,71 @@ void setupPlatform(bool (*checkSDCallback)())
 	// Apply an overclock for about 2x performance and a voltage tweak to stablize most RP2040 boards.
 	// If it's good enough for pixel-pushing in MicroPython, it's good enough for us :P
 	// https://github.com/micropython/micropython/issues/8208
-	vreg_set_voltage(VREG_VOLTAGE_MAX);
+	int cpuMHz = config.cpuBoost ? 266 : 250;
+	vreg_voltage voltage = config.cpuBoost ? VREG_VOLTAGE_MAX : VREG_VOLTAGE_1_20;
+	vreg_set_voltage(voltage);
 	delay(SYS_CHANGE_DELAY); // Allow vreg time to stabilize
-	if (!set_sys_clock_khz(266000, false))
+	if (!set_sys_clock_khz(cpuMHz * 1000, false))
 	{
 		Serial.println("Couldn't overclock CPU, halting...");
 		while (1) delay(1);
 	}
-	Serial.println("CPU overclocked to 266MHz");
+	Serial.print("CPU overclocked to "); Serial.print(cpuMHz); Serial.println("MHz");
 
 	// Sync peripheral bus to the CPU speed, gives boost to max SPI rate
 	uint32_t freq = clock_get_hz(clk_sys);
 	clock_configure(clk_peri, 0, CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS, freq, freq);
 	Serial.println("Peripheral bus frequencies applied");
 
-	// SD readers can be sensitive to overclocking.
-	// If we have an SD reader try setting various baud rates and use the highest working.
-	spi_set_baudrate(getSdSpi(), SPI_FULL_SPEED);
-	delay(SYS_CHANGE_DELAY);
-	if (!checkSDCallback())
+#if RP2040_PIO_SPI != 1
+	spi_set_baudrate(getDisplaySpi(), SPI_FREQUENCY);
+	Serial.println("Display frequency set");
+#endif
+
+	if (checkSDCallback())
 	{
-		// Didn't work at full speed, try something that should get around the 24MHz mark
-		spi_set_baudrate(getSdSpi(), SD_SCK_MHZ(27));
-		delay(SYS_CHANGE_DELAY);
+		Serial.println("Setting SD card SPI rate");
+		bool tryNormalSpeed = true;
+		unsigned long speed;
+
+		if (config.sdMode)
+		{
+			Serial.print("Trying to set SD mode to "); Serial.println(config.sdMode);
+			speed = SD_SCK_MHZ(SD_MODE_SPEEDS[config.sdMode]);
+			spi_set_baudrate(getSdSpi(), speed);
+			delay(SYS_CHANGE_DELAY);
+			if (checkSDCallback())
+			{
+				sdSpiDriver.setSckSpeed(speed);
+				tryNormalSpeed = false;
+			}
+			else
+			{
+				Serial.println("Couldn't set SD to configured SD mode, falling back to full speed");
+			}
+		}
+
+		// Normal setup or fallback for failed SD rate OC
+		if (tryNormalSpeed)
+		{
+			config.sdMode = SD_MODE_DEFAULT;
+			speed = SD_SCK_MHZ(SD_MODE_SPEEDS[config.sdMode]);
+			spi_set_baudrate(getSdSpi(), speed);
+			delay(SYS_CHANGE_DELAY);
+			if (checkSDCallback())
+				sdSpiDriver.setSckSpeed(speed);
+			else
+				Serial.println("Couldn't set SD to normal speed, SD will be disabled");
+		}
+
+		if (checkSDCallback())
+		{
+			Serial.print("SD reader speed set to "); Serial.print(getSpiRateSdMHz()); Serial.println("MHz");
+		}
+		else
+		{
+			Serial.print("Check your SD card format and/or SD reader wiring and power requirements");
+		}
 	}
 
 	Serial.println("Platform setup complete");
@@ -258,7 +317,7 @@ SdSpiDriverT2P::SdSpiDriverT2P()
 
 void SdSpiDriverT2P::activate()
 {
-	// SDCARD_SPI.beginTransaction(spiSettings);
+	(void)0;
 }
 
 void SdSpiDriverT2P::begin(SdSpiConfig config)
@@ -279,12 +338,6 @@ void SdSpiDriverT2P::begin(SdSpiConfig config)
 	gpio_set_function(SDCARD_SCK_PIN, GPIO_FUNC_SPI);
 
 	gpio_pull_up(SDCARD_MISO_PIN); // Pull up MISO
-
-	if (SDCARD_CS_PIN > -1)
-	{
-		gpio_set_function(SDCARD_CS_PIN, GPIO_FUNC_SPI);
-		gpio_pull_up(SDCARD_CS_PIN);
-	}
 
 #if USE_DMA_SD == 1
 	// DMA configuration - 2 channels (TX/RX)
@@ -326,6 +379,8 @@ void SdSpiDriverT2P::deactivate()
 #if USE_DMA_SD == 1
 	dma_channel_unclaim(sdRxChannel);
 	dma_channel_unclaim(sdTxChannel);
+#else
+	(void)0;
 #endif
 }
 
@@ -354,7 +409,7 @@ void SdSpiDriverT2P::send(const uint8_t *buf, size_t count)
 
 void SdSpiDriverT2P::setSckSpeed(uint32_t maxSck)
 {
-	spiSettings = SPISettings(maxSck, MSBFIRST, SPI_MODE0);
+	spiSettings = SPISettings(maxSck, spiSettings.getBitOrder(), spiSettings.getDataMode());
 }
 
 /*******************************************************************************
@@ -400,16 +455,24 @@ bool FsFileTS::available(void)
 	else return file32.available();
 }
 
-bool FsFileTS::close(void)
+bool FsFileTS::close(bool sync)
 {
 	if (fsFile)
 	{
 		pauseBackground();
 		bool closed = fsFile ? fsFile.close() : true;
+		if (sync)
+			fsFile.sync();
 		resumeBackground();
 		return closed;
 	}
-	else return file32.close();
+	else
+	{
+		bool closed = file32.close();
+		if (sync)
+			file32.sync();
+		return closed;
+	}
 }
 
 uint8_t FsFileTS::getError() const

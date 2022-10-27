@@ -66,7 +66,7 @@ That's it! tty2pico should display a startup screen. If running from flash, tty2
 
 This is a pin mapping for the Raspberry Pi Pico and pin-compatible clones. Connect your display to the corresponding `TFT_` pins and your optional SD reader to the corresponding `SD_` pins. You will of course also need to connect to the necessary power pin(s) for your devices. For the GC9A01, that would be the `3V3(OUT)` pin in the image. An ILI9341 display will want 5v power, so that would be better connected to the `VBUS` or `VSYS` pins.
 
-If your microSD reader is level-shifting, you should be able to hook it up to the `VBUS` or `VSYS` pins and be set, otherwise you will also need to connect it to the `3V3(OUT)` pin possibly along with your display.
+If you have an external SD reader, you will need to hook it up to the `3V3(OUT)` pin, possibly sharing it with the display.
 
 If you're using a RoundyPi you don't have to worry about any of this 😁
 
@@ -78,11 +78,13 @@ Using FAT32 from microSD does work, however it's not a supported format. The clu
 
 #### MicroSD Readers
 
-tty2pico supports SD readers via a SPI interface. At startup tty2pico will try to automatically detect the SPI rate for the SD reader. The integrated SD readers of the RoundyPi and the SparkFun Thing Plus RP2040 have been tested to work at a "full speed" setting around the 40MHz mark. The external SD reader from Adafruit is also known to run at this higher speed.
+tty2pico supports SD readers via the SPI interface that support "full speed", which is typically around 24MHz. A good portion of the external readers out there will support this frequency.
 
-Some of the less expensive SD readers on Amazon and AliExpress will only support a lower rate of 24MHz. While not optimal for speed, they still work great for displaying galleries of larger images that couldn't be stored on the flash file system.
+The integrated SD readers of the RoundyPi and the SparkFun Thing Plus RP2040 have been tested to work at a higher speed we'll call OC mode (overclock mode) which will put them around the 44MHz mark. The external SD readers from Adafruit and Sparkfun are known to run at this higher speed as well.
 
-The speed the SD filesystem is running is display on the tty2pico startup screen and when then `CMDSHSYSHW` command is executed.
+The microSD SPI speed is displayed on the tty2pico startup screen and when then `CMDSHSYSHW` command is executed.
+
+> WARNING: Setting the SPI rate for your microSD reader too high can cause corruption to the SD card. Only use the higher rate OC mode with known working hardware, or you're willing to reformat your card to see if it will work.
 
 ### Images
 
@@ -111,6 +113,8 @@ title = "tty2pico RoundyPi Configuration"
 
 [tty2pico]
 backgroundColor = 0
+cpuBoost = true
+sdMode = 0
 slideshowDelay = 2000
 startupCommand = "CMDBYE"
 startupDelay = 5000
@@ -124,6 +128,8 @@ uncapFramerate = false
 | Option | Valid Values | Default Value | Description |
 | ------ | --------- | ------------- | ----------- |
 | backgroundColor | 16-bit RGB565 color value in integer form | 0 (Black) | The default background color when using transparent images. You will need to find an RGB565 color value usually in hex format like [the TFT_eSPI color definitions](https://github.com/Bodmer/TFT_eSPI/blob/13e62a88d07ed6e29d15fe76b132a927ec29e307/TFT_eSPI.h#L282), then convert the hex value to an integer value using an online tool or the `tools/hex-to-int.py` Python script like `python hex-to-int.py FFFF` |
+| cpuBoost | true/false | true | Apply a slight boost to the standard overclock. For the RP2040 this takes it from 250MHz to 266MHz, and is enabled by default.<br><br>This option is mostly meant for tuning SD reader compatibility with the `sdMode` option, since SPI rate is tied to CPU frequency. It can also be used if your board is unstable at the higher CPU speed. |
+| sdMode | 0 = Normal (25MHz-27MHz)<br><br>1 = Fast (32-33MHz)<br><br>2 = Max (41-44MHz) | 0 (Normal) | This option will configure the speed of your SPI SD reader. SPI rate ranges are given because this scales a bit with the `cpuBoost` setting.<br><br>By default most SD readers should be able to handle the `Normal` setting, since that's about the top range of what would be defined as the standard speed.<br><br>The RoundyPi and Sparkfun Thing Plus RP2040 have internal SD readers known to work at the `Max` speed, and the tty2pico builds for those devices default to this `Max` setting. The external SD readers from Adafruit and Sparkfun are also reported to work at `Max` (needs verification).<br><br>Some other boards may work somewhere in between `Normal` and `Max`, which is where the `Fast` setting comes in. It will essentially apply a "mild" overclock to the SD reader with a rate in between the `Normal` and `Max` speeds.<br><br>Be careful if testing higher ranges than are known or supported for the SD reader. The SD card may load initially, but become unstable during use possibly causing file system corruption. **Make sure to backup your SD card prior to testing unsupported/unknown hardware with this option.** |
 | slideshowDelay | 0+ | 2000 | The delay in milliseconds between switching images during the slideshow/screensaver. |
 | startupCommand | string | "" | The [tty2pico command](#command-list) to run at startup. |
 | startupDelay | 0+ | 5000 | The delay in milliseconds to show the startup screen |
@@ -178,6 +184,7 @@ The development focus is on the round GC9A01 based display, though manual build 
 | Resolution | Tech | Module | Driver |
 | - | - | - | - |
 | 240x240 Round | IPS | [1.28inch LCD Module](https://www.waveshare.com/wiki/1.28inch_LCD_Module) | GC9A01 |
+| 320x240 | IPS | [Pico ResTouch LCD 2.8inch](https://www.waveshare.com/wiki/Pico-ResTouch-LCD-2.8) | ST7789VW |
 | 320x172 | IPS | [1.47inch LCD Module](https://www.waveshare.com/wiki/1.47inch_LCD_Module) | ST7789V |
 | 320x240 | TFT | [2.4inch LCD Module](https://www.waveshare.com/wiki/2.4inch_LCD_Module) | ILI9341 |
 | 160x128 | TFT | [1.8inch LCD Module](https://www.waveshare.com/wiki/1.8inch_LCD_Module) | ST7735 |

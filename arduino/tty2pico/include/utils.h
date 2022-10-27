@@ -1,6 +1,8 @@
 #ifndef TTY2PICO_UTILS_H
 #define TTY2PICO_UTILS_H
 
+#define ARRAY_COUNT(arr) (sizeof(arr) / sizeof(arr[0]))
+
 void trimTrailing(char *str)
 {
 	int index = -1, i = 0;

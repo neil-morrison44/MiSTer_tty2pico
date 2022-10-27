@@ -60,10 +60,15 @@ FATFS fatfs;
 
 bool checkSD()
 {
+	pauseBackground();
 	FsFile tmp = sdfs.open("/tty2pico.tmp", O_RDWR | O_CREAT | O_AT_END);
 	bool exists = tmp;
-	tmp.remove();
+	if (exists)
+		tmp.remove();
 	tmp.close();
+	sdfs.card()->syncDevice();
+	resumeBackground();
+	hasSD = exists;
 	return exists;
 }
 
@@ -157,7 +162,7 @@ bool saveFile(String path, const char *data, int size, oflag_t oflag = O_RDWR | 
 	{
 		Serial.print("Failed to save file "); Serial.println(path);
 	}
-	file.close();
+	file.close(true);
 
 	return bytes;
 }

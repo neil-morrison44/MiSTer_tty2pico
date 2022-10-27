@@ -91,6 +91,14 @@
 #define USE_DMA_SD 0 // If defined will use the DMA mode with SD card for better performance on supported hardware
 #endif
 
+#ifndef CPU_BOOST
+#define CPU_BOOST 1 // Enable a slight boost over the standard overclock (if available for platform), will have slight effect SD SPI rate
+#endif
+
+#ifndef SD_MODE
+#define SD_MODE 0 // See TTY2PICO_SdModes for details
+#endif
+
 /**************************
  * Computed configuration
  **************************/
@@ -137,10 +145,26 @@ typedef enum TTY2PICO_Font {
 	FONT8 = 8, // Font 8. Large 75 pixel font needs ~3256 bytes in FLASH, only characters 1234567890:-.
 } TTY2PICO_Font;
 
+typedef enum TTY2PICO_SdModes
+{
+	SD_MODE_DEFAULT = 0, // 25.0MHz CPU@250MHz | 26.7MHz CPU@266MHz (1:1 peripheral clock)
+	SD_MODE_HIGH,        // 32.2MHz CPU@250MHz | 33.3MHz CPU@266MHz (1:1 peripheral clock)
+	SD_MODE_MAX,         // 41.3MHz CPU@250MHz | 44.3MHz CPU@266MHz (1:1 peripheral clock)
+} TTY2PICO_SdModes;
+
+const int SD_MODE_SPEEDS[] =
+{
+	27, // SD_SPEED_DEFAULT - 25.0MHz CPU@250MHz | 26.7MHz CPU@266MHz (1:1 peripheral clock)
+	34, // SD_SPEED_HIGH    - 32.2MHz CPU@250MHz | 33.3MHz CPU@266MHz (1:1 peripheral clock)
+	45, // SD_SPEED_MAX     - 41.3MHz CPU@250MHz | 44.3MHz CPU@266MHz (1:1 peripheral clock)
+};
+
 struct TTY2PICO_Config
 {
 	uint16_t backgroundColor = BACKGROUND_COLOR;
 	String imagePath = LOGO_PATH;
+	bool cpuBoost = CPU_BOOST;
+	TTY2PICO_SdModes sdMode = (TTY2PICO_SdModes)SD_MODE;
 	String startupCommand = "";
 	unsigned long startupDelay = STARTUP_DELAY;
 	String startupImage = STARTUP_LOGO;
@@ -185,8 +209,20 @@ const char *parseConfig(char *buffer)
 	auto [backgroundColorOK, backgroundColor] = tty2pico->getInt("backgroundColor");
 	if (backgroundColorOK) config.backgroundColor = (uint16_t)backgroundColor;
 
+	auto [cpuBoostOK, cpuBoost] = tty2pico->getBool("cpuBoost");
+	if (cpuBoostOK) config.cpuBoost = cpuBoost;
+
 	auto [imagePathOK, imagePath] = tty2pico->getString("imagePath");
 	if (imagePathOK) config.imagePath = imagePath.c_str();
+
+	auto [sdModeOK, sdMode] = tty2pico->getInt("sdMode");
+	if (sdModeOK) config.sdMode = (sdMode >= SD_MODE_DEFAULT && sdMode <= SD_MODE_MAX) ? (TTY2PICO_SdModes)sdMode : SD_MODE_DEFAULT;
+
+	auto [slideshowDelayOK, slideshowDelay] = tty2pico->getInt("slideshowDelay");
+	if (slideshowDelayOK) config.slideshowDelay = (uint32_t)slideshowDelay;
+
+	auto [slideshowFolderOK, slideshowFolder] = tty2pico->getString("slideshowFolder");
+	if (slideshowFolderOK) config.slideshowFolder = slideshowFolder.c_str();
 
 	auto [startupCommandOK, startupCommand] = tty2pico->getString("startupCommand");
 	if (startupCommandOK && startupCommand.length() > 0) config.startupCommand = startupCommand.c_str();
@@ -196,12 +232,6 @@ const char *parseConfig(char *buffer)
 
 	auto [startupImageOK, startupImage] = tty2pico->getString("startupImage");
 	if (startupImageOK) config.startupImage = startupImage.c_str();
-
-	auto [slideshowDelayOK, slideshowDelay] = tty2pico->getInt("slideshowDelay");
-	if (slideshowDelayOK) config.slideshowDelay = (uint32_t)slideshowDelay;
-
-	auto [slideshowFolderOK, slideshowFolder] = tty2pico->getString("slideshowFolder");
-	if (slideshowFolderOK) config.slideshowFolder = slideshowFolder.c_str();
 
 	auto [tftWidthOK, tftWidth] = tty2pico->getInt("tftWidth");
 	if (tftWidthOK) config.tftWidth = (uint16_t)tftWidth;
@@ -224,15 +254,17 @@ int exportConfig(char *buffer, int bufferSize)
 		String("title = \"tty2pico Configuration\"\n") +
 		"\n[tty2pico]" +
 		"\nbackgroundColor = " + String(config.backgroundColor) +
+		"\ncpuBoost = " + String(config.cpuBoost ? "true" : "false") +
 		"\nimagePath = \"" + config.imagePath + "\"" +
+		"\nsdMode = " + String(config.sdMode) +
 		"\nstartupCommand = \"" + config.startupCommand + "\"" +
-		"\nstartupDelay = \"" + String(config.startupDelay) + "\"" +
+		"\nstartupDelay = " + String(config.startupDelay) +
 		"\nstartupImage = \"" + config.startupImage + "\"" +
 		"\nslideshowDelay = " + String(config.slideshowDelay) +
 		"\nslideshowFolder = \"" + config.slideshowFolder + "\"" +
-		"\ntftWidth = " + String(config.tftWidth) +
-		"\ntftHeight = " + String(config.tftHeight) +
-		"\ntftRotation = " + String(config.tftRotation) +
+		(TFT_WIDTH != config.tftWidth ? "\ntftWidth = " + String(config.tftWidth) : "") +
+		(TFT_HEIGHT != config.tftHeight ? "\ntftHeight = " + String(config.tftHeight) : "") +
+		(TFT_ROTATION != config.tftRotation ? "\ntftRotation = " + String(config.tftRotation) : "") +
 		"\nuncapFramerate = " + String(config.uncapFramerate ? "true" : "false");
 
 	memcpy(buffer, commandText.c_str(), commandText.length());
