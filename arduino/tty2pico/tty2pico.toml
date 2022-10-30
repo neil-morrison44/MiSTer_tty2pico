@@ -1,0 +1,12 @@
+title = "tty2pico Stock Configuration"
+
+[tty2pico]
+backgroundColor = 0
+cpuBoost = true
+sdMode = 0
+slideshowDelay = 2000
+slideshowPath = "/logos/"
+startupCommand = ""
+startupDelay = 5000
+startupImage = ""
+uncapFramerate = false
