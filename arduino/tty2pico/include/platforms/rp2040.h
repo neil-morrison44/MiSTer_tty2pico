@@ -16,7 +16,7 @@
 #include "pico/util/datetime.h"
 #include <UnixTime.h>
 
-#define SYS_CHANGE_DELAY 200
+#define SYS_CHANGE_DELAY 250
 
 static SdSpiDriverT2P sdSpiDriver;
 
