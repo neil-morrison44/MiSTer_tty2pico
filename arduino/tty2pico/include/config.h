@@ -165,7 +165,7 @@ typedef enum TTY2PICO_Font {
 	FONT7 = 7,	// Font 7. 7 segment 48 pixel font, needs ~2438 bytes in
 				// FLASH, only characters 1234567890:.
 	FONT8 = 8,	// Font 8. Large 75 pixel font needs ~3256 bytes in FLASH,
-				// only characters 1234567890:-.
+	// only characters 1234567890:-.
 } TTY2PICO_Font;
 
 typedef enum TTY2PICO_SdModes {
@@ -200,7 +200,7 @@ struct TTY2PICO_Config {
 	int tftWidth = TFT_WIDTH;
 	int tftHeight = TFT_HEIGHT;
 	bool uncapFramerate = false;
-	bool showDefaultForUnknown = false;
+	String missingCoreImage = "";
 
 	int getDisplayHeight() const {
 		return tftHeight < tftWidth ? tftHeight : tftWidth;
@@ -286,10 +286,9 @@ const char *parseConfig(char *buffer) {
 		tty2pico->getBool("uncapFramerate");
 	if (uncapFramerateOK) config.uncapFramerate = uncapFramerate;
 
-	auto [showDefaultForUnknownOK, showDefaultForUnknown] =
-		tty2pico->getBool("showDefaultForUnknown");
-	if (showDefaultForUnknownOK)
-		config.showDefaultForUnknown = showDefaultForUnknown;
+	auto [missingCoreImageOK, missingCoreImage] =
+		tty2pico->getString("missingCoreImage");
+	if (missingCoreImageOK) config.missingCoreImage = missingCoreImage.c_str();
 
 	return nullptr;
 }
@@ -317,8 +316,7 @@ int exportConfig(char *buffer, int bufferSize) {
 			 : "") +
 		"\nuncapFramerate = " +
 		String(config.uncapFramerate ? "true" : "false") +
-		"\nshowDefaultForUnknown = " +
-		String(config.showDefaultForUnknown ? "true" : "false");
+		"\nmissingCoreImage = \"" + config.missingCoreImage + "\"";
 
 	memcpy(buffer, commandText.c_str(), commandText.length());
 	return commandText.length();
