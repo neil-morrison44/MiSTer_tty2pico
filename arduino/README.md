@@ -1,8 +1,10 @@
 # tty2pico for Arduino
 
-<img src="./docs/images/8AEE547F-BAA3-452A-836F-03CCF3AC730D_1_105_c.jpeg" alt="Image of the display" height="300">
+A full colour version of [tty2oled](https://github.com/venice1200/MiSTer_tty2oled) display addon for the [MiSTer FPGA](https://github.com/MiSTer-devel).
 
-A full colour version of [tty2oled](https://github.com/venice1200/MiSTer_tty2oled) display addon for the [MiSTer FPGA](https://github.com/MiSTer-devel) and features:
+<img src="./docs/images/8AEE547F-BAA3-452A-836F-03CCF3AC730D_1_105_c.jpeg" alt="Image of the display" height="300"><br>
+
+Features:
 
 * Targets compatiblity with the [tty2oled Command List](https://github.com/venice1200/MiSTer_tty2oled/wiki/Command_v2)
 * Displays PNG, static GIF, and animated GIF files all with transparency at up to 50fps!
@@ -23,8 +25,8 @@ Table of Contents:
 		- [GIF Files](#gif-files)
 	- [Configuration](#configuration)
 - [Development](#development)
-	- [PlatformIO Configuration](#platformio-configuration)
 	- [Dependencies](#dependencies)
+	- [PlatformIO Configuration](#platformio-configuration)
 		- [Boards](#boards)
 		- [Displays](#displays)
 - [Command List](#command-list)
@@ -114,11 +116,12 @@ title = "tty2pico RoundyPi Configuration"
 [tty2pico]
 backgroundColor = 0
 cpuBoost = true
+missingCoreImage = "/logos/mister.png"
 sdMode = 0
 slideshowDelay = 2000
 startupCommand = "CMDBYE"
 startupDelay = 5000
-startupImage = "/logos/mister.loop.gif"
+startupImage = "/logos/psx.gif"
 tftHeight = 240
 tftWidth = 240
 tftRotation = 2
@@ -129,6 +132,7 @@ uncapFramerate = false
 | ------ | --------- | ------------- | ----------- |
 | backgroundColor | 16-bit RGB565 color value in integer form | 0 (Black) | The default background color when using transparent images. You will need to find an RGB565 color value usually in hex format like [the TFT_eSPI color definitions](https://github.com/Bodmer/TFT_eSPI/blob/13e62a88d07ed6e29d15fe76b132a927ec29e307/TFT_eSPI.h#L282), then convert the hex value to an integer value using an online tool or the `tools/hex-to-int.py` Python script like `python hex-to-int.py FFFF` |
 | cpuBoost | true/false | true | Apply a slight boost to the standard overclock. For the RP2040 this takes it from 250MHz to 266MHz, and is enabled by default.<br><br>This option is mostly meant for tuning SD reader compatibility with the `sdMode` option, since SPI rate is tied to CPU frequency. It can also be used if your board is unstable at the higher CPU speed. |
+| missingCoreImage | string | "" | An image to be displayed when a requested core image is unavailable. |
 | sdMode | 0 = Normal (25MHz-27MHz)<br><br>1 = Fast (32-33MHz)<br><br>2 = Max (41-44MHz) | 0 (Normal) | This option will configure the speed of your SPI SD reader. SPI rate ranges are given because this scales a bit with the `cpuBoost` setting.<br><br>By default most SD readers should be able to handle the `Normal` setting, since that's about the top range of what would be defined as the standard speed.<br><br>The RoundyPi and Sparkfun Thing Plus RP2040 have internal SD readers known to work at the `Max` speed, and the tty2pico builds for those devices default to this `Max` setting. The external SD readers from Adafruit and Sparkfun are also reported to work at `Max` (needs verification).<br><br>Some other boards may work somewhere in between `Normal` and `Max`, which is where the `Fast` setting comes in. It will essentially apply a "mild" overclock to the SD reader with a rate in between the `Normal` and `Max` speeds.<br><br>Be careful if testing higher ranges than are known or supported for the SD reader. The SD card may load initially, but become unstable during use possibly causing file system corruption. **Make sure to backup your SD card prior to testing unsupported/unknown hardware with this option.** |
 | slideshowDelay | 0+ | 2000 | The delay in milliseconds between switching images during the slideshow/screensaver. |
 | startupCommand | string | "" | The [tty2pico command](#command-list) to run at startup. |
@@ -143,12 +147,6 @@ uncapFramerate = false
 
 The project is configured to use PlatformIO for development targeting the [Arduino-Pico](https://github.com/earlephilhower/arduino-pico) core.
 
-### PlatformIO Configuration
-
-A PlatformIO build environment is defined for each supported board. The main `platformio.ini` file defines the base build parameters and imports shared configurations for each board from the `boards/` folder. The `displays/` folder contains configurations for each supported display, and are also imported through the `platformio.ini` file. The shared configurations are then composed into build environments that are defined in each board's `env/[Board]-[Display].ini` file, which are automatically generated when running the `tools/generate-environments.py` script.
-
-If you would like to add a build for a board/display that isn't supported, copy one of the existing display or env files, rename, then update accordingly.
-
 ### Dependencies
 
 All platform, framework and external library dependencies required to build will be automatically downloaded by PlatformIO when executing a build. The external library dependencies are:
@@ -161,19 +159,30 @@ All platform, framework and external library dependencies required to build will
 * bodmer/TFT_eSPI@2.4.78
 * gyverlibs/UnixTime@1.1
 
+### PlatformIO Configuration
+
+A PlatformIO build environment is defined for each supported board. The `platformio.ini` file defines some base build parameters and imports shared configurations for each board from the and `env/` folder. The `.ini` files in the `boards/` and `displays/` folders are used to compose the files in the `env/` folder using the `tools/generate-environments.py` Python script.
+
+If you would like to add a build for a board/display that isn't supported:
+
+* Copy one of the existing `.ini` files in the `boards/` and/or `displays/` and rename
+* Update the file(s) with your new parameters. Make sure to rename the sections in at the top in `[]`.
+* Run the `tools/generate-environments.py` script to generate your environment(s)
+* If using PlatformIO in VS Code run `PlatformIO: Refresh Project Tasks` from the Command Palette to update the cached tasks in the IDE
+
 #### Boards
 
 Manual build configurations are available for the following RP2040 boards:
 
-| Board | Flash Size | SD Reader? | Display? | Remarks |
+| Board | Flash Size | microSD Support | Built-in Display | Remarks |
 | ----- | ---------- | ---------- | -------- | ------- |
-| Raspberry Pi Pico | 2 MB | No | No | The original |
-| Pico clones | 16 MB | No | No | e.g. Pimoroni Pico LiPo |
-| [RoundyPi](https://github.com/sbcshop/RoundyPi) | 2 MB | Yes | Round 1.28" 240x240 GC9A01 | Just add an (optional) SD card! |
-| Sparkfun Pro Micro RP2040 | 16 MB | No | No | Easily available and relatively cheap |
-| Sparkfun Thing Plus RP2040 | 16 MB | Yes | No | A bit expensive but allows a lot of flexibility |
+| [RoundyPi](https://github.com/sbcshop/RoundyPi) | 2 MB | Built-in | Round 1.28" 240x240 GC9A01 | The recommended hardare for tty2pico. Just add an (optional) SD card! |
+| Sparkfun Thing Plus RP2040 | 16 MB | Built-in | No | A very high quality board with max flash space and a high speed microSD reader. |
+| Raspberry Pi Pico | 2 MB | External | No | The "OG" |
+| Pico clones | 16 MB | External | No | Any pin-compatible board with 16MB, this includes boards like the Pimoroni Pico LiPo and generic 16MB USB-C Pico clones |
+| Sparkfun Pro Micro RP2040 | 16 MB | No | No | A great option for an inexpensive and easily available board for running from flash. This board only has 1 SPI channel, so no microSD support at the moment. |
 
-Each build is also preconfigured to use an external SPI-based SD reader if one isn't built-in. See the relevant `env/[BoardName].ini` file for pin mapping via the `SDCARD_` defines.
+Each build is also preconfigured to use an external SPI-based SD reader if supported. See the relevant `boards/[BoardName].ini` file for pin mapping via the `SDCARD_` defines.
 
 #### Displays
 
@@ -184,7 +193,6 @@ The development focus is on the round GC9A01 based display, though manual build 
 | Resolution | Tech | Module | Driver |
 | - | - | - | - |
 | 240x240 Round | IPS | [1.28inch LCD Module](https://www.waveshare.com/wiki/1.28inch_LCD_Module) | GC9A01 |
-| 320x240 | IPS | [Pico ResTouch LCD 2.8inch](https://www.waveshare.com/wiki/Pico-ResTouch-LCD-2.8) | ST7789VW |
 | 320x172 | IPS | [1.47inch LCD Module](https://www.waveshare.com/wiki/1.47inch_LCD_Module) | ST7789V |
 | 320x240 | TFT | [2.4inch LCD Module](https://www.waveshare.com/wiki/2.4inch_LCD_Module) | ILI9341 |
 | 160x128 | TFT | [1.8inch LCD Module](https://www.waveshare.com/wiki/1.8inch_LCD_Module) | ST7735 |
@@ -205,8 +213,8 @@ These commands are adapted from `tty2oled` and should be (mostly) compatible:
 | CMDBYE | Show Sorgelig's Cat Icon | `CMDBYE` |
 | CMDCLS | Clear and Update the Display | `CMDCLS` |
 | CMDCOR | Command to announce core change, will try to display in the following order:<br>`[corename].loop.fast.gif`<br>`[corename].loop.gif`<br>`[corename].fast.gif`<br>`[corename].gif`<br>`[corename].png` | `CMDCOR,[corename]`<br>`[corename]`<br>e.g.<br>`SNES`<br>`CMDCOR,SNES`<br>`CMDCOR,19XX` |
-| CMDDOFF | Switch Display off | `CMDDOFF` |
-| CMDDON | Power Display on | `CMDDON` |
+| CMDDOFF | Turn off the display | `CMDDOFF` |
+| CMDDON | Turn on the display.0 | `CMDDON` |
 | CMDENOTA | Reboots tty2pico device into bootloader mode to receive a firmware update | `CMDENOTA` |
 | CMDROT | Rotate screen relative to starting position (0=none, 1=180°, 2=90°, 3=270°) | `CMDROT,0` for no rotation<br>`CMDROT,1` to flip screen |
 | CMDSAVER | Disable or Enable the ScreenSaver (currently only toggle) | `CMDSAVER` |
@@ -227,15 +235,29 @@ These commands are specific to `tty2pico`:
 | ------- | -------- | ------- |
 | CMDGETSYS | Retrieve a pipe-separated system identifier string composed from the build flags with the `TTY2PICO_` prefix that can be used to remotely manage tty2pico options and updates, example output:<br><br>`version=1.0.0\|board=Raspberry Pi Pico\|display=GC9A01` | `CMDGETSYS` |
 | CMDGETTIME | Get the current real-time clock value in the specified format | `CMDGETTIME`<br>`CMDGETTIME,[format]`<br><br>Formats are:<br>0 = Unix timestamp (default if missing)<br>1 = Human readable |
+| CMDRLCONF | Force a reload of the `tty2pico.toml` config file | `CMDRLCONF` |
 | CMDSHOW | Show an image from the active storage device | `CMDSHOW,/logos/pattern.loop.gif` |
 
 ## Roadmap
 
 ### TODO
 
-* [ ] Implement support for whatever commands make sense from:
-  * [tty2oled](https://github.com/venice1200/MiSTer_tty2oled/wiki/Command_v2)
+* [ ] Implement support for whatever commands make sense from [tty2oled](https://github.com/venice1200/MiSTer_tty2oled/wiki/Command_v2):
+  * General
+    * [ ] CMDCON - Set display brightness
+    * [ ] CMDHWINF - Similar to tty2pico `CMDGETSYS`
+    * [ ] CMDRESET - Reset the MCU
+  * Drawing
+    * [ ] CMDCLSWU - Clear the display buffer without updating the display
     * [ ] CMDGEO - Show Geometric Figures (maybe?)
+    * [ ] CMDDUPD - Update Display Content (write Display Buffer to Screen)
+  * Dynamic Loading
+    * [ ] CMDAPD - Announce picture data (for loading from MiSTer storage)
+    * [ ] CMDSPIC - Show actual loaded Picture on Display (for loading from MiSTer storage)
+* [ ] Handle remaining parameter variations for existing commands
+  * [ ] CMDSAVER
+  * [ ] CMDTXT
+* [ ] Add support for transition effects (is this possible with the limited RAM?)
 * ~~[ ] Add JPEG support~~
 * [ ] Multicore support (one for logic, the other for draw calls)
 * [ ] Add support for other fast chips like ESP32 and ESP32-S3
