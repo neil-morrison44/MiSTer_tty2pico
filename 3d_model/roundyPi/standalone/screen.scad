@@ -6,6 +6,7 @@ $pcb_height = 1.62;
 $screen_height = 2;
 
 module pcb() {
+    $fa = 0.1;
     hull() {
         translate([ 0, 0, $screen_height ]) {
             cylinder(h = $pcb_height, r = $pcb_radius, center = true);
@@ -38,9 +39,22 @@ module device() {
     }
 }
 
-module case () { cylinder(h = 2.8, r = $pcb__max_radius + 2, center = false); }
+module case () {
+  $fa = 0.1;
+  cylinder(h = 2.8, r = $pcb__max_radius + 2, center = false);
+}
+
+module screwHole(){
+  $fs = 0.1;
+  cylinder(h = 10, r = 1.5, center = true);
+}
 
 difference() {
   case();
   device();
+
+  for ( x = [-($pcb__max_radius - 2), ($pcb__max_radius - 2)] ){
+    translate([x, 0, 0])
+    screwHole();
+}
 }
