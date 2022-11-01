@@ -53,7 +53,7 @@ $ screen /dev/ttyACM0
 
 This will show you what the MiSTer is requesting for the core name, what file(s) were searched for, and possibly some error messages if a file wasn't located. Again the this is not case-sensitive, so a core name of `PSX` will match `psx.gif`.
 
-For best results make sure your image files are the same resolution or smaller than then display. See the [Image Files](https://github.com/neil-morrison44/MiSTer_tty2pico/wiki/Image-Files) section of the wiki for image specifications and optimization tips.
+For best results make sure your image files are the same resolution or smaller than the display. See the [Image Files](https://github.com/neil-morrison44/MiSTer_tty2pico/wiki/Image-Files) section of the wiki for image specifications and optimization tips.
 
 ### (Optional) Edit tty2pico Configuration
 
