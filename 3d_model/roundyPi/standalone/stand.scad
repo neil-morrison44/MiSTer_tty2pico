@@ -1,25 +1,9 @@
 $fn = 360;
 
-// use <../standalone/screen.scad>;
-
 $pcb__max_radius = 26;
 $screw_distance = $pcb__max_radius - 5;
 
 $screw_radius = 2.5 / 2;
-
-module cover() {
-    translate([ 119.75, 195, 14.25 ])
-        import("../../cad_models/dust_cover_fixed.stl", convexity = 5);
-}
-
-module cableHole() {
-    $length = 5;
-    translate([ 0, 10, 0 ]) hull() {
-        for (x = [ -$length, $length ]) {
-            translate([ x, 0, 0 ]) cylinder(r = 5, h = 100, center = true);
-        }
-    }
-}
 
 module arm(sd_holder) {
     $width = 8;
@@ -40,18 +24,18 @@ module arm(sd_holder) {
 }
 
 module arms() {
-    for (x = [ -$screw_distance, $screw_distance ]) {
-        rotate([ -18, 0, 0 ]) translate([ x, -17.5, 3 ]) arm(x > 0);
+    translate(
+        [ 0, -2.338, 5.5 ]) for (x = [ -$screw_distance, $screw_distance ]) {
+        rotate([ -108, 0, 0 ]) translate([ x, -17.5, 0 ]) arm(x > 0);
     }
 }
 
-module cover_with_arms() {
-    difference() {
-        cover();
-        cableHole();
-    }
+arms();
 
-    arms();
+hull() {
+    translate([ -($screw_distance + 4), -1.88, 0 ])
+
+        cube([ ($screw_distance * 2) + 8, 5, 15 ]);
+
+    translate([ -5, -8, 0 ]) cube([ 10, 30, 1 ]);
 }
-
-cover_with_arms();

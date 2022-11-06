@@ -5,7 +5,7 @@ $pcb__max_radius = 26;
 $pcb_chin_width = 17;
 $pcb_height = 1.62;
 $screen_height = 1.86;
-$case_height = 6.3;
+$case_height = 6.6;
 
 $screw_distance = $pcb__max_radius - 5;
 
