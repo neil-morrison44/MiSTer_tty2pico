@@ -1,3 +1,5 @@
+$pcb__max_radius = 26;
+$screw_distance = $pcb__max_radius - 5;
 $screw_radius = 2.5 / 2;
 
 module arm(sd_holder) {

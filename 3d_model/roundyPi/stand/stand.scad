@@ -1,8 +1,5 @@
 $fn = 360;
 
-$pcb__max_radius = 26;
-$screw_distance = $pcb__max_radius - 5;
-
 include <../shared.scad>;
 
 module arms() {
