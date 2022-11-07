@@ -2,10 +2,6 @@ $fn = 360;
 
 include <../shared.scad>;
 
-$pcb__max_radius = 26;
-$screw_distance = $pcb__max_radius - 5;
-
-
 module cover() {
     translate([ 119.75, 195, 14.25 ])
         import("../../cad_models/dust_cover_fixed.stl", convexity = 5);
