@@ -6,7 +6,7 @@ $pcb_height = 1.62;
 $screen_height = 1.86;
 $case_height = 6.6;
 
-include <../shared.scad>;
+include <../shared.scad>
 
 module pcb() {
     $fa = 0.1;
@@ -61,11 +61,21 @@ module screwHole() {
     translate([ 0, 0, -1 ]) cylinder(h = $case_height + 2, r = 1.5);
 }
 
+module cableCutout() {
+    scale([1.5,1,1])
+    translate([ 0, -20, 8.75 ]) rotate([ 90, 0, 0 ])
+        cylinder(h = 25, r = 7.5, center = true);
+}
+
 difference() {
   case();
   translate([0,0,1]){
 #device();
+
   }
 
   for ( x = [-($screw_distance), ($screw_distance)] ){
-    translate([x, 0, 0])    screwHole();}}
+    translate([x, 0, 0])    screwHole();}
+
+    cableCutout();
+    }

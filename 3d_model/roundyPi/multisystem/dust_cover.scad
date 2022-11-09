@@ -3,8 +3,9 @@ $fn = 360;
 include <../shared.scad>;
 
 module cover() {
-    translate([ 119.75, 195, 14.25 ])
-        import("../../cad_models/dust_cover_fixed.stl", convexity = 5);
+    // the stl isn't centered
+    translate([ -310.75,155,15.9 ])
+        import("../../cad_models/MMS2022_V5B2_038B_DUST_RTP.stl", convexity = 5);
 }
 
 module cableHole() {
