@@ -11,8 +11,12 @@ jobs:
         run: pip install mpy-cross
       - name: convert tty_and_logos
         run: python -m mpy_cross tty_and_logos.py -Omax -march=armv6m
+        working-directory: micropython
       - name: convert libs
         run: for FILE in lib/*.py; do python -m mpy_cross $FILE -Omax -march=armv6m; done
+        working-directory: micropython
+      - name: move files
+        run: mv micropython/*.mpy . & mv micropython/main.py .
       - name: zip files
         run: zip -R device-files '*.mpy' 'main.py' 'logos/*.png'
       - name: Upload device-files

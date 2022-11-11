@@ -1,93 +1,100 @@
 # MiSTer_tty2pico
-A full colour version of https://github.com/venice1200/MiSTer_tty2oled
 
-- Should run on any device that supports micropython, tested on the RP2040 Pico.
-- Built for the gc9a01 display, but swapping that for any other display should be easy enough
-- The more RAM the device has got the faster it'll switch images
+tty2pico is an addon project for the [MiSTer FPGA](https://github.com/MiSTer-devel) which displays full color text, graphics or animations based on the active MiSTer core. It was inspired by, and strives for command compatibility with, the original [tty2oled](https://github.com/venice1200/MiSTer_tty2oled) project.
 
-<img src="./readme_images/8AEE547F-BAA3-452A-836F-03CCF3AC730D_1_105_c.jpeg" alt="Image of the display" height="250">
-
-## Installation
-Hardware:
-- Connect the display to match the Pins specified in https://github.com/neil-morrison44/MiSTer_tty2pico/blob/main/tty_and_logos.py#L17-L22
-- On a computer, plug it into USB with BOOTSEL held (normal Pi Pico `firmware.uf2` steps, except with the custom firmware from github releases)
-
-On the board:
-- If it's a Pi Pico you'll need to upload a custom `firmware.uf2` file to support USB Mass Storage Class, this can be found attached to the release (can see the workflow that adds it in this repo)
-- After it's installed the firmware it should appear as an empty flash drive (might need to unplug & replug), extract and copy over the files found in `files.zip` on the release
-- Find / create logo files which fit the following criteria:
-  - _must_ be PNGs
-  - max resolution depends on RAM but I've found ~160x160px works for the RP2040 Pico, it'll center the image regardless
-  - should be run through something like imageOptim to compress the PNG
-  - Remove the alpha channel
-  - Not interlaced
-  - It'll look at the colour of the top left pixel to pick the background
-  - Greyscale PNGs are supported and can probably be native display resolution since they're less resource intensive
-- Name the logo files the names of the cores (e.g. `logos/SNES.png`) this doesn't appear to be case sensitive
-- Add them to the drive that appears when the device is mounted along with `main.py` and the `.mpy` versions of the other files.
-- If you want to change images once it's plugged into a MiSTer you'll need to do:
-```
-$ sudo mkdir /media/pico-usb
-$ sudo mount /dev/sda /media/pico-usb
-$ ls /media/pico-usb/logos
-```
-(assuming the drive is at `/dev/sda`)
-(also you might need to reboot once you're finished)
+<p align="middle">
+<img src="./readme_images/IMG_1520.jpeg" alt="Image of RoundyPi case" height="300">
+<img src="./readme_images/8AEE547F-BAA3-452A-836F-03CCF3AC730D_1_105_c.jpeg" alt="Image of the display" height="300">
+</p>
 
 
-On the MiSTer side:
-- Follow installation instructions of https://github.com/venice1200/MiSTer_tty2oled
-- Change the tty in its `.ini` files to be the one for the device. Also turn off unsupported features. e.g.
-```
-TTYDEV="/dev/ttyACM0"
-USBMODE="no"
-SCRIPT_UPDATE="no"
-TTY2OLED_UPDATE="no"
-```
-- The device won't know what to do with the new updators etc added to tty2oled so... don't use them.
+## Features
 
-## For other boards
-The `.mpy` files & `firmware.uf2` are intended for the Pi Pico, but the `.py` files themselves should work on any board that can run micropython (though it'll need to support MSC mode & the RAM will be more limited than when using `.mpy` files).
-Custom firmware / `.mpy` files for other boards / architectures can be added here fairly easily.
+* Displays PNG, static GIF, and animated GIF files all with transparency!
+* Tuned for performance - animations can play up to 50fps or more!
+* Can display files from built-in flash or microSD card if available
+* Support for SPI displays up to 320x240 resolution (may require advanced setup)
+* Appears as USB Mass Storage device so you can maintain your files
+* Targets compatiblity with the [tty2oled Command List](https://github.com/venice1200/MiSTer_tty2oled/wiki/Command_v2)
 
-## Questions
+## Requirements
 
-### How do I know what to name the logo files?
-Once you've got the board connected and running you can ssh in and type
-```
-$ screen /dev/ttyACM0
-```
+tty2pico releases target the following hardware:
 
-Which'll show you what the MiSTer is sending, what filename was attempted, and a couple of error messages.
-The filesystem is case insensitive, so `psx.png` should be found when it sends `PSX` etc
+* Raspberry Pi Pico or other pin-compatbile RP2040 board
+* 1.28inch Round 240x240 GC9A01 LCD Module
+* Optional SPI microSD reader and card
 
-### Why MicroPython?
-I started writing this in C / C++ a while ago but gave up when I realised I'd have to do a lot of the USB MSC code myself to get it to appear as a flash drive, but if that changes it'd be a lot faster & probably support bigger images. CircuitPython is a bit more opinionated about what you can do with displays, which is probably nice if you're rendering a UI, but for this I just wanted to blit as fast as python could.
+The [RoundyPi](https://github.com/sbcshop/RoundyPi) module combines all three pieces of hardware on a single board, and is the **recommended** hardware to use for your installation.
 
-### Why not include logos in this repo?
-I'm not a fan of being sued, so unless someone can justify their fair use I'll just leave the default `mister` one in (which I'm not even sure of the copyright on but it's used elsewhere so...).
+Several other board and display configurations are available for advanced setups, which are detailed in the [Hardware](https://github.com/neil-morrison44/MiSTer_tty2pico/wiki/Hardware) section of the Wiki.
 
-There might be a set of `.pngs` somewhere, _eventually_, but it won't be here.
+## Quick Start
 
-### Can it support <screen X>?
-Sure, just edit the `tty_and_logos.py` file to point to a different display lib & change some `240`s into whatever the new display width & height is, so long as it supports the `.blit_buffer` method it should work fine.
+The quick start instructions assume the use of a RoundyPi, though most steps will be the same or very similar if using a Pico or another custom setup.
 
-## 3D printed mount
+### Install Firmware
 
-<img src="./readme_images/B8A32793-4AA9-4293-92DC-E02D58DB419E_1_105_c.jpeg" alt="Image of display in the 3D printed mount beside the MiSTer" height="250">
+To install:
 
-- There's quite a simple mount for it in the `3d_model` folder, the cable is left exposed so I recommend cable ties.
-- Will need 2 3m screws to attach the front to the base.
-- The screen & pico slide into their holes and are held securely
-- The base should be printed with more infill than the front so it's better balanced.
-- .stls in the `cad_models` folder are stl conversions of files from https://grabcad.com/library/raspberry-pi-pico-w-pins-1 & https://grabcad.com/library/waveshare-1-28in-round-display-1
+1. Download the `.uf2` for your setup from the (latest release)[https://github.com/neil-morrison44/MiSTer_tty2pico/releases/latest].
+2. Hold the `BOOT` (or `BOOTSEL` on a Pico) button while plugging in your device. A new drive will appear on your computer with the name `RPI-RP2`.
+3. Copy the `.uf2` file to the `RPI-RP2` drive. This will upload the new firmware to the device.
 
-## TODO
-- I'd like to have more default logos & have the error states (missing image, image too large) show something visually
-- I'll design a case for the Pi Pico & gc9a01 and add the `.stl`s here
-- Could do my own updater & watch script rather than piggybacking off of tty2oled
-- Custom PCB? Probably a bit much.
+That's it! tty2pico should display a startup screen with some system information. If running from flash, tty2pico will try to mount an existing flash partition first. This will preserve your data between firmware updates. If no FAT partition is present on the flash parition it will be automatically created and labeled `TTY2PICO` when mounted as a drive on a PC. If running from SD card make sure it's using exFAT format and you're set.
 
-## Libs
-- Uses https://github.com/russhughes/gc9a01py with some tweaks to add `@micropython.native` to a couple of methods & remove the unused text rendering
-- Uses https://github.com/Ratfink/micropython-png , which requires the itertools module
+If you'd like to build a custom setup take a look at the [Hardware](https://github.com/neil-morrison44/MiSTer_tty2pico/wiki/Hardware) page for a list of supported hardware and the [Development](https://github.com/neil-morrison44/MiSTer_tty2pico/wiki/Development) page for project setup information.
+
+### Load Images
+
+Images can either be loaded over USB from a computer, including the MiSTer, or directly on to SD card.
+
+tty2pico supports PNG, transparent PNG, GIF and animated GIF files. When looking for an image to load, tty2pico will search the `/logos/` folder of your storage device (flash or microSD). Loading images is simple since your tty2pico device will show up as a flash drive on your computer. Just copy the images into the `/logos/` folder and you're set!
+
+The logos should be named the same as the core, for example `snes.png` for SNES. This is not case-sensitive. If you don't know what the core name [check this list](https://mister-devel.github.io/MkDocs_MiSTer/developer/corenames/).
+
+If you have a `[core name].gif` file it will play once, then stop (to support things that animate in, like the GAMEBOY logo) - if you want to loop the gif name it `[core name].loop.gif`, e.g. `snes.loop.gif`.
+
+Make sure your image files are the same resolution or smaller than the display. See the [Image Files](https://github.com/neil-morrison44/MiSTer_tty2pico/wiki/Image-Files) section of the wiki for image specifications and optimization tips.
+
+### (Optional) Edit tty2pico Configuration
+
+On initial boot, tty2pico will generate a `tty2pico.toml` config file at the root of your storage device if one doesn't exist. Here you can tweak some default system options and tune a couple performance aspects of your setup. Refer to the [Configuration](https://github.com/neil-morrison44/MiSTer_tty2pico/wiki/Configuration) wiki page for a complete list of options.
+
+By default tty2pico will overclock the RP2040 to ensure images load quickly & animate smoothly, this can be tweaked in the config - but it is recommended to run with the overclock if possible.
+
+### MiSTer Setup
+
+First follow installation instructions of <https://github.com/venice1200/MiSTer_tty2oled> to get the script running on your MiSTer.
+
+tty2pico isn't fully compatible with tty2oled, so some features like `USBMODE` and script updates need to be disabled. Update these values in the .ini file:
+
+* TTYDEV="/dev/ttyACM0" _(or whatever `tty` device the board appears as)_
+* USBMODE="no"
+* SCRIPT_UPDATE="no"
+* TTY2OLED_UPDATE="no"
+
+The `tty2pico` file from the releases should be put into the MiSTer's scripts folder, this auto-updating script will keep the board's firmware up to date and will, over time, allow for features to be added.
+
+Finally plug in your tty2pico device and reboot the MiSTer to complete the setup.
+
+## 3D printable cases
+
+TBC (link to stl files once they're in and link to wiki page on printing)
+
+### For the standalone RoundyPi
+
+### For the RoundyPi + MiSTer Multisystem (V5)
+
+### For the Pico
+
+
+## Micropython version
+
+The original, MicroPython version is under the `/micropython` folder in this repo.
+It's not recommended for use, unless anyone particuarly likes the (unintentional) early 90s aesthetic of the images loading line by line.
+
+## Thanks
+
+- Thanks to (everyone who worked on tty2oled)[https://github.com/venice1200/MiSTer_tty2oled/graphs/contributors], since this project's standing on that project's shoulders (and, for the time being, scripts)
+- Massive thanks to @FeralAI for getting the arduino version running. I'd tried to wrap my head around the pico's flash file system in C++ before & completely failed, compromising on MicroPython where that was dealt with already.
