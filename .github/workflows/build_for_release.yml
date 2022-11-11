@@ -66,7 +66,7 @@ jobs:
         run: for FILE in lib/*.py; do python -m mpy_cross $FILE -Omax -march=armv6m; done
         working-directory: micropython
       - name: move files
-        run: mv micropython/*.mpy . & mv micropython/main.py .
+        run: mv micropython/*.mpy . & mv micropython/main.py . & mv micropython/lib ./lib
       - name: zip files
         run: zip -R device-files '*.mpy' 'main.py' 'logos/*.png'
 
