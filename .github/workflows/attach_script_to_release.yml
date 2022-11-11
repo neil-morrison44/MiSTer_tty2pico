@@ -1,0 +1,29 @@
+name: Build for release
+
+on:
+  release:
+    types: [created]
+
+
+jobs:
+  add_script_to_release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Get release
+        id: get_release
+        uses: bruceadams/get-release@v1.2.3
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Attach script file
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: ./scripts/tty2pico.sh
+          asset_name: tty2pico.sh
+          asset_content_type: text/x-shellscript
