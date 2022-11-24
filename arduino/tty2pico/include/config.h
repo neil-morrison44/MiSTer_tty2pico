@@ -165,7 +165,7 @@ typedef enum TTY2PICO_Font {
 	FONT7 = 7,	// Font 7. 7 segment 48 pixel font, needs ~2438 bytes in
 				// FLASH, only characters 1234567890:.
 	FONT8 = 8,	// Font 8. Large 75 pixel font needs ~3256 bytes in FLASH,
-	// only characters 1234567890:-.
+				// only characters 1234567890:-.
 } TTY2PICO_Font;
 
 typedef enum TTY2PICO_SdModes {
@@ -200,7 +200,7 @@ struct TTY2PICO_Config {
 	int tftWidth = TFT_WIDTH;
 	int tftHeight = TFT_HEIGHT;
 	bool uncapFramerate = false;
-	String missingCoreImage = "";
+	String missingCoreImage = "startup";
 
 	int getDisplayHeight() const {
 		return tftHeight < tftWidth ? tftHeight : tftWidth;
