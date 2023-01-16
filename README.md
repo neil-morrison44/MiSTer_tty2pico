@@ -37,7 +37,7 @@ The quick start instructions assume the use of a RoundyPi, though most steps wil
 
 To install:
 
-1. Download the `.uf2` for your setup from the (latest release)[https://github.com/neil-morrison44/MiSTer_tty2pico/releases/latest].
+1. Download the `.uf2` for your setup from the [latest release](https://github.com/neil-morrison44/MiSTer_tty2pico/releases/latest)
 2. Hold the `BOOT` (or `BOOTSEL` on a Pico) button while plugging in your device. A new drive will appear on your computer with the name `RPI-RP2`.
 3. Copy the `.uf2` file to the `RPI-RP2` drive. This will upload the new firmware to the device.
 
