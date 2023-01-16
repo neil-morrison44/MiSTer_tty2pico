@@ -14,13 +14,13 @@ $lean = 70;
 
 module pico() {
     translate([ $pico_width / 2, -2, 0 ]) rotate([ 0, 180, 0 ])
-        rotate([ 90, 0, 0 ]) import("./cad_models/pico.stl", convexity = 3);
+        rotate([ 90, 0, 0 ]) import("../cad_models/pico.stl", convexity = 3);
 }
 
 module lcd() {
     translate([ 0, 0, 35 ]) rotate([ $lean, 0, 0 ])
         scale([ $wiggle_room_scale, $wiggle_room_scale, $wiggle_room_scale ])
-            import("./cad_models/lcd.stl", convexity = 3);
+            import("../cad_models/lcd.stl", convexity = 3);
 }
 
 module screwHole() {
@@ -58,14 +58,14 @@ module base(){
     difference(){
         union(){
     translate([0,20,-1]){
-        difference(){ 
+        difference(){
     cube([$face_radius * 2,60,10], true);
         translate([0,0,1])
         cube([$pico_width + 0.5, 65, 2], true);
         translate([0,0,10])
         cube([$pico_width - 0.25, 65, 21.5], true);
         cube([9, 65, 5], true);
-            
+
             $screwX = (11.4 / 2);
             for (x = [-$screwX, $screwX]){
             $fn = 12;
@@ -73,7 +73,7 @@ module base(){
               #cylinder(100, r=$pico_screw_radius, center=true);
             }
     }
-    
+
 }
 
 hull(){
@@ -82,11 +82,11 @@ $fn = 36;
         for (x = [ -$screwX, $screwX ]) {
             translate([ x, -5.5, 5])
             rotate([$lean,0,0])
-            translate([0,0,-2]) 
+            translate([0,0,-2])
             cylinder(7, r1=$screw_radius * 2, r2=$screw_radius * 4);
         }
-        
-        translate([0,-6,-5]) 
+
+        translate([0,-6,-5])
         cube([$face_radius * 2, 6, 1], true);
 
 }
@@ -96,7 +96,7 @@ $fn = 36;
             $fn = 36;
             translate([ x, -5.5, 5])
             rotate([$lean,0,0])
-            translate([0,0,5]) 
+            translate([0,0,5])
             cylinder(15, r=$screw_radius - 0.25, center = true);
         }
 
