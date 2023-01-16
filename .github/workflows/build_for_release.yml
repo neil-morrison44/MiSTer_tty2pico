@@ -7,7 +7,7 @@ on:
 
 jobs:
   build_firmware:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Get release
         id: get_release
